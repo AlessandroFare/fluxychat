@@ -6,7 +6,7 @@ import { Loader2, Plus, Wrench } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section, Textarea } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section, SkeletonCard, Textarea } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -66,7 +66,15 @@ export default function McpIdentitySettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await loadAll();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadAll]);
 
   async function handleRegisterServer() {
@@ -117,15 +125,14 @@ export default function McpIdentitySettingsPage() {
       />
       <ConsoleFeedback error={error} notice={notice} />
 
-      {!token && (
+      {!token ? (
         <Panel className="p-4 text-sm text-muted-foreground">
           Admin JWT required. Copy one from <Link href="/projects" className="text-primary underline">Projects</Link>.
         </Panel>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      ) : loading ? (
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <div className="space-y-8">
@@ -159,7 +166,7 @@ export default function McpIdentitySettingsPage() {
                 {registry?.servers.map((s) => <option key={s.name} value={s.name} />)}
               </datalist>
               <Input placeholder="Tool name" value={toolName} onChange={(e) => setToolName(e.target.value)} />
-              <select className="rounded-md border border-border bg-background px-2 py-1.5 text-sm w-full" value={toolOrigin} onChange={(e) => setToolOrigin(e.target.value)}>
+              <select className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm" value={toolOrigin} onChange={(e) => setToolOrigin(e.target.value)}>
                 <option value="installed">Installed</option>
                 <option value="builtin">Built-in</option>
                 <option value="remote">Remote</option>
@@ -177,7 +184,12 @@ export default function McpIdentitySettingsPage() {
               <Panel className="p-4 space-y-2">
                 <h3 className="text-sm font-semibold">Servers ({registry?.servers.length ?? 0})</h3>
                 {(registry?.servers ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No custom servers registered.</p>
+                  <EmptyState
+                    compact
+                    className="border-0 bg-transparent"
+                    title="No custom servers"
+                    description="Register one above to attach its instructions to agents."
+                  />
                 ) : (
                   registry?.servers.map((s) => (
                     <div key={s.name} className="border-b border-border pb-2 last:border-0">
@@ -190,7 +202,12 @@ export default function McpIdentitySettingsPage() {
               <Panel className="p-4 space-y-2">
                 <h3 className="text-sm font-semibold">Tools ({registry?.tools.length ?? 0})</h3>
                 {(registry?.tools ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tool provenance entries.</p>
+                  <EmptyState
+                    compact
+                    className="border-0 bg-transparent"
+                    title="No tool provenance"
+                    description="Registered tools appear here with their origin."
+                  />
                 ) : (
                   registry?.tools.map((t) => (
                     <div key={`${t.serverName}:${t.toolName}`} className="border-b border-border pb-2 last:border-0">
@@ -206,7 +223,12 @@ export default function McpIdentitySettingsPage() {
           <Section title="Tool-call audit log">
             <Panel className="p-4 space-y-2 max-h-80 overflow-y-auto">
               {audit.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tool calls logged yet.</p>
+                <EmptyState
+                  compact
+                  className="border-0 bg-transparent"
+                  title="No tool calls logged"
+                  description="Tool calls appear here as agents make them."
+                />
               ) : (
                 audit.map((entry) => (
                   <div key={entry.id} className="flex justify-between gap-2 border-b border-border pb-2 text-xs last:border-0">

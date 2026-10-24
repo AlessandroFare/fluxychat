@@ -24,20 +24,20 @@ export async function dispatchSSORoutes(request, url, h) {
     return json(result);
   }
 
-  if (path.match(/^\/api\/sso\/configurations\/[a-z0-9]+$/) && request.method === "GET") {
+  if (path.match(/^\/api\/sso\/configurations\/[^/]+$/) && request.method === "GET") {
     const configId = path.split("/").pop();
     const result = await SSO.getConfiguration(env, { configId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
-  if (path.match(/^\/api\/sso\/configurations\/[a-z0-9]+$/) && request.method === "PATCH") {
+  if (path.match(/^\/api\/sso\/configurations\/[^/]+$/) && request.method === "PATCH") {
     const configId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
     const result = await SSO.updateConfiguration(env, { configId, ...body, projectId });
     return json(result);
   }
 
-  if (path.match(/^\/api\/sso\/configurations\/[a-z0-9]+$/) && request.method === "DELETE") {
+  if (path.match(/^\/api\/sso\/configurations\/[^/]+$/) && request.method === "DELETE") {
     const configId = path.split("/").pop();
     const result = await SSO.deleteConfiguration(env, { configId, projectId });
     return json(result);
@@ -51,19 +51,19 @@ export async function dispatchSSORoutes(request, url, h) {
     return json(result);
   }
 
-  if (path.match(/^\/api\/sso\/sessions\/[a-z0-9]+$/) && request.method === "GET") {
+  if (path.match(/^\/api\/sso\/sessions\/[^/]+$/) && request.method === "GET") {
     const sessionId = path.split("/").pop();
     const result = await SSO.getSession(env, { sessionId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
-  if (path.match(/^\/api\/sso\/sessions\/[a-z0-9]+\/touch$/) && request.method === "POST") {
+  if (path.match(/^\/api\/sso\/sessions\/[^/]+\/touch$/) && request.method === "POST") {
     const sessionId = path.split("/")[4];
     const result = await SSO.touchSession(env, { sessionId, projectId });
     return json(result);
   }
 
-  if (path.match(/^\/api\/sso\/sessions\/[a-z0-9]+\/invalidate$/) && request.method === "POST") {
+  if (path.match(/^\/api\/sso\/sessions\/[^/]+\/invalidate$/) && request.method === "POST") {
     const sessionId = path.split("/")[4];
     const result = await SSO.invalidateSession(env, { sessionId, projectId });
     return json(result);

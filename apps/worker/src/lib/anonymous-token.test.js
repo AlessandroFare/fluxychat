@@ -46,4 +46,36 @@ describe("issueAnonymousToken", () => {
     expect(result.body.userId).toMatch(/^anon_/);
     expect(signJwtHs256).toHaveBeenCalled();
   });
+
+  it("ignores a client-supplied anonId (audit F-31)", async () => {
+    const signJwtHs256 = vi.fn(async (_secret, payload) => JSON.stringify(payload));
+    const env = {
+      DEFAULT_PROJECT_ID: "default",
+      DB: {
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => ({
+            first: vi.fn(async () => ({ jwt_secret: "secret" })),
+          })),
+        })),
+      },
+    };
+    const request = new Request("http://localhost/tokens/anonymous", {
+      method: "POST",
+      headers: { "X-Fluxy-Api-Key": "fc_test" },
+    });
+    const result = await issueAnonymousToken(
+      env,
+      {
+        signJwtHs256,
+        isValidId: (id) => /^[a-zA-Z0-9_-]{1,128}$/.test(id),
+        resolveProjectId: vi.fn(async () => "proj1"),
+      },
+      request,
+      { anonId: "victim_user" },
+    );
+    expect(result.ok).toBe(true);
+    expect(result.body.userId).toMatch(/^anon_/);
+    expect(result.body.userId).not.toBe("victim_user");
+    expect(result.body.claims.sub).not.toBe("victim_user");
+  });
 });

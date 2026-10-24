@@ -24,6 +24,8 @@ import { useDashboardSession } from "./dashboard-session";
 import { ConsolePageHeader } from "./console-page-header";
 import { ConsoleProjectRoomBar } from "./console-project-room-bar";
 import { ConsoleShell } from "./console-shell";
+import { SimulatedPreviewBanner } from "./simulated-preview-banner";
+import { Banner } from "./ui";
 import { VerticalLiveWorkspace } from "./vertical-live-workspace";
 
 type StudioVerticalId = "edu" | "health" | "events" | "finance" | "continuity";
@@ -261,6 +263,18 @@ export function VerticalStudio({ config }: { config: VerticalStudioConfig }) {
         preferRoom
         hint="Vertical workflow events sync to your active room when signed in. Demo seeds apply when no room is selected."
       />
+
+      {syncState === "partial" ? (
+        <Banner variant="warn">
+          Some journey events did not reach the Worker — the workspace below mixes local and synced
+          state.
+        </Banner>
+      ) : syncState !== "synced" ? (
+        <SimulatedPreviewBanner>
+          Metrics and journey events are generated in your browser until a room syncs with the
+          Worker.
+        </SimulatedPreviewBanner>
+      ) : null}
 
       <div className="flex flex-col gap-4" key={tick}>
         <section className="rounded-2xl border border-border bg-foreground p-5 text-background sm:p-7">

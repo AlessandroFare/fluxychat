@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   cronPolicyNeedsRoom,
   isPolicyCooldownActive,
@@ -7,6 +7,11 @@ import {
   policyPatternMatches,
   renderAmbientPrompt,
 } from "./ambient-agents.js";
+
+const handoff = { active: false };
+vi.mock("./room-handoff.js", () => ({
+  isHumanHandoffActive: vi.fn(async () => handoff.active),
+}));
 
 describe("ambient-agents", () => {
   it("maps policy row", () => {
@@ -71,6 +76,43 @@ describe("ambient-agents", () => {
     expect(cronPolicyNeedsRoom("cron", "")).toBe(true);
     expect(cronPolicyNeedsRoom("cron", "room-1")).toBe(false);
     expect(cronPolicyNeedsRoom("webhook", "")).toBe(false);
+  });
+
+  it("skips autonomous runs while human handoff is active (audit F-46)", async () => {
+    handoff.active = true;
+    try {
+      const { executeAmbientPolicy } = await import("./ambient-agents.js");
+      const policy = mapAgentPolicyRow({
+        id: "apol_1",
+        project_id: "p1",
+        name: "Alert",
+        trigger_type: "webhook",
+        trigger_pattern: "incident.opened",
+        agent_id: "bot1",
+        room_id: "room1",
+        max_autonomy: "notify",
+        prompt_template: null,
+        enabled: 1,
+        cooldown_seconds: 0,
+        last_triggered_at: null,
+        created_at: "2026-08-01T00:00:00Z",
+        updated_at: "2026-08-01T00:00:00Z",
+      });
+      const env = {
+        DB: {
+          prepare() {
+            throw new Error("db must not be touched when handoff is active");
+          },
+        },
+      };
+      const out = await executeAmbientPolicy(env, policy, {
+        triggerType: "webhook",
+        triggerKey: "incident.opened",
+      });
+      expect(out).toMatchObject({ ok: false, reason: "human_handoff_active" });
+    } finally {
+      handoff.active = false;
+    }
   });
 
   it("tickAmbientCronPolicies scans cron rows", async () => {

@@ -25,7 +25,7 @@ export async function dispatchHIPAARoutes(request, url, h) {
   if (path.match(/^\/api\/hipaa\/baa\/[a-z0-9]+$/) && request.method === "PATCH") {
     const baaId = path.split("/").pop();
     const body = await request.json();
-    const result = await HIPAA.updateBAA(env, { baaId, projectId, ...body });
+    const result = await HIPAA.updateBAA(env, { ...body, baaId, projectId });
     return json(result);
   }
 
@@ -65,7 +65,7 @@ export async function dispatchHIPAARoutes(request, url, h) {
   if (path.match(/^\/api\/hipaa\/phi\/detections\/[a-z0-9]+\/review$/) && request.method === "POST") {
     const detectionId = path.split("/")[5];
     const body = await request.json();
-    const result = await HIPAA.reviewPHIDetection(env, { detectionId, projectId, ...body });
+    const result = await HIPAA.reviewPHIDetection(env, { ...body, detectionId, projectId });
     return json(result);
   }
 
@@ -87,7 +87,7 @@ export async function dispatchHIPAARoutes(request, url, h) {
   if (path.match(/^\/api\/hipaa\/breaches\/[a-z0-9]+$/) && request.method === "PATCH") {
     const breachId = path.split("/").pop();
     const body = await request.json();
-    const result = await HIPAA.updateBreach(env, { breachId, projectId, ...body });
+    const result = await HIPAA.updateBreach(env, { ...body, breachId, projectId });
     return json(result);
   }
 
@@ -100,7 +100,7 @@ export async function dispatchHIPAARoutes(request, url, h) {
   if (path.match(/^\/api\/hipaa\/training\/[a-z0-9]+\/complete$/) && request.method === "POST") {
     const trainingId = path.split("/")[4];
     const body = await request.json();
-    const result = await HIPAA.completeTraining(env, { trainingId, projectId, ...body });
+    const result = await HIPAA.completeTraining(env, { ...body, trainingId, projectId });
     return json(result);
   }
 

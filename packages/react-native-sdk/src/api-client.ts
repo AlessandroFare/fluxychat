@@ -1,5 +1,9 @@
 import { FluxyChatConfig, Message, Room, User, PaginationOptions } from './types';
 
+// Audit F-92: path segments can come from route params/callers — encode them
+// so a value with '/', '?' or '#' cannot address a different endpoint.
+const seg = (value: string): string => encodeURIComponent(value);
+
 export class ApiClient {
   private baseUrl: string;
   private projectId: string;
@@ -42,7 +46,7 @@ export class ApiClient {
   }
 
   async getRoom(roomId: string): Promise<Room> {
-    return this.request<Room>('GET', `/api/rooms/${roomId}`);
+    return this.request<Room>('GET', `/api/rooms/${seg(roomId)}`);
   }
 
   async createRoom(name: string, type: Room['type'] = 'group'): Promise<Room> {
@@ -50,24 +54,24 @@ export class ApiClient {
   }
 
   async updateRoom(roomId: string, data: Partial<Room>): Promise<Room> {
-    return this.request<Room>('PATCH', `/api/rooms/${roomId}`, data);
+    return this.request<Room>('PATCH', `/api/rooms/${seg(roomId)}`, data);
   }
 
   async deleteRoom(roomId: string): Promise<void> {
-    return this.request<void>('DELETE', `/api/rooms/${roomId}`);
+    return this.request<void>('DELETE', `/api/rooms/${seg(roomId)}`);
   }
 
   // Members
   async addMember(roomId: string, userId: string): Promise<void> {
-    return this.request<void>('POST', `/api/rooms/${roomId}/members`, { userId });
+    return this.request<void>('POST', `/api/rooms/${seg(roomId)}/members`, { userId });
   }
 
   async removeMember(roomId: string, userId: string): Promise<void> {
-    return this.request<void>('DELETE', `/api/rooms/${roomId}/members`, { userId });
+    return this.request<void>('DELETE', `/api/rooms/${seg(roomId)}/members`, { userId });
   }
 
   async listMembers(roomId: string): Promise<User[]> {
-    return this.request<User[]>('GET', `/api/rooms/${roomId}/members`);
+    return this.request<User[]>('GET', `/api/rooms/${seg(roomId)}/members`);
   }
 
   // Messages
@@ -76,38 +80,38 @@ export class ApiClient {
     if (options?.limit) params.set('limit', String(options.limit));
     if (options?.before) params.set('before', options.before);
     if (options?.after) params.set('after', options.after);
-    return this.request<Message[]>('GET', `/api/rooms/${roomId}/messages?${params.toString()}`);
+    return this.request<Message[]>('GET', `/api/rooms/${seg(roomId)}/messages?${params.toString()}`);
   }
 
   async sendMessage(roomId: string, content: string, kind: Message['kind'] = 'text', metadata?: Record<string, unknown>): Promise<Message> {
-    return this.request<Message>('POST', `/api/rooms/${roomId}/messages`, { content, kind, metadata });
+    return this.request<Message>('POST', `/api/rooms/${seg(roomId)}/messages`, { content, kind, metadata });
   }
 
   async editMessage(roomId: string, messageId: string, content: string): Promise<Message> {
-    return this.request<Message>('PATCH', `/api/rooms/${roomId}/messages/${messageId}`, { content });
+    return this.request<Message>('PATCH', `/api/rooms/${seg(roomId)}/messages/${seg(messageId)}`, { content });
   }
 
   async deleteMessage(roomId: string, messageId: string): Promise<void> {
-    return this.request<void>('DELETE', `/api/rooms/${roomId}/messages/${messageId}`);
+    return this.request<void>('DELETE', `/api/rooms/${seg(roomId)}/messages/${seg(messageId)}`);
   }
 
   // Reactions
   async addReaction(roomId: string, messageId: string, emoji: string): Promise<void> {
-    return this.request<void>('POST', `/api/rooms/${roomId}/messages/${messageId}/reactions`, { emoji });
+    return this.request<void>('POST', `/api/rooms/${seg(roomId)}/messages/${seg(messageId)}/reactions`, { emoji });
   }
 
   async removeReaction(roomId: string, messageId: string, emoji: string): Promise<void> {
-    return this.request<void>('DELETE', `/api/rooms/${roomId}/messages/${messageId}/reactions`, { emoji });
+    return this.request<void>('DELETE', `/api/rooms/${seg(roomId)}/messages/${seg(messageId)}/reactions`, { emoji });
   }
 
   // Presence
   async getPresence(roomId: string): Promise<{ online: User[]; total: number }> {
-    return this.request('GET', `/api/rooms/${roomId}/presence`);
+    return this.request('GET', `/api/rooms/${seg(roomId)}/presence`);
   }
 
   // AI
   async invokeAgent(roomId: string, agentId: string, message: string): Promise<Message> {
-    return this.request<Message>('POST', `/api/rooms/${roomId}/ai/invoke`, { agentId, message });
+    return this.request<Message>('POST', `/api/rooms/${seg(roomId)}/ai/invoke`, { agentId, message });
   }
 
   // Search
@@ -120,7 +124,7 @@ export class ApiClient {
   // Export
   async exportRoom(roomId: string, format: 'json' | 'csv' = 'json'): Promise<Blob> {
     const params = new URLSearchParams({ format });
-    const url = `${this.baseUrl}/api/rooms/${roomId}/export?${params.toString()}`;
+    const url = `${this.baseUrl}/api/rooms/${seg(roomId)}/export?${params.toString()}`;
     const response = await fetch(url, { headers: this.headers });
     return response.blob();
   }

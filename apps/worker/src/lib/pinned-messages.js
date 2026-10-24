@@ -14,6 +14,7 @@
  */
 
 import { logInfo } from "./worker-log.js";
+import { internalDoHeaders } from "./room-shard.js";
 
 const VALID_CATEGORIES = ["decision", "info", "checklist", "important"];
 const DEFAULT_MAX_PINS = 20;
@@ -78,7 +79,7 @@ export async function pinMessage(env, input) {
     const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
     await stub.fetch("https://internal/announce", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
       body: JSON.stringify({
         type: "message_pinned",
         roomId,
@@ -121,7 +122,7 @@ export async function unpinMessage(env, input) {
     const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
     await stub.fetch("https://internal/announce", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
       body: JSON.stringify({
         type: "message_unpinned",
         roomId,

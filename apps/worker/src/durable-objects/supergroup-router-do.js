@@ -13,23 +13,45 @@
  *   Rooms opt into supergroup mode via D1 `rooms.shard_count > 1` or manual trigger.
  */
 
-import { normalizeShardCount, MAX_ROOM_SHARDS, shardIndexForUser, roomDoName } from "../lib/room-shard.js";
+import { normalizeShardCount, MAX_ROOM_SHARDS, shardIndexForUser, roomDoName, internalDoHeaders } from "../lib/room-shard.js";
 import { withRuntimeConfig } from "../lib/with-runtime-config.js";
+import { isInternalDoRequest } from "./room-do.js";
 
 const SHARD_FETCH_TIMEOUT = 100;
 const SHARD_CAPACITY_WARN = 800;
 const SHARD_CAPACITY_MAX = 1000;
+/** Audit F-50: bound the in-memory per-shard report map. */
+const MAX_TRACKED_SHARDS = 2048;
 
 export class SupergroupRouterDurableObject {
   constructor(state, env) {
     this.state = state;
     this.env = withRuntimeConfig(env);
     this.rooms = new Map();
+    // Audit F-50: rebalance does read-modify-write across awaits — serialize.
+    this.rebalanceChain = Promise.resolve();
+  }
+
+  runSerialized(fn) {
+    const next = this.rebalanceChain.then(fn, fn);
+    this.rebalanceChain = next.then(
+      () => {},
+      () => {},
+    );
+    return next;
   }
 
   async fetch(request) {
     const url = new URL(request.url);
     const method = request.method;
+
+    // Audit F-50: every router endpoint is worker-internal only.
+    if (!isInternalDoRequest(request, this.env)) {
+      return new Response(JSON.stringify({ ok: false, error: "forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     if (method === "GET" && url.pathname === "/health") {
       return new Response(JSON.stringify({ ok: true, rooms: this.rooms.size }), {
@@ -43,7 +65,7 @@ export class SupergroupRouterDurableObject {
       if (!projectId || !roomId) {
         return new Response(JSON.stringify({ error: "projectId and roomId required" }), { status: 400 });
       }
-      const result = await this.rebalanceRoom(projectId, roomId);
+      const result = await this.runSerialized(() => this.rebalanceRoom(projectId, roomId));
       return new Response(JSON.stringify(result), {
         headers: { "Content-Type": "application/json" },
         status: result.error ? 400 : 200,
@@ -69,6 +91,9 @@ export class SupergroupRouterDurableObject {
         return new Response(JSON.stringify({ error: "roomId and shardIndex required" }), { status: 400 });
       }
       const key = `${roomId}#s${shardIndex}`;
+      if (this.rooms.size >= MAX_TRACKED_SHARDS && !this.rooms.has(key)) {
+        this.rooms.delete(this.rooms.keys().next().value);
+      }
       this.rooms.set(key, { connectionCount, reportedAt: Date.now() });
       return new Response(JSON.stringify({ ok: true }), {
         headers: { "Content-Type": "application/json" },
@@ -134,6 +159,7 @@ export class SupergroupRouterDurableObject {
       try {
         const stub = this.env.ROOM.get(this.env.ROOM.idFromName(roomId));
         const res = await stub.fetch("https://internal/live-stats", {
+          headers: internalDoHeaders(this.env),
           signal: AbortSignal.timeout(SHARD_FETCH_TIMEOUT),
         });
         if (res.ok) this.mergeLiveStats(base, await res.json());
@@ -150,6 +176,7 @@ export class SupergroupRouterDurableObject {
       stubs.map((stub) =>
         Promise.race([
           stub.fetch("https://internal/live-stats", {
+            headers: internalDoHeaders(this.env),
             signal: AbortSignal.timeout(SHARD_FETCH_TIMEOUT),
           }).then((r) => (r.ok ? r.json() : null)),
           new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), SHARD_FETCH_TIMEOUT)),
@@ -163,7 +190,6 @@ export class SupergroupRouterDurableObject {
       }
     }
 
-    base.userCount = base.users.length;
     return base;
   }
 
@@ -176,6 +202,9 @@ export class SupergroupRouterDurableObject {
     for (const uid of users) {
       if (uid && !base.users.includes(uid)) base.users.push(uid);
     }
+    // Audit fix A2-30: keep userCount in sync here so the single-shard path
+    // (which returns before the multi-shard assignment) reports it too.
+    base.userCount = base.users.length;
     const members = Array.isArray(body.members) ? body.members : [];
     const seen = new Set(base.members.map((m) => m.userId));
     for (const m of members) {
@@ -199,6 +228,7 @@ export class SupergroupRouterDurableObject {
       try {
         const stub = this.env.ROOM.get(this.env.ROOM.idFromName(roomDoName(roomId, i, count)));
         const res = await stub.fetch("https://internal/live-stats", {
+          headers: internalDoHeaders(this.env),
           signal: AbortSignal.timeout(SHARD_FETCH_TIMEOUT),
         });
         if (res.ok) {

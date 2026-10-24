@@ -103,7 +103,7 @@ export function SearchableSelect({
                     type="button"
                     onClick={() => handleSelect(option.id)}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
-                      option.id === value ? "bg-brand/10 font-medium text-brand" : ""
+                      option.id === value ? "bg-brand/10 font-medium text-[var(--brand-hover)]" : ""
                     }`}
                   >
                     {option.logoUrl ? (

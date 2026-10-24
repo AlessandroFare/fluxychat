@@ -3,11 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Italic, List, Heading1, Heading2, Code, Undo2, Redo2 } from "lucide-react";
 import { useYjs } from "./yjs-provider";
+import CollabPresenceChip from "./collab-presence-chip";
 
 export default function CollabNotes() {
-  const { doc, ytext, connected, awareness, undoManager } = useYjs();
+  const { doc, ytext, undoManager } = useYjs();
   const [content, setContent] = useState("");
-  const [remoteUsers, setRemoteUsers] = useState<string[]>([]);
   const syncingRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -21,10 +21,6 @@ export default function CollabNotes() {
     ytext.observe(observer);
     return () => ytext.unobserve(observer);
   }, [ytext]);
-
-  useEffect(() => {
-    setRemoteUsers([...awareness.values()].map((a) => a.name || a.userId));
-  }, [awareness]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -72,16 +68,6 @@ export default function CollabNotes() {
         <div className="ml-auto flex items-center gap-1">
           <button onClick={() => undoManager?.undo()} className="rounded p-1 hover:bg-muted" title="Undo"><Undo2 className="h-3.5 w-3.5" /></button>
           <button onClick={() => undoManager?.redo()} className="rounded p-1 hover:bg-muted" title="Redo"><Redo2 className="h-3.5 w-3.5" /></button>
-          {remoteUsers.length > 0 && (
-            <div className="ml-2 flex items-center gap-1 text-[10px] text-muted-foreground">
-              {remoteUsers.slice(0, 3).map((u, i) => (
-                <span key={i} className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
-                  {u.charAt(0).toUpperCase()}
-                </span>
-              ))}
-              {remoteUsers.length > 3 && <span className="text-muted-foreground">+{remoteUsers.length - 3}</span>}
-            </div>
-          )}
         </div>
       </div>
       <div className="flex-1 p-4">
@@ -93,8 +79,8 @@ export default function CollabNotes() {
           placeholder="Start typing collaborative notes..."
         />
       </div>
-      <div className="border-t px-3 py-1 text-[10px] text-muted-foreground">
-        {connected ? `${remoteUsers.length > 0 ? `${remoteUsers.length} user${remoteUsers.length > 1 ? "s" : ""} online` : "Connected. No other users."}` : "Connecting..."}
+      <div className="flex items-center justify-between border-t px-3 py-1">
+        <CollabPresenceChip />
       </div>
     </div>
   );

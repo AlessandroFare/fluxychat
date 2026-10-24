@@ -63,7 +63,15 @@ func (p *fluxyProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	client := newAPIClient(config.WorkerURL.ValueString(), config.AdminJWT.ValueString())
+	// Audit F-93: http worker_urls were accepted, sending the admin JWT in
+	// clear on every call. Require https (localhost http only for dev).
+	workerURL, err := validateWorkerURL(config.WorkerURL.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid worker_url", err.Error())
+		return
+	}
+
+	client := newAPIClient(workerURL, config.AdminJWT.ValueString())
 	resp.DataSourceData = &providerData{client: client}
 	resp.ResourceData = &providerData{client: client}
 }

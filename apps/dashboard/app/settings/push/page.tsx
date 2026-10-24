@@ -6,6 +6,7 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { Banner, Button, EmptyState, Panel, Section } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -46,7 +47,15 @@ export default function PushSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function save() {
@@ -86,8 +95,9 @@ export default function PushSettingsPage() {
       <Section title="Push configuration">
         <Panel className="space-y-4 p-4">
           {loading ? (
-            <div className="flex items-center text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-2/3" />
             </div>
           ) : configs.length === 0 ? (
             <EmptyState

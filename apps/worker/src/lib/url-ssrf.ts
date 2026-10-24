@@ -100,7 +100,12 @@ function isPrivateIpv4String(hostname: string): boolean {
 function isPrivateIpv6String(hostname: string): boolean {
   const lower = hostname.toLowerCase();
   if (lower.includes("[") && !lower.includes("]")) return true;
-  if (lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80")) {
+  // Audit fix A2e: fc00::/7 and fe80::/10 are IPv6 literals and always contain
+  // a colon. The bare prefix match denied ordinary DNS hostnames (fda.gov).
+  if (
+    lower.includes(":") &&
+    (lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80"))
+  ) {
     return true;
   }
   const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
@@ -136,9 +141,48 @@ function readAllowlist(env: unknown): Set<string> {
   return new Set(
     raw
       .split(",")
-      .map((s) => s.trim().toLowerCase())
+      .map((s) => s.trim().toLowerCase().replace(/^\*\./, ""))
       .filter(Boolean),
   );
+}
+
+/**
+ * Audit F-02: first-party egress hosts the platform itself calls (AI providers,
+ * payments, push, GitHub). User-supplied URLs are never covered by this list —
+ * those require an operator entry in ALLOWED_SSRF_HOSTS.
+ */
+const PLATFORM_EGRESS_HOSTS = [
+  "api.openai.com",
+  "api.anthropic.com",
+  "generativelanguage.googleapis.com",
+  "api.stripe.com",
+  "hooks.stripe.com",
+  "slack.com",
+  "fcm.googleapis.com",
+  "api.github.com",
+  "image.pollinations.ai",
+];
+
+function effectiveAllowlist(env: unknown): Set<string> {
+  const allow = readAllowlist(env);
+  for (const host of PLATFORM_EGRESS_HOSTS) allow.add(host);
+  return allow;
+}
+
+/**
+ * Audit F-02: the DNS-residual SSRF risk is mitigated by requiring the
+ * operator allowlist. When a call site passes `env` the gate is ON unless
+ * REQUIRE_SSRF_HOST_ALLOWLIST is explicitly "false"/"0"; call sites that still
+ * pass no env keep the legacy behaviour until they are migrated (audit F-45).
+ */
+function requireHostAllowlist(env: unknown): boolean {
+  if (env === undefined || env === null) return false;
+  const raw = String(
+    (env as { REQUIRE_SSRF_HOST_ALLOWLIST?: string } | undefined)?.REQUIRE_SSRF_HOST_ALLOWLIST ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  return !(raw === "false" || raw === "0");
 }
 
 export function isPrivateUrl(urlString: string, env?: unknown): boolean {
@@ -148,12 +192,8 @@ export function isPrivateUrl(urlString: string, env?: unknown): boolean {
 
     if (!["http:", "https:"].includes(parsed.protocol)) return true;
 
-    const allow = readAllowlist(env);
-    const requireAllowlist =
-      String((env as { REQUIRE_SSRF_HOST_ALLOWLIST?: string } | undefined)?.REQUIRE_SSRF_HOST_ALLOWLIST || "") ===
-        "true" ||
-      String((env as { REQUIRE_SSRF_HOST_ALLOWLIST?: string } | undefined)?.REQUIRE_SSRF_HOST_ALLOWLIST || "") === "1";
-    if (requireAllowlist) {
+    const allow = effectiveAllowlist(env);
+    if (requireHostAllowlist(env)) {
       return !isOnAllowlist(hostname, allow);
     }
 

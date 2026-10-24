@@ -3,6 +3,10 @@
  * RFC 6238 compliant, uses Web Crypto API
  */
 
+import { checkAndConsumeRateLimit } from './rate-limit.js';
+import { sealSecretAtRest, openSecretAtRest } from './secrets-crypto.js';
+import { timingSafeEqual } from './crypto-timing.js';
+
 const DEFAULT_PERIOD = 30;
 const DEFAULT_DIGITS = 6;
 const DEFAULT_ALGORITHM = 'SHA-1';
@@ -50,13 +54,16 @@ export async function generateBackupCodes() {
   const codeHashes = [];
 
   for (let i = 0; i < BACKUP_CODE_COUNT; i++) {
-    const bytes = new Uint8Array(4);
+    // Audit #24: 80 bits of entropy (was 32). Hashed in the canonical
+    // dash-less uppercase form that verifyBackupCode reconstructs.
+    const bytes = new Uint8Array(10);
     crypto.getRandomValues(bytes);
-    const code = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, 8).toUpperCase();
-    const formatted = `${code.slice(0, 4)}-${code.slice(4)}`;
+    const canonical = Array.from(bytes, (b) => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+    const formatted = (canonical.match(/.{5}/g) || [canonical]).join('-');
     codes.push(formatted);
-    const hash = await sha256Hex(formatted);
-    codeHashes.push(hash);
+    codeHashes.push(await sha256Hex(canonical));
   }
 
   return { codes, codeHashes };
@@ -70,8 +77,20 @@ export async function generateBackupCodes() {
  * @returns {boolean} Whether the code is valid
  */
 export async function verifyTotp(secret, code, window = 1) {
+  return (await verifyTotpStep(secret, code, window)).valid;
+}
+
+/**
+ * Verify a TOTP code and report which time step matched.
+ * Audit F-32: the caller needs the step to enforce single-use codes.
+ * @param {string} secret
+ * @param {string} code
+ * @param {number} window
+ * @returns {Promise<{ valid: boolean, timeStep: number|null }>}
+ */
+export async function verifyTotpStep(secret, code, window = 1) {
   const cleanCode = code.replace(/[\s-]/g, '');
-  if (!/^\d{6}$/.test(cleanCode)) return false;
+  if (!/^\d{6}$/.test(cleanCode)) return { valid: false, timeStep: null };
 
   const keyBytes = base32Decode(secret);
   const now = Math.floor(Date.now() / 1000);
@@ -102,10 +121,11 @@ export async function verifyTotp(secret, code, window = 1) {
       (hash[offset + 3] & 0xff);
 
     const expected = String(otp % Math.pow(10, DEFAULT_DIGITS)).padStart(DEFAULT_DIGITS, '0');
-    if (cleanCode === expected) return true;
+    // Audit F-38: constant-time comparison (was `===`).
+    if (await timingSafeEqual(cleanCode, expected)) return { valid: true, timeStep };
   }
 
-  return false;
+  return { valid: false, timeStep: null };
 }
 
 /**
@@ -115,6 +135,8 @@ export async function enrollTotp(env, projectId, userId) {
   const secret = generateTotpSecret();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  // Audit F-30: never store the TOTP seed in clear (keyed AES-GCM envelope).
+  const stored = await sealSecretAtRest(env, secret);
 
   await env.DB.prepare(
     `INSERT INTO admin_totp_secrets (id, project_id, user_id, secret, enabled, created_at)
@@ -125,7 +147,7 @@ export async function enrollTotp(env, projectId, userId) {
        verified_at = NULL,
        created_at = excluded.created_at`
   )
-    .bind(id, projectId, userId, secret, now)
+    .bind(id, projectId, userId, stored, now)
     .run();
 
   return { id, secret };
@@ -144,7 +166,9 @@ export async function verifyAndEnableTotp(env, projectId, userId, code) {
   if (!row) return { success: false, reason: 'No TOTP enrollment found' };
   if (row.enabled) return { success: false, reason: 'TOTP already enabled' };
 
-  const valid = await verifyTotp(row.secret, code);
+  const secret = await openSecretAtRest(env, row.secret);
+  if (secret == null) return { success: false, reason: 'TOTP secret unreadable' };
+  const valid = await verifyTotp(secret, code);
   if (!valid) return { success: false, reason: 'Invalid code' };
 
   const now = new Date().toISOString();
@@ -192,10 +216,45 @@ export async function verifyAdminTotp(env, projectId, userId, code) {
     .bind(projectId, userId)
     .first();
 
-  if (!row) return { verified: true, method: 'none' }; // No 2FA configured
+  if (!row) return { verified: false, reason: 'totp_not_configured' }; // Audit F-29: no silent pass
 
-  const valid = await verifyTotp(row.secret, code);
-  if (valid) return { verified: true, method: 'totp' };
+  // Audit #24: bound online guessing of the TOTP/backup codes per identity.
+  const limit = Number(env.RATE_LIMIT_TOTP_VERIFY_PER_MINUTE || 5);
+  if (limit > 0) {
+    const rate = await checkAndConsumeRateLimit(env, {
+      key: `totp-verify:${projectId}:${userId}`,
+      limit,
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) {
+      return {
+        verified: false,
+        rateLimited: true,
+        retryAfterSeconds: rate.retryAfterSeconds,
+      };
+    }
+  }
+
+  // Audit fix A2-20: after a key rotation the sealed secret is unreadable —
+  // fail closed instead of throwing from the base32 decoder.
+  const secret = await openSecretAtRest(env, row.secret);
+  if (!secret) return { verified: false, reason: 'secret_unreadable' };
+
+  const valid = await verifyTotpStep(secret, code);
+  if (valid.valid) {
+    // Audit F-32: single-use codes — claim the matched time step atomically so a
+    // captured code cannot be replayed inside its validity window.
+    const claim = await env.DB.prepare(
+      `UPDATE admin_totp_secrets SET last_used_step = ?
+       WHERE id = ? AND (last_used_step IS NULL OR last_used_step < ?)`,
+    )
+      .bind(valid.timeStep, row.id, valid.timeStep)
+      .run();
+    if (!Number(claim?.meta?.changes || 0)) {
+      return { verified: false, reason: 'code_reused' };
+    }
+    return { verified: true, method: 'totp' };
+  }
 
   // Try backup code
   const backupResult = await verifyBackupCode(env, projectId, userId, code);

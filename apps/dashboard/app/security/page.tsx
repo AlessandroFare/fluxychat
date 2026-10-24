@@ -475,7 +475,7 @@ function ChecklistRow({ item }: { item: SecurityCheck }) {
     pass: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
     warn: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50" },
     fail: { icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-    unknown: { icon: Eye, color: "text-slate-400", bg: "bg-muted/40" },
+    unknown: { icon: Eye, color: "text-muted-foreground", bg: "bg-muted/40" },
   };
   const c = config[item.status];
   const Icon = c.icon;

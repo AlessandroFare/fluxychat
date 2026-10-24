@@ -4,6 +4,35 @@
  */
 import { pickRouteDeps } from "./route-http-deps.js";
 
+/** Audit F-77: server-side price table — the client never picks the amount. */
+const CHECKOUT_PLAN_PRICES = { starter: "1999", pro: "4999" };
+const DEFAULT_BILLING_RETURN_URL = "https://app.fluxychat.com/billing";
+
+/**
+ * Audit F-83: redirect targets are handed to Stripe; only allow relative paths
+ * (single slash) or absolute URLs on our own app origins (default + PUBLIC_APP_URL).
+ */
+function safeBillingRedirect(value, fallback, env) {
+  if (typeof value !== "string" || !value.trim()) return fallback;
+  const candidate = value.trim();
+  const allowedOrigins = new Set([new URL(fallback).origin]);
+  try {
+    if (env?.PUBLIC_APP_URL) allowedOrigins.add(new URL(env.PUBLIC_APP_URL).origin);
+  } catch {
+    /* ignore malformed config */
+  }
+  try {
+    if (candidate.startsWith("/") && !candidate.startsWith("//")) {
+      return new URL(candidate, fallback).toString();
+    }
+    const parsed = new URL(candidate);
+    if (allowedOrigins.has(parsed.origin)) return parsed.toString();
+  } catch {
+    /* fall through to fallback */
+  }
+  return fallback;
+}
+
 export async function dispatchBillingRoutes(request, url, h) {
   const {
     env,
@@ -65,7 +94,7 @@ export async function dispatchBillingRoutes(request, url, h) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
     const body = await request.json().catch(() => null);
-    const planName = body?.planName || "starter";
+    const planName = String(body?.planName || "starter").trim().toLowerCase();
     if (!env.STRIPE_SECRET_KEY) {
       return json(
         {
@@ -73,6 +102,31 @@ export async function dispatchBillingRoutes(request, url, h) {
           message: "Stripe integration is not configured on this server.",
         },
         { status: 501 }
+      );
+    }
+    const unitAmount = CHECKOUT_PLAN_PRICES[planName];
+    if (!unitAmount) {
+      return json(
+        {
+          error: "plan_not_purchasable",
+          message: "Self-serve checkout is available for: starter, pro.",
+        },
+        { status: 400 },
+      );
+    }
+    const currentPlan = await getProjectPlan(env, auth.projectId);
+    const currentStatus = String(currentPlan?.billingStatus || "").toLowerCase();
+    // Audit fix M7: a project with a live subscription must not open a second
+    // checkout — repeat checkouts would double-bill. `customer.subscription
+    // .deleted` keeps the Stripe ids with status "cancelled", so cancelled
+    // projects can still re-subscribe.
+    if (currentPlan?.stripeSubscriptionId && !["canceled", "cancelled"].includes(currentStatus)) {
+      return json(
+        {
+          error: "already_subscribed",
+          message: "This project already has a subscription. Manage it from the billing portal.",
+        },
+        { status: 409 },
       );
     }
     try {
@@ -87,11 +141,11 @@ export async function dispatchBillingRoutes(request, url, h) {
           "payment_method_types[]": "card",
           "line_items[0][price_data][currency]": "usd",
           "line_items[0][price_data][product_data][name]": `FluxyChat ${planName.charAt(0).toUpperCase() + planName.slice(1)}`,
-          "line_items[0][price_data][unit_amount]": planName === "starter" ? "1999" : "4999",
+          "line_items[0][price_data][unit_amount]": unitAmount,
           "line_items[0][price_data][recurring][interval]": "month",
           "line_items[0][quantity]": "1",
-          success_url: body?.successUrl || "https://app.fluxychat.com/billing?success=1",
-          cancel_url: body?.cancelUrl || "https://app.fluxychat.com/billing?cancelled=1",
+          success_url: safeBillingRedirect(body?.successUrl, `${DEFAULT_BILLING_RETURN_URL}?success=1`, env),
+          cancel_url: safeBillingRedirect(body?.cancelUrl, `${DEFAULT_BILLING_RETURN_URL}?cancelled=1`, env),
           client_reference_id: auth.projectId,
           "metadata[project_id]": auth.projectId,
           "metadata[plan_name]": planName,
@@ -149,7 +203,7 @@ export async function dispatchBillingRoutes(request, url, h) {
         },
         body: new URLSearchParams({
           customer: customerId.stripe_customer_id,
-          return_url: body?.returnUrl || "https://app.fluxychat.com/billing",
+          return_url: safeBillingRedirect(body?.returnUrl, DEFAULT_BILLING_RETURN_URL, env),
         }).toString(),
       });
       const portalSession = await portalRes.json();

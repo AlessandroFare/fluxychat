@@ -1,6 +1,8 @@
 /**
  * NW-103 — enhanced mentions: @here, @channel, role groups, member autocomplete.
+ * Wave E adds @group:<name> (custom user groups) to expansion and suggestions.
  */
+import { getUserGroupMemberIds, listUserGroupNames } from "./user-groups.js";
 
 const SPECIAL_MENTIONS = [
   { id: "here", label: "@here", description: "Notify members active in this room", kind: "special" },
@@ -30,6 +32,10 @@ export function normalizeMentionToken(token) {
   if (!raw) return "";
   const lower = raw.toLowerCase();
   if (lower === "here" || lower === "channel") return lower;
+  if (lower.startsWith("group:")) {
+    const name = lower.slice(6).trim();
+    return name ? `group:${name}` : "";
+  }
   if (lower.startsWith("role:")) {
     const role = lower.slice(5);
     return ROLE_ALIASES[role] ? `role:${ROLE_ALIASES[role]}` : lower;
@@ -47,7 +53,7 @@ export function mentionHandlesForAgentInvoke(tokens) {
   for (const raw of tokens || []) {
     const token = normalizeMentionToken(raw);
     if (!token) continue;
-    if (token === "here" || token === "channel" || token.startsWith("role:")) continue;
+    if (token === "here" || token === "channel" || token.startsWith("role:") || token.startsWith("group:")) continue;
     handles.push(token.replace(/^@/, ""));
   }
   return [...new Set(handles)];
@@ -126,6 +132,17 @@ export async function expandMentions(env, input) {
       continue;
     }
 
+    if (token.startsWith("group:")) {
+      const ids = await getUserGroupMemberIds(env, {
+        projectId: input.projectId,
+        name: token.slice(6),
+      });
+      for (const uid of ids) {
+        if (uid !== input.authorUserId && memberIds.has(uid)) resolved.add(uid);
+      }
+      continue;
+    }
+
     if (memberIds.has(token) && token !== input.authorUserId) {
       resolved.add(token);
     }
@@ -165,7 +182,20 @@ export async function listMentionSuggestions(env, input) {
       role: m.role,
     }));
 
-  return [...specials, ...users].slice(0, limit);
+  let groups = [];
+  if (input.projectId) {
+    const names = await listUserGroupNames(env, { projectId: input.projectId });
+    groups = names
+      .filter((name) => !q || name.includes(q) || `group:${name}`.includes(q))
+      .map((name) => ({
+        id: `group:${name}`,
+        label: `@group:${name}`,
+        description: "User group",
+        kind: "group",
+      }));
+  }
+
+  return [...specials, ...groups, ...users].slice(0, limit);
 }
 
 export { SPECIAL_MENTIONS };

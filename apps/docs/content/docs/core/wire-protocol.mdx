@@ -31,7 +31,7 @@ Keep `fc_…` API keys on the server. Mint JWTs with `POST /auth/token`. Refresh
 
 | Job | Frame / API | Wrong primitive |
 | --- | --- | --- |
-| Pointers | `type: "cursor"` / `sendCursor` (up to 600/min) | Broadcast at 60 Hz |
+| Pointers | `type: "cursor"` / `sendCursor` (up to 600/min; optional `presenceKey` layer, e.g. `"agent"`) | Broadcast at 60 Hz |
 | Roster | `presence_patch`, `presenceMembers` | Full roster above 250 users (`presenceKind` becomes `aggregate`) |
 | Chat | JSON messages + `clientMessageId` | Feeds or comment threads |
 | Ephemeral pulse | `client-ephemeral-*` (skips webhooks) | Persisting it |

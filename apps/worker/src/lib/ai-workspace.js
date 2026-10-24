@@ -97,8 +97,14 @@ export async function addTab(env, { workspaceId, tabType, label, icon, sortOrder
   return { id, created: true };
 }
 
-export async function removeTab(env, { id }) {
-  const result = await env.DB.prepare("DELETE FROM workspace_tabs WHERE id = ?").bind(id).run();
+export async function removeTab(env, { id, projectId }) {
+  // Audit fix A2b: scope by project — a bare id let any tenant's admin delete
+  // another tenant's tab.
+  const result = await env.DB.prepare(
+    "DELETE FROM workspace_tabs WHERE id = ? AND workspace_id IN (SELECT id FROM workspace_configs WHERE project_id = ?)",
+  )
+    .bind(id, projectId)
+    .run();
   return { deleted: result.meta?.changes || 0 };
 }
 
@@ -126,8 +132,14 @@ export async function pinItem(env, { workspaceId, itemType, itemId, pinnedBy, no
   return { id, created: true };
 }
 
-export async function unpinItem(env, { id }) {
-  const result = await env.DB.prepare("DELETE FROM workspace_pins WHERE id = ?").bind(id).run();
+export async function unpinItem(env, { id, projectId }) {
+  // Audit fix A2b: scope by project — a bare id let any tenant's member delete
+  // another tenant's pin.
+  const result = await env.DB.prepare(
+    "DELETE FROM workspace_pins WHERE id = ? AND workspace_id IN (SELECT id FROM workspace_configs WHERE project_id = ?)",
+  )
+    .bind(id, projectId)
+    .run();
   return { deleted: result.meta?.changes || 0 };
 }
 

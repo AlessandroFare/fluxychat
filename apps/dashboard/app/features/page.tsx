@@ -1,10 +1,8 @@
-"use client";
-
 import Link from "next/link";
-import { ConsoleShell } from "../components/console-shell";
-import { ConsolePageHeader } from "../components/console-page-header";
-import { Panel } from "~/components/ui/Panel";
-import { Button } from "~/components/ui/button";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { MarketingShell } from "../components/marketing-shell";
+import { SimulatedPreviewBanner } from "../components/simulated-preview-banner";
+import styles from "../landing/landing-c.module.css";
 
 interface FeatureItem {
   title: string;
@@ -65,8 +63,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "AI tool presets",
         description: "Reader, messenger, and moderator tool groups with per-tool approval gates for enterprise governance.",
-        href: "/admin",
-        hrefLabel: "Admin",
+        href: "/settings/agent-tools",
+        hrefLabel: "Tool policy",
       },
       {
         title: "Room memory & knowledge graph",
@@ -76,9 +74,9 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "AI suggestions & digest",
-        description: "Reply suggestions and daily summaries for active rooms.",
-        href: "/activities",
-        hrefLabel: "Automations",
+        description: "Reply suggestions in chat; daily digest endpoints on the Worker.",
+        href: "/rooms",
+        hrefLabel: "In-room suggestions",
       },
     ],
   },
@@ -89,8 +87,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Channel bridges",
         description: "Slack, Discord, Telegram, WhatsApp, Teams: OAuth and signing secrets in the console. Not a finished omnichannel helpdesk.",
-        href: "/integrations",
-        hrefLabel: "Integrations",
+        href: "/bridges",
+        hrefLabel: "Bridges",
       },
       {
         title: "Card element builder",
@@ -113,8 +111,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "SMS & WhatsApp",
         description: "Inbound/outbound via Sent.dm; external messages land in rooms.",
-        href: "/integrations",
-        hrefLabel: "Integrations",
+        href: "/settings/telephony",
+        hrefLabel: "Telephony",
       },
       {
         title: "Polls & forms",
@@ -130,15 +128,15 @@ const GROUPS: FeatureGroup[] = [
     items: [
       {
         title: "SSO / SAML & SCIM",
-        description: "Enterprise sign-in and user provisioning via API.",
-        href: "/admin",
-        hrefLabel: "Admin",
+        description: "SAML and SCIM settings for self-hosted projects. Hosted SAML stays off.",
+        href: "/settings/identity",
+        hrefLabel: "Identity settings",
       },
       {
         title: "Data classification & retention",
-        description: "Labels on rooms/messages, retention policies, and legal hold.",
-        href: "/privacy",
-        hrefLabel: "Privacy",
+        description: "Retention policies, legal hold, classification labels, and room labels in the console; message-level overrides via the Worker API.",
+        href: "/settings/retention",
+        hrefLabel: "Retention & classification",
       },
       {
         title: "Audit & export",
@@ -172,25 +170,23 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "Live dashboards & events",
-        description: "Live metrics and event feeds for high-traffic rooms.",
-        href: "/analytics",
-        hrefLabel: "Analytics",
+        description: "Live metrics and event feeds for high-traffic rooms (Worker API).",
       },
       {
         title: "Incident response & on-call",
-        description: "Incident management, alerts, and on-call rotations tied to rooms.",
-        href: "/webhooks",
-        hrefLabel: "Webhooks",
+        description: "Incident created/acknowledged/resolved phases can start published Ops workflows in the linked room. Paging stays in your on-call tool.",
+        href: "/ops/settings",
+        hrefLabel: "Incident workflows",
       },
       {
         title: "Gamification & reputation",
-        description: "XP, badges, and leaderboards for active communities.",
-        href: "/analytics",
-        hrefLabel: "Analytics",
+        description: "D1 leaderboards in FluxyGame; XP, badges, and community reputation endpoints on the Worker.",
+        href: "/game",
+        hrefLabel: "Leaderboards",
       },
       {
-        title: "Hybrid events & streaming overlays",
-        description: "Hybrid events and overlays for live streams.",
+        title: "Live stream overlays",
+        description: "Chat overlays on live streams. WHIP/HLS ingest needs Cloudflare Stream secrets.",
         href: "/stream",
         hrefLabel: "FluxyStream",
       },
@@ -233,8 +229,8 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Slack / Discord / Matrix bridges",
         description: "Sync external channels with FluxyChat rooms (admin config).",
-        href: "/integrations",
-        hrefLabel: "Integrations",
+        href: "/bridges",
+        hrefLabel: "Bridges",
       },
       {
         title: "Conversation transcripts",
@@ -254,7 +250,7 @@ const GROUPS: FeatureGroup[] = [
       },
       {
         title: "App & Agent Marketplace",
-        description: "Publish, review, and install apps with signed manifests, scoped grants, and quota tracking.",
+        description: "Private app and template catalog with signed manifests, scoped grants, and quota tracking. Not a public app store.",
         href: "/marketplace",
         hrefLabel: "Open marketplace",
       },
@@ -297,28 +293,36 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Journey Mapping",
         description: "Track customer touchpoints across channels, visualize transition paths, detect drop-off points.",
+        href: "/analytics",
+        hrefLabel: "Open demo",
       },
       {
         title: "Conversation Analytics",
         description: "Sentiment analysis, intent detection, topic clustering, and knowledge gap identification.",
+        href: "/analytics",
+        hrefLabel: "Open demo",
       },
       {
         title: "Expert Routing",
         description: "Skill-based agent routing with SLA policies, priority scoring, and per-agent load balancing.",
+        href: "/agent-queue",
+        hrefLabel: "SDK module",
       },
       {
         title: "Virtual Waiting Room",
         description: "Queue management with priority ordering, estimated wait times, and abandonment tracking.",
+        href: "/agent-queue",
+        hrefLabel: "SDK module",
       },
       {
         title: "CRM & Knowledge Base",
-        description: "Salesforce/Zendesk/HubSpot/Intercom integrations, Confluence/Notion/SharePoint connectors with RAG.",
+        description: "Salesforce/Zendesk/HubSpot/Intercom sync and Confluence/Notion/SharePoint connectors. Catalog and dry-run writes until a design partner.",
         href: "/integrations",
         hrefLabel: "Integrations",
       },
       {
         title: "Real-time Translation",
-        description: "Per-user language preference, auto-detect, glossary terms, and live translate.",
+        description: "Per-user viewer language, per-room auto-translate target, and cached LLM translations. Source language is model-inferred; no glossary editor yet.",
         href: "/settings/translation",
         hrefLabel: "Translation",
       },
@@ -349,39 +353,199 @@ const GROUPS: FeatureGroup[] = [
       {
         title: "Ephemeral messages",
         description: "Post ephemeral messages visible only to specific users with automatic DM fallback when native ephemeral is unsupported.",
+        href: "/settings/ephemeral",
+        hrefLabel: "Ephemeral settings",
       },
     ],
   },
 ];
 
+type FeatureStatus = "production" | "beta" | "preview" | "labs" | "demo" | "checklist" | "api";
+
+/**
+ * Readiness follows `PLATFORM_READINESS` for product modules and the QA
+ * campaign for the rest. Production = Worker persist + auth + tenancy + tests,
+ * not a hosted SLA. Keep this map in sync with the cards above.
+ */
+const FEATURE_STATUS: Record<string, FeatureStatus> = {
+  "In-room AI agents": "production",
+  "MCP client": "beta",
+  "LLM middleware pipeline": "production",
+  WorkflowAgent: "preview",
+  "Streaming markdown": "production",
+  "Reconnect and history": "production",
+  "Realtime voice": "production",
+  "AI tool presets": "production",
+  "Room memory & knowledge graph": "production",
+  "AI suggestions & digest": "production",
+  "Channel bridges": "beta",
+  "Card element builder": "production",
+  "Unified inbox": "production",
+  "Agent queue": "production",
+  "SMS & WhatsApp": "beta",
+  "Polls & forms": "production",
+  "SSO / SAML & SCIM": "beta",
+  "Data classification & retention": "production",
+  "Audit & export": "production",
+  "SOC2 / HIPAA checklist": "checklist",
+  "IP whitelist & DLP": "labs",
+  "Realtime feature showcase": "production",
+  "Live dashboards & events": "api",
+  "Incident response & on-call": "beta",
+  "Gamification & reputation": "beta",
+  "Live stream overlays": "production",
+  "create-fluxy-chat CLI": "production",
+  "DevTools web UI": "production",
+  "Sandbox support": "preview",
+  "Embed widget": "production",
+  "Custom domain": "production",
+  "Slack / Discord / Matrix bridges": "beta",
+  "Conversation transcripts": "production",
+  "Slash commands": "production",
+  "Regex message routing": "api",
+  "App & Agent Marketplace": "production",
+  "Chatbot Builder": "production",
+  "Cross-Channel Continuity": "labs",
+  "A/B Testing": "labs",
+  "A2A Protocol": "preview",
+  "Spatial & Digital Twin Rooms": "labs",
+  "Web3 / Decentralized Chat": "production",
+  "Journey Mapping": "demo",
+  "Conversation Analytics": "demo",
+  "Expert Routing": "api",
+  "Virtual Waiting Room": "api",
+  "CRM & Knowledge Base": "beta",
+  "Real-time Translation": "production",
+  "Automation Engine": "beta",
+  Processes: "beta",
+  "AST markdown system": "api",
+  "Concurrency strategies": "api",
+  "Thread state": "api",
+  "Ephemeral messages": "production",
+};
+
+const FEATURE_STATUS_LABEL: Record<FeatureStatus, string> = {
+  production: "Production",
+  beta: "Beta",
+  preview: "Preview",
+  labs: "Labs",
+  demo: "Demo",
+  checklist: "Checklist",
+  api: "API / SDK",
+};
+
+const FEATURE_STATUS_LEGEND: Array<[FeatureStatus, string]> = [
+  ["production", "Worker persist + auth + tenancy + tests"],
+  ["beta", "external dependency, partner gate, or partial console"],
+  ["preview", "console surface, no SLA"],
+  ["labs", "preview quality, no SLA"],
+  ["demo", "in-browser SDK demo"],
+  ["checklist", "evidence checklist, not an attestation"],
+  ["api", "shipped API/SDK, no console page"],
+];
+
+const FEATURE_ITEMS = GROUPS.flatMap((group) => group.items);
+const UNLABELED_FEATURES = FEATURE_ITEMS.filter((item) => !FEATURE_STATUS[item.title]);
+if (UNLABELED_FEATURES.length > 0) {
+  throw new Error(
+    `Missing readiness label: ${UNLABELED_FEATURES.map((item) => item.title).join(", ")}`,
+  );
+}
+
+const STATUS_COUNTS = FEATURE_ITEMS.reduce<Record<FeatureStatus, number>>(
+  (counts, item) => {
+    counts[FEATURE_STATUS[item.title]] += 1;
+    return counts;
+  },
+  { production: 0, beta: 0, preview: 0, labs: 0, demo: 0, checklist: 0, api: 0 },
+);
+
 export default function FeaturesPage() {
   return (
-    <ConsoleShell>
-      <ConsolePageHeader
-        title="Features"
-        description="What you can do with FluxyChat today. Each card links to the console page where you can try it."
-      />
-      <div className="mt-6 space-y-8">
-        {GROUPS.map((group) => (
-          <section key={group.title}>
-            <h2 className="text-lg font-semibold text-foreground">{group.title}</h2>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{group.intro}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {group.items.map((item) => (
-                <Panel key={item.title} className="flex h-full flex-col">
-                  <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
-                  <p className="mt-2 flex-1 text-sm text-muted-foreground">{item.description}</p>
-                  {item.href ? (
-                    <Button variant="ghost" size="sm" className="mt-3 w-fit px-0" asChild>
-                      <Link href={item.href}>{item.hrefLabel ?? "Open"}</Link>
-                    </Button>
-                  ) : null}
-                </Panel>
-              ))}
-            </div>
-          </section>
+    <MarketingShell className={styles.pageWide}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Features / readiness</span>
+          <h1 className={styles.pageTitle}>What runs today. At what level.</h1>
+          <p className={styles.pageLede}>
+            A hand-written capability list with an honest readiness label. Production means Worker
+            persistence, auth, tenancy, and tests — not a hosted SLA. Cards open the console surface
+            where one exists.
+          </p>
+          <div className={styles.pageActions}>
+            <Link href={HOSTED_PATHS.getStarted} className={`${styles.btn} ${styles.btnPrimary}`}>
+              Get started
+            </Link>
+            <Link href="/pricing" className={`${styles.btn} ${styles.btnGhost}`}>
+              Pricing
+            </Link>
+          </div>
+        </div>
+        <div className={styles.pageMeta}>
+          <span><strong>{FEATURE_ITEMS.length}</strong> capabilities</span>
+          <span><strong>{STATUS_COUNTS.production}</strong> production</span>
+          <span><strong>{FEATURE_ITEMS.length - STATUS_COUNTS.production}</strong> not production</span>
+        </div>
+      </header>
+
+      <SimulatedPreviewBanner label="Preview - static overview.">
+        A hand-written capability list. Readiness labels say what is production, beta, preview,
+        labs, demo, API, or checklist.
+      </SimulatedPreviewBanner>
+
+      <div className={styles.statusLegend}>
+        {FEATURE_STATUS_LEGEND.map(([status, text]) => (
+          <span key={status}>
+            <strong>{FEATURE_STATUS_LABEL[status]}</strong> {text}
+          </span>
         ))}
       </div>
-    </ConsoleShell>
+
+      {GROUPS.map((group) => (
+        <section key={group.title} className={styles.pageSection}>
+          <div className={styles.pageSectionHead}>
+            <span className={styles.pageEyebrow}>Capability</span>
+            <h2 className={styles.pageH2}>{group.title}</h2>
+          </div>
+          <div className={styles.pageBody}>
+            <p>{group.intro}</p>
+            <div className={styles.pageCards}>
+              {group.items.map((item) => (
+                <div key={item.title} className={styles.pageCard}>
+                  <div className={styles.pageCardHead}>
+                    <h3>{item.title}</h3>
+                    <span
+                      className={styles.statusChip}
+                      data-status={FEATURE_STATUS[item.title]}
+                    >
+                      {FEATURE_STATUS_LABEL[FEATURE_STATUS[item.title]]}
+                    </span>
+                  </div>
+                  <p>{item.description}</p>
+                  {item.href ? (
+                    <Link href={item.href} className={styles.pageCardLink}>
+                      {item.hrefLabel ?? "Open"}
+                    </Link>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ))}
+
+      <div className={styles.pageCta}>
+        <div>
+          <span className={styles.pageEyebrow}>Next</span>
+          <p className={styles.pageH2}>Try it in a room.</p>
+          <p>The playground is public; the console is where agents, keys, and billing live.</p>
+        </div>
+        <div className={styles.pageActions}>
+          <Link href="/demo" className={`${styles.btn} ${styles.btnPrimary}`}>Open the playground</Link>
+          <Link href="/why" className={`${styles.btn} ${styles.btnGhost}`}>Why FluxyChat</Link>
+          <Link href="/guides" className={`${styles.btn} ${styles.btnGhost}`}>Guides</Link>
+        </div>
+      </div>
+    </MarketingShell>
   );
 }

@@ -394,7 +394,7 @@ export default function VoiceAiPage() {
                   </label>
                 ))}
               </fieldset>
-              <Input value={testText} onChange={(e) => setTestText(e.target.value)} />
+              <Input value={testText} onChange={(e) => setTestText(e.target.value)} aria-label="Test phrase" />
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => void handlePipelineTest()} disabled={voice.status === "running"}>
                   <Play className="h-3 w-3 mr-1" /> Run pipeline

@@ -64,13 +64,14 @@ export function createBridgeWebhookRequest(platform, bridgeId, body, options = {
  * @param {*} env
  * @param {object} h Route deps bag
  * @param {ReturnType<typeof loadWebhookFixture>} fixture
+ * @param {{ headers?: Record<string, string> }} [overrides] Headers merged over the fixture's own (e.g. fresh signatures)
  */
-export async function replayWebhookFixture(dispatchFn, env, h, fixture) {
+export async function replayWebhookFixture(dispatchFn, env, h, fixture, overrides = {}) {
   const request = createBridgeWebhookRequest(
     fixture.platform,
     fixture.bridgeId,
     fixture.payload,
-    { headers: fixture.headers },
+    { headers: { ...(fixture.headers || {}), ...(overrides.headers || {}) } },
   );
   const url = new URL(request.url);
   const response = await dispatchFn(request, url, h);

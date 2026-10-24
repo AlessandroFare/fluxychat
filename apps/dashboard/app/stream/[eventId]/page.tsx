@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Eye, Hand, ThumbsUp, Loader2, AlertCircle } from "lucide-react";
+import { Eye, Loader2, AlertCircle } from "lucide-react";
 import { ConsoleShell } from "@/app/components/console-shell";
 import { useDashboardSession } from "@/app/components/dashboard-session";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
@@ -32,7 +32,7 @@ export default function StreamViewerPage() {
   const [viewerCount, setViewerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [handRaised, setHandRaised] = useState(false);
+  const [watching, setWatching] = useState(false);
   const [showChat, setShowChat] = useState(true);
   const [replayHls, setReplayHls] = useState<string | null>(null);
   const [angleReplays, setAngleReplays] = useState<SyncedAngleReplay[]>([]);
@@ -111,11 +111,11 @@ export default function StreamViewerPage() {
     return () => { cancelled = true; clearInterval(interval); };
   }, [eventId, token]);
 
-  const handleRaiseHand = async () => {
+  const toggleWatching = async () => {
     if (!token || !eventId) return;
-    setHandRaised(!handRaised);
+    setWatching(!watching);
     try {
-      const endpoint = handRaised ? "leave" : "join";
+      const endpoint = watching ? "leave" : "join";
       await fetch(`${WORKER_URL}/api/live/events/${eventId}/${endpoint}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -242,23 +242,16 @@ export default function StreamViewerPage() {
               <div className="flex items-center gap-2 border-t border-border p-2">
                 <button
                   type="button"
-                  onClick={handleRaiseHand}
+                  onClick={toggleWatching}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                    handRaised
-                      ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400"
+                    watching
+                      ? "bg-green-500/20 text-green-700 dark:text-green-400"
                       : "bg-muted text-muted-foreground hover:bg-muted/80",
                   )}
                 >
-                  <Hand className="size-3" />
-                  {handRaised ? "Lower hand" : "Raise hand"}
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted/80"
-                >
-                  <ThumbsUp className="size-3" />
-                  Like
+                  <Eye className="size-3" />
+                  {watching ? "Watching" : "Watch"}
                 </button>
                 {isLive && (
                   <a

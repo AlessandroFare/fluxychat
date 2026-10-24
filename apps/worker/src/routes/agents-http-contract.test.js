@@ -1,9 +1,15 @@
 /**
  * Phase 2 agent HTTP contracts: invoke, list, bots, quota, rate limit.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createAuthMatrixDeps, unauthorizedRequest } from "./auth-matrix-deps.js";
 import { dispatchAgentsRoutes } from "./agents-http.js";
+import { finalizeAgentChatMessage } from "../lib/agent-runtime.js";
+
+vi.mock("../lib/agent-runtime.js", async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, finalizeAgentChatMessage: vi.fn(async () => null) };
+});
 
 const memberJwt = async () => ({
   userId: "u1",
@@ -96,6 +102,36 @@ function deps(overrides = {}) {
   });
 }
 
+function agentDoStub({ messageId = null } = {}) {
+  return {
+    AGENT: {
+      idFromName: (name) => name,
+      get: () => ({
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              run: {
+                status: "completed",
+                content: "hello from DO",
+                runId: "run-do",
+                latencyMs: 5,
+                inputTokens: 1,
+                outputTokens: 2,
+                estimatedCost: 0,
+                iterations: 1,
+                toolCalls: [],
+                contextFetched: false,
+              },
+              messageId,
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          ),
+      }),
+    },
+  };
+}
+
 function jsonReq(path, { method = "GET", body } = {}) {
   return unauthorizedRequest(path, { method, body });
 }
@@ -147,6 +183,21 @@ describe("agent HTTP — invoke", () => {
     expect(body.error).toBe("agent not found");
   });
 
+  it("POST /agents/:id/invoke into a room outside the project is 404 (F-39)", async () => {
+    const req = jsonReq("/agents/bot-1/invoke", {
+      method: "POST",
+      body: { roomId: "other-project-room", content: "hi" },
+    });
+    const res = await dispatchAgentsRoutes(
+      req,
+      new URL(req.url),
+      deps({ extra: { canAccessRoom: async () => false } }),
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("room_not_found");
+  });
+
   it("POST /agents/:id/invoke over agent rpm is 429", async () => {
     const req = jsonReq("/agents/bot-1/invoke", {
       method: "POST",
@@ -166,6 +217,35 @@ describe("agent HTTP — invoke", () => {
     const body = await res.json();
     expect(body.error).toBe("agent_rate_limit_exceeded");
     expect(res.headers.get("Retry-After")).toBe("30");
+  });
+
+  it("POST /agents/:id/invoke with a full room turn queue is 429", async () => {
+    const req = jsonReq("/agents/bot-1/invoke", {
+      method: "POST",
+      body: { roomId: "room-1", content: "hi" },
+    });
+    const res = await dispatchAgentsRoutes(
+      req,
+      new URL(req.url),
+      deps({
+        env: {
+          AGENT: {
+            idFromName: (name) => name,
+            get: () => ({
+              fetch: async () =>
+                new Response(
+                  JSON.stringify({ ok: false, reason: "turn_queue_full", retryAfterSeconds: 7 }),
+                  { headers: { "Content-Type": "application/json" } },
+                ),
+            }),
+          },
+        },
+      }),
+    );
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.error).toBe("turn_queue_full");
+    expect(res.headers.get("Retry-After")).toBe("7");
   });
 
   it("POST /agents/:id/invoke over project quota is 402", async () => {
@@ -220,6 +300,58 @@ describe("agent HTTP — invoke", () => {
     expect(body.message.content).toBe("ok");
     expect(body.message.roomId).toBe("room-1");
   });
+
+  it("POST /agents/:id/invoke via the agent DO finalizes the streamed reply (Art.50)", async () => {
+    vi.mocked(finalizeAgentChatMessage).mockClear();
+    const automations = vi.fn();
+    const req = jsonReq("/agents/bot-1/invoke", {
+      method: "POST",
+      body: { roomId: "room-1", content: "hi" },
+    });
+    const res = await dispatchAgentsRoutes(
+      req,
+      new URL(req.url),
+      deps({
+        env: agentDoStub({ messageId: 42 }),
+        extra: { safeSchedulePostMessageAutomations: automations },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message.id).toBe(42);
+    expect(finalizeAgentChatMessage).toHaveBeenCalledTimes(1);
+    expect(finalizeAgentChatMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        messageId: 42,
+        userId: "bot-1",
+        extraMetadata: { aiDisclosure: "AI assistant" },
+      }),
+    );
+    expect(automations).not.toHaveBeenCalled(); // the room's stream end owns them
+  });
+
+  it("POST /agents/:id/invoke via the agent DO with stream:false inserts + finalizes the reply", async () => {
+    vi.mocked(finalizeAgentChatMessage).mockClear();
+    const automations = vi.fn();
+    const req = jsonReq("/agents/bot-1/invoke", {
+      method: "POST",
+      body: { roomId: "room-1", content: "hi", stream: false },
+    });
+    const res = await dispatchAgentsRoutes(
+      req,
+      new URL(req.url),
+      deps({
+        env: agentDoStub({ messageId: null }),
+        extra: { safeSchedulePostMessageAutomations: automations },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message.id).toBe(99); // inserted by the route (fake D1 last_row_id)
+    expect(finalizeAgentChatMessage).toHaveBeenCalledTimes(1);
+    expect(automations).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("agent HTTP — list and create", () => {
@@ -234,6 +366,18 @@ describe("agent HTTP — list and create", () => {
   it("POST /bots without a name is 400", async () => {
     const req = jsonReq("/bots", { method: "POST", body: { provider: "openai" } });
     const res = await dispatchAgentsRoutes(req, new URL(req.url), deps());
+    expect(res.status).toBe(403);
+  });
+
+  it("POST /bots validates the name for an admin (audit F-44)", async () => {
+    const req = jsonReq("/bots", { method: "POST", body: { provider: "openai" } });
+    const res = await dispatchAgentsRoutes(
+      req,
+      new URL(req.url),
+      deps({
+        verifyJwt: async () => ({ userId: "u1", projectId: "p1", roles: ["admin"] }),
+      }),
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("name required");

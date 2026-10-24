@@ -5,4 +5,18 @@ description: "You are not allowed to join this room"
 
 # 40302 — forbidden
 
-Capability or role check failed (for example publish on a spectator socket). HTTP 403.
+A capability or role check failed — for example publishing on a spectator socket, or an admin route the token's roles do not cover. Terminal for that action.
+
+**At a glance** — HTTP 403 · close 1008 `Forbidden` · terminal · depends on the role/capability, not the connection.
+
+## What to do
+
+- Check the JWT `roles` claim against what the action requires — the [Auth / JWT cookbook](/docs/cookbook/auth-jwt) maps roles to routes.
+- On the WebSocket, the SDK maps a `Forbidden` close to `FluxyNotMemberError`; the raw close reason keeps the server's wording.
+- This can be action-scoped rather than connection-scoped: a spectator stays connected but cannot publish.
+
+## Related
+
+- [40300 not_member](/docs/errors/not_member)
+- [40301 banned](/docs/errors/banned)
+- [10008 ws_policy](/docs/errors/ws_policy)

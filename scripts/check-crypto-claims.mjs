@@ -44,7 +44,10 @@ const CLAIM_RE =
 const CRYPTO_EVIDENCE = [
   /crypto\.subtle\./,
   /crypto\.getRandomValues/,
-  /from ["'][^"']*(url-ssrf|group-cipher|secrets-crypto|token-crypto|webhook-signing|jwt-auth|audit-chain|cmk-store|vapid|apns|fcm-v1|room-e2e|cmk-encryption)/,
+  // Static or dynamic imports of a module that does the cryptography itself.
+  /(?:from\s|import\(\s*)["'][^"']*(url-ssrf|group-cipher|secrets-crypto|token-crypto|webhook-signing|jwt-auth|audit-chain|cmk-store|vapid|apns|fcm-v1|room-e2e|cmk-encryption|crypto-timing)/,
+  // @noble/* is a real cryptography library (used where WebCrypto has no primitive, e.g. secp256k1).
+  /(?:from\s|import\(\s*)["'][^"']*@noble\//,
   /require\(["'][^"']*(group-cipher|secrets-crypto|cmk-encryption)/,
 ];
 

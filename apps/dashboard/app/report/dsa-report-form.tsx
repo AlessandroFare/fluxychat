@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "~/components/ui/button";
 
 export function DsaReportForm() {
   const [explanation, setExplanation] = useState("");
@@ -90,13 +91,9 @@ export function DsaReportForm() {
           Could not send ({error}). Try again or email support@fluxychat.com.
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={status === "sending"}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-      >
-        {status === "sending" ? "Sending..." : "Submit notice"}
-      </button>
+      <Button type="submit" loading={status === "sending"}>
+        Submit notice
+      </Button>
     </form>
   );
 }

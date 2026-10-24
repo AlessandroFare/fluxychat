@@ -5,11 +5,13 @@
 
 import { depsEnv } from "../lib/deps-env.js";
 import { verifyJwtAndGetContext } from "../lib/jwt-auth.js";
-import { parseSamlAssertion, validateSamlTiming, validateSamlAudience, createSsoSession, getSamlConfig, upsertSamlConfig, generateSpMetadata } from '../lib/sso-saml.js';
+import { parseSamlAssertion, validateSamlTiming, validateSamlAudience, createSsoSession, getSamlConfig, upsertSamlConfig, generateSpMetadata, recordSamlAssertionUse } from '../lib/sso-saml.js';
 import { createScimUser, getScimUser, listScimUsers, updateScimUser, deleteScimUser, createScimGroup, listScimGroups, createScimToken, listScimTokens, deleteScimToken, verifyScimToken } from '../lib/scim.js';
 import { enrollTotp, verifyAndEnableTotp, verifyAdminTotp, isTotpEnabled, getTotpStatus, disableTotp } from '../lib/totp-2fa.js';
 import { buildAllowedOriginsList } from "../lib/custom-domains.js";
 import { resolveProjectId } from "../lib/resolve-project-id.js";
+import { assertSecretApiKey } from "../lib/api-key-kind.js";
+import { sealSecretAtRest } from "../lib/secrets-crypto.js";
 import { isHostedSamlLoginEnabled } from "../lib/hosted-saas-policy.js";
 import { isValidId } from "../lib/valid-ids.js";
 import {
@@ -174,6 +176,16 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const audience = validateSamlAudience(assertion, samlConfig);
     if (!audience.valid) return respond({ error: 'Invalid SAML audience', reason: audience.reason }, 401);
 
+    // Audit F-27: a signed assertion is single-use.
+    const replay = await recordSamlAssertionUse(env, {
+      projectId,
+      assertionId: assertion.assertionId,
+      notOnOrAfter: assertion.notOnOrAfter,
+    });
+    if (!replay.ok) {
+      return respond({ error: 'Invalid SAML assertion', reason: replay.reason }, 401);
+    }
+
     const mapping = JSON.parse(config.attribute_mapping || '{}');
     const email = assertion.attributes[mapping.email || 'email'] || assertion.nameId;
     const name = assertion.attributes[mapping.name || 'displayName'] || email;
@@ -209,7 +221,10 @@ export async function dispatchIdentityRoutes(request, url, h) {
     if (!session) return respond({ error: 'Invalid or expired SSO session' }, 401);
 
     const totpResult = await verifyAdminTotp(env, session.project_id, session.name_id, body.code);
-    if (!totpResult.verified) return respond({ error: 'Invalid 2FA code' }, 401);
+    if (!totpResult.verified) {
+      if (totpResult.rateLimited) return respond({ error: 'Too many attempts' }, 429);
+      return respond({ error: 'Invalid 2FA code' }, 401);
+    }
 
     const secretRow = await env.DB.prepare(
       `SELECT jwt_secret FROM project_secrets WHERE project_id = ?`
@@ -221,7 +236,10 @@ export async function dispatchIdentityRoutes(request, url, h) {
       sub: session.name_id, tid: session.project_id, roles: ['member'], iat: now, exp: now + 8 * 3600,
     });
 
-    await env.DB.prepare(`UPDATE sso_sessions SET jwt_token = ? WHERE id = ?`).bind(jwt, body.ssoSessionId).run();
+    await env.DB.prepare(`UPDATE sso_sessions SET jwt_token = ? WHERE id = ?`)
+      // Audit F-37: seal the token at rest like the initial insert.
+      .bind(await sealSecretAtRest(env, jwt), body.ssoSessionId)
+      .run();
     return respond({ ok: true, token: jwt, userId: session.name_id, projectId: session.project_id });
   }
 
@@ -231,6 +249,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const startIndex = parseInt(url.searchParams.get('startIndex') || '1');
@@ -243,6 +262,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
@@ -255,6 +275,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const user = await getScimUser(env, projectId, scimUserMatch[1]);
@@ -266,6 +287,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
@@ -278,6 +300,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const deleted = await deleteScimUser(env, projectId, scimUserMatch[1]);
@@ -289,6 +312,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const startIndex = parseInt(url.searchParams.get('startIndex') || '1');
@@ -301,6 +325,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const projectId = url.searchParams.get('projectId');
     if (!projectId) return respond({ error: 'projectId required' }, 400);
     const tokenResult = await verifyScimBearer(request, env, projectId);
+    if (tokenResult?.scopeDenied) return respond({ error: 'insufficient_scope' }, 403);
     if (!tokenResult) return respond({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
@@ -377,12 +402,33 @@ export async function dispatchIdentityRoutes(request, url, h) {
   }
 
   if (path === "/auth/admin/2fa-verify" && request.method === "POST") {
+    const apiKey =
+      request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
+    if (!apiKey) return respond({ error: "api key required" }, 401);
+    // Audit F-29: this endpoint verified codes for ANY (projectId, userId) in
+    // the body with no caller authentication. Only secret keys may call it,
+    // and only for their own project.
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) return respond({ error: secretOk.error }, secretOk.status);
+    const apiProjectId = await resolveProjectId(request, env);
+    if (!apiProjectId || apiProjectId === (env.DEFAULT_PROJECT_ID || "default")) {
+      return respond({ error: "invalid api key" }, 401);
+    }
     const body = await request.json();
     if (!body.projectId || !body.userId || !body.code) {
       return respond({ error: 'Missing projectId, userId, or code' }, 400);
     }
+    if (body.projectId !== apiProjectId) {
+      return respond({ error: "forbidden" }, 403);
+    }
     const result = await verifyAdminTotp(env, body.projectId, body.userId, body.code);
-    if (!result.verified) return respond({ error: 'Invalid 2FA code' }, 401);
+    if (!result.verified) {
+      if (result.rateLimited) return respond({ error: 'Too many attempts' }, 429);
+      if (result.reason === "totp_not_configured") {
+        return respond({ error: "2fa_not_configured" }, 409);
+      }
+      return respond({ error: 'Invalid 2FA code' }, 401);
+    }
     return respond({ ok: true, method: result.method });
   }
 
@@ -419,6 +465,7 @@ export async function dispatchIdentityRoutes(request, url, h) {
       userDisplayName: typeof body.displayName === "string" ? body.displayName : auth.userId,
       requestOrigin: request.headers.get("Origin"),
     });
+    if (result.error) return respond({ error: result.error }, result.status || 400);
     return respond({ options: result.options });
   }
 
@@ -441,6 +488,10 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const apiKey =
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) return respond({ error: "api key required" }, 401);
+    // Audit F-22: login/* mints JWTs with caller-chosen roles; a publishable
+    // key would let any browser claim admin. Only secret keys may issue.
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) return respond({ error: secretOk.error }, secretOk.status);
     const projectId = await resolveProjectId(request, env);
     if (!projectId || projectId === (env.DEFAULT_PROJECT_ID || "default")) {
       return respond({ error: "invalid api key" }, 401);
@@ -462,6 +513,10 @@ export async function dispatchIdentityRoutes(request, url, h) {
     const apiKey =
       request.headers.get("X-Fluxy-Api-Key") || url.searchParams.get("apiKey");
     if (!apiKey) return respond({ error: "api key required" }, 401);
+    // Audit F-22: the verified passkey binds the credential; the ROLES in the
+    // JWT are asserted by the caller, so only a secret key may mint them.
+    const secretOk = assertSecretApiKey(apiKey);
+    if (!secretOk.ok) return respond({ error: secretOk.error }, secretOk.status);
     const projectId = await resolveProjectId(request, env);
     if (!projectId || projectId === (env.DEFAULT_PROJECT_ID || "default")) {
       return respond({ error: "invalid api key" }, 401);
@@ -532,14 +587,28 @@ async function verifyAdmin(request, env) {
 async function verifyScimBearer(request, env, projectId) {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
-  return verifyScimToken(env, projectId, authHeader);
+  const token = await verifyScimToken(env, projectId, authHeader);
+  if (!token) return null;
+  // Audit F-38: enforce the token's scopes against the SCIM resource being
+  // touched — a `users` token must not administer groups (and vice versa).
+  const resource = new URL(request.url).pathname.includes("/Groups") ? "groups" : "users";
+  const scopes = String(token.scopes || "")
+    .split(",")
+    .map((scope) => scope.trim().toLowerCase())
+    .filter(Boolean);
+  // Tokens with no recorded scopes keep legacy full access.
+  if (scopes.length && !scopes.includes(resource)) return { ...token, scopeDenied: true };
+  return token;
 }
 
 // Local JWT sign (mirrors worker.js signJwtHs256)
 async function signJwtLocal(secret, payload) {
   const header = { alg: "HS256", typ: "JWT" };
   const enc = (obj) => btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const data = `${enc(header)}.${enc(payload)}`;
+  // Audit F-04: minting always adds `jti` — the verifier rejects tokens without
+  // one, so a locally signed token would otherwise be unusable (and revocable).
+  const body = { jti: crypto.randomUUID(), ...payload };
+  const data = `${enc(header)}.${enc(body)}`;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),

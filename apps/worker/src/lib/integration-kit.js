@@ -4,6 +4,8 @@
  */
 import { encryptSecret, decryptSecret } from "./secrets-crypto.js";
 import { verifyWebhookSignature } from "./webhook-batch-verify.js";
+import { signWebhookPayload } from "./webhook-signing.js";
+import { timingSafeEqual } from "./crypto-timing.js";
 import { isWebhookSecretEncryptionRequired, isPlaintextWebhookSecretAllowed } from "./webhook-signing.js";
 import { fanoutRoomInternal } from "./room-shard.js";
 import { logInfo } from "./worker-log.js";
@@ -17,6 +19,8 @@ import {
   parseEntityRef,
   writesViaEnvPat,
 } from "./integration-providers.js";
+import { INCIDENT_PROVIDERS, startIncidentWorkflowIfConfigured, syncProviderIncident } from "./incident-ingest.js";
+import { startWebhookTriggeredRuns } from "./ops-webhook-triggers.js";
 
 export { INTEGRATION_PROVIDERS, integrationCatalog, parseEntityRef, mapProviderPayload };
 
@@ -45,6 +49,39 @@ async function resolveSigningSecret(env, row) {
     return decryptSecret(env, row.signing_ciphertext, row.signing_iv);
   }
   return null;
+}
+
+/**
+ * Audit F-76: the generic verifier HMACs the bare body, which is what GitHub,
+ * Linear and Sentry send — but Slack signs `v0:{timestamp}:{body}` and
+ * PagerDuty v3 prefixes `v1=` (possibly a comma-separated list), so both
+ * providers could never pass and their ingest was dead.
+ */
+async function verifyProviderSignature(provider, secret, { rawBody, signature, timestamp }) {
+  const sig = String(signature || "").trim();
+  if (!sig) return false;
+  if (provider === "slack") {
+    const ts = String(timestamp || "").trim();
+    const tsNum = Number(ts);
+    if (!ts || !sig.startsWith("v0=")) return false;
+    if (!Number.isFinite(tsNum) || Math.abs(Date.now() / 1000 - tsNum) > 300) return false;
+    const expected = (await signWebhookPayload(secret, `v0:${ts}:${rawBody}`)).replace(/^sha256=/, "");
+    return timingSafeEqual(expected, sig.slice(3));
+  }
+  if (provider === "pagerduty") {
+    const expected = (await signWebhookPayload(secret, rawBody)).replace(/^sha256=/, "");
+    const candidates = sig
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => (part.startsWith("v1=") ? part.slice(3) : part));
+    for (const candidate of candidates) {
+      if (await timingSafeEqual(expected, candidate)) return true;
+    }
+    return false;
+  }
+  const verified = await verifyWebhookSignature(secret, rawBody, sig);
+  return verified.valid === true;
 }
 
 export async function upsertIntegrationConnection(env, input) {
@@ -231,13 +268,17 @@ export async function linkEntityRoom(env, input) {
 export async function findEntityLink(env, { projectId, provider, entityType, entityId }) {
   const db = env.DB;
   if (!db) return null;
+  // A link stored with entity_id = "*" is the project-wide fallback for that
+  // provider+type (e.g. every pagerduty:incident → incident room). Exact wins.
   return db
     .prepare(
       `SELECT room_id as roomId, provider, entity_type as entityType, entity_id as entityId
        FROM entity_room_links
-       WHERE project_id = ? AND provider = ? AND entity_type = ? AND entity_id = ?`,
+       WHERE project_id = ? AND provider = ? AND entity_type = ? AND entity_id IN (?, '*')
+       ORDER BY CASE WHEN entity_id = ? THEN 0 ELSE 1 END
+       LIMIT 1`,
     )
-    .bind(projectId, provider, entityType, entityId)
+    .bind(projectId, provider, entityType, entityId, entityId)
     .first();
 }
 
@@ -252,13 +293,26 @@ async function rememberDelivery(env, { projectId, provider, deliveryKey }) {
       )
       .bind(crypto.randomUUID(), projectId, provider, key, new Date().toISOString())
       .run();
-    return { duplicate: false };
-  } catch {
-    return { duplicate: true };
+    return { duplicate: false, key };
+  } catch (err) {
+    // Only a UNIQUE violation means "already seen". Any other failure (DB
+    // down, schema drift) must surface: treating it as a duplicate would
+    // silently drop the event.
+    if (/unique/i.test(String(err?.message || err))) return { duplicate: true };
+    throw err;
   }
 }
 
-export async function ingestIntegrationWebhook(env, { projectId, provider, rawBody, signature }) {
+/** A failed ingest releases its claim so the provider's redelivery is processed. */
+async function releaseDelivery(env, { projectId, provider, deliveryKey }) {
+  await env.DB.prepare(
+    "DELETE FROM integration_deliveries WHERE project_id = ? AND provider = ? AND delivery_key = ?",
+  )
+    .bind(projectId, provider, deliveryKey)
+    .run();
+}
+
+export async function ingestIntegrationWebhook(env, { projectId, provider, rawBody, signature, timestamp, waitUntil }) {
   const p = str(provider).toLowerCase();
   if (!INTEGRATION_PROVIDERS.includes(p)) {
     return { ok: false, error: "unknown_provider", status: 400 };
@@ -278,8 +332,8 @@ export async function ingestIntegrationWebhook(env, { projectId, provider, rawBo
 
   const secret = await resolveSigningSecret(env, row);
   if (!secret) return { ok: false, error: "signing_secret_missing", status: 401 };
-  const verified = await verifyWebhookSignature(secret, rawBody, signature || "");
-  if (!verified.valid) return { ok: false, error: "invalid_signature", status: 401 };
+  const signatureOk = await verifyProviderSignature(p, secret, { rawBody, signature, timestamp });
+  if (!signatureOk) return { ok: false, error: "invalid_signature", status: 401 };
 
   let payload;
   try {
@@ -299,14 +353,127 @@ export async function ingestIntegrationWebhook(env, { projectId, provider, rawBo
   });
   if (dup.duplicate) return { ok: true, duplicate: true };
 
-  const link = await findEntityLink(env, {
-    projectId,
-    provider: p,
-    entityType: mapped.entityType,
-    entityId: mapped.entityId,
-  });
+  let link;
+  let incident = null;
+  try {
+    link = await findEntityLink(env, {
+      projectId,
+      provider: p,
+      entityType: mapped.entityType,
+      entityId: mapped.entityId,
+    });
+
+    // P20-A bridge: incident-class events open/advance the tracked incident
+    // (ack/resolve follow the provider lifecycle). Needs a room to create one.
+    if (INCIDENT_PROVIDERS.has(p)) {
+      incident = await syncProviderIncident(env, {
+        projectId,
+        provider: p,
+        mapped,
+        payload,
+        roomId: link?.roomId || null,
+      });
+    }
+  } catch (err) {
+    // The claim is only settled once the event is fully processed: release it
+    // so a later provider redelivery is not mistaken for a duplicate.
+    await releaseDelivery(env, { projectId, provider: p, deliveryKey: dup.key }).catch(() => {});
+    throw err;
+  }
+
+  // Ambient agents (#38): a signature-verified event can trigger `webhook`
+  // policies (e.g. pattern "pagerduty:incident" → triage in the incident
+  // room). Policies own their room/autonomy; with none matched this is one
+  // cheap SELECT. The payload stays marked untrusted.
+  const dispatchAmbient = async () => {
+    try {
+      const { dispatchAmbientEvent } = await import("./ambient-agents.js");
+      await dispatchAmbientEvent(env, {
+        projectId,
+        triggerType: "webhook",
+        triggerKey: `${p}:${mapped.entityType}:${mapped.kind}`,
+        roomId: link?.roomId || undefined,
+        payload: {
+          provider: p,
+          kind: mapped.kind,
+          entityType: mapped.entityType,
+          entityId: mapped.entityId,
+          title: mapped.title,
+          body: mapped.body,
+          trust: "untrusted",
+          incidentId: incident?.incidentId || null,
+        },
+      });
+    } catch (err) {
+      logInfo("integration.ambient_dispatch_failed", {
+        provider: p,
+        message: String(err?.message || err),
+      });
+    }
+  };
+  const postIngest = async () => {
+    await dispatchAmbient();
+    // P20-A: any incident phase (created/acknowledged/resolved) can start the
+    // workflow the policy names for it, in the incident room.
+    if (incident?.action) {
+      try {
+        await startIncidentWorkflowIfConfigured(env, {
+          projectId,
+          provider: p,
+          incident,
+          mapped,
+          roomId: link?.roomId || null,
+        });
+      } catch (err) {
+        logInfo("integration.incident_workflow_failed", {
+          provider: p,
+          message: String(err?.message || err),
+        });
+      }
+    }
+    // A resolved incident writes a report into ops knowledge (`files.search`
+    // finds it during future triage).
+    if (incident?.action === "resolved") {
+      try {
+        const { indexIncidentReport } = await import("./incident-knowledge.js");
+        await indexIncidentReport(env, { projectId, incidentId: incident.incidentId });
+      } catch (err) {
+        logInfo("integration.incident_knowledge_failed", {
+          provider: p,
+          message: String(err?.message || err),
+        });
+      }
+    }
+    // Published workflows can declare the events they want (trigger.match)
+    // and run here, in the room the event is linked to.
+    try {
+      const triggered = await startWebhookTriggeredRuns(env, {
+        projectId,
+        provider: p,
+        triggerKey: `${p}:${mapped.entityType}:${mapped.kind}`,
+        roomId: link?.roomId || null,
+        mapped,
+        incidentId: incident?.incidentId || null,
+      });
+      if (triggered?.started?.length) {
+        logInfo("integration.webhook_workflows_started", {
+          provider: p,
+          count: triggered.started.length,
+        });
+      }
+    } catch (err) {
+      logInfo("integration.webhook_workflow_failed", {
+        provider: p,
+        message: String(err?.message || err),
+      });
+    }
+  };
+  // The route passes ctx.waitUntil so provider webhooks answer immediately.
+  if (typeof waitUntil === "function") waitUntil(postIngest());
+  else await postIngest();
+
   if (!link?.roomId) {
-    return { ok: true, queued: false, reason: "no_entity_link", event: mapped };
+    return { ok: true, queued: false, reason: "no_entity_link", event: mapped, incident };
   }
 
   try {
@@ -329,7 +496,7 @@ export async function ingestIntegrationWebhook(env, { projectId, provider, rawBo
     logInfo("integration.fanout_failed", { provider: p, message: String(err?.message || err) });
   }
 
-  return { ok: true, roomId: link.roomId, event: mapped };
+  return { ok: true, roomId: link.roomId, event: mapped, incident };
 }
 
 export async function resolveProjectWriteCredentials(env, { projectId, provider }) {
@@ -439,6 +606,10 @@ export async function approveWriteIntent(env, { projectId, intentId, userId }) {
     .first();
   if (!row) return { ok: false, error: "not_found", status: 404 };
   if (row.status !== "pending") return { ok: false, error: "not_pending", status: 409 };
+  // Audit F-24: maker-checker — the requester cannot approve their own write.
+  if (row.requested_by && userId && row.requested_by === userId) {
+    return { ok: false, error: "requester_cannot_approve", status: 403 };
+  }
 
   const preview = JSON.parse(row.preview_json || "{}");
   const currentHash = await canonicalPayloadHash(preview);
@@ -448,9 +619,9 @@ export async function approveWriteIntent(env, { projectId, intentId, userId }) {
   if (preview.dryRun || !writesViaEnvPat(row.provider)) {
     await db
       .prepare(
-        "UPDATE integration_write_intents SET status = ?, executed_at = ?, requested_by = ? WHERE id = ?",
+        "UPDATE integration_write_intents SET status = ?, executed_at = ?, approved_by = ? WHERE id = ?",
       )
-      .bind("dry_run", new Date().toISOString(), userId || row.requested_by, row.id)
+      .bind("dry_run", new Date().toISOString(), userId || null, row.id)
       .run();
     return { ok: true, intent: { id: row.id, status: "dry_run", preview } };
   }
@@ -478,9 +649,9 @@ export async function approveWriteIntent(env, { projectId, intentId, userId }) {
   }
   await db
     .prepare(
-      "UPDATE integration_write_intents SET status = ?, executed_at = ?, requested_by = ? WHERE id = ?",
+      "UPDATE integration_write_intents SET status = ?, executed_at = ?, approved_by = ? WHERE id = ?",
     )
-    .bind("executed", new Date().toISOString(), userId || row.requested_by, row.id)
+    .bind("executed", new Date().toISOString(), userId || null, row.id)
     .run();
   return { ok: true, intent: { id: row.id, status: "executed", ticket: ticket.ticket } };
 }

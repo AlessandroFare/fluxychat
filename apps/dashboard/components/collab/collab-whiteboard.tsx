@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useYjs } from "./yjs-provider";
+import CollabPresenceChip from "./collab-presence-chip";
 import { useTheme } from "@/app/components/theme-provider";
 import { installCanvasMaxSizeGuard, maxCssBox } from "@/lib/canvas-max-size-guard";
 
@@ -33,7 +34,7 @@ function isPlausibleElement(el: unknown): el is Record<string, unknown> {
 }
 
 export default function CollabWhiteboard() {
-  const { doc, connected, yarray } = useYjs();
+  const { doc, yarray } = useYjs();
   const { resolvedTheme } = useTheme();
   const apiRef = useRef<{
     updateScene?: (scene: { elements?: unknown[]; appState?: Record<string, unknown> }) => void;
@@ -102,8 +103,12 @@ export default function CollabWhiteboard() {
     const sane = elements.filter(isPlausibleElement);
     if (!sane.length) return;
     try {
-      syncingRef.current = true;
       const json = JSON.parse(JSON.stringify(sane));
+      // Excalidraw also fires onChange for selection/appState changes — skip identical
+      // scenes so a click does not clobber the shared CRDT array.
+      const current = JSON.stringify(yarray.toJSON().filter(isPlausibleElement));
+      if (current === JSON.stringify(json)) return;
+      syncingRef.current = true;
       doc.transact(() => {
         yarray.delete(0, yarray.length);
         yarray.push(json);
@@ -118,13 +123,8 @@ export default function CollabWhiteboard() {
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden">
-      <div className={cn(
-        "pointer-events-none absolute right-3 top-3 z-10 rounded-full px-2 py-0.5 text-[10px] font-medium",
-        connected
-          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-          : "bg-amber-500/15 text-amber-800 dark:text-amber-200",
-      )}>
-        {connected ? "Live Yjs" : "Offline"}
+      <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-background/85 px-2 py-0.5 shadow-sm backdrop-blur">
+        <CollabPresenceChip />
       </div>
       <div ref={hostRef} className="fluxy-excalidraw-host absolute inset-0">
         {box ? (
@@ -155,8 +155,4 @@ export default function CollabWhiteboard() {
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | false | null | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

@@ -7,11 +7,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  CONSOLE_NAV_ACCOUNT,
   CONSOLE_NAV_AGENTS,
   CONSOLE_NAV_BUILD,
   CONSOLE_NAV_CONNECT,
   CONSOLE_NAV_GROUPS,
   CONSOLE_NAV_INDUSTRIES,
+  CONSOLE_NAV_LAB_SURFACES,
+  CONSOLE_NAV_LABS_LINKS,
   CONSOLE_NAV_OPERATE,
   CONSOLE_NAV_PLATFORM,
   CONSOLE_NAV_TOOLS,
@@ -21,7 +24,15 @@ import {
 import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { filterDashboardNavItems } from "@/lib/dashboard-feature-flags";
 
-export type ConsoleCommandGroup = "Navigate" | "Industries" | "Platform" | "Operate" | "Actions" | "Help";
+export type ConsoleCommandGroup =
+  | "Navigate"
+  | "Industries"
+  | "Platform"
+  | "Labs"
+  | "Operate"
+  | "Account"
+  | "Actions"
+  | "Help";
 
 export type ConsoleCommandAction = "copy-worker-url" | "open-support";
 
@@ -60,8 +71,11 @@ function navItems(quickstartHref: string): ConsoleCommandItemDef[] {
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_TOOLS), "Navigate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_PLATFORM), "Platform", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_INDUSTRIES), "Industries", quickstartHref),
+    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_LAB_SURFACES), "Labs", quickstartHref),
+    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_LABS_LINKS), "Labs", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_OPERATE), "Operate", quickstartHref),
     ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_TRUST), "Operate", quickstartHref),
+    ...mapNavItems(filterDashboardNavItems(CONSOLE_NAV_ACCOUNT), "Account", quickstartHref),
   ];
 }
 
@@ -141,7 +155,16 @@ export function filterConsoleCommandItems(
   });
 }
 
-const GROUP_ORDER: ConsoleCommandGroup[] = ["Navigate", "Platform", "Industries", "Operate", "Actions", "Help"];
+const GROUP_ORDER: ConsoleCommandGroup[] = [
+  "Navigate",
+  "Platform",
+  "Industries",
+  "Labs",
+  "Operate",
+  "Account",
+  "Actions",
+  "Help",
+];
 
 /** Group filtered items preserving section order. */
 export function groupConsoleCommandItems(

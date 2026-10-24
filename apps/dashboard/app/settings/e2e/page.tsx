@@ -6,7 +6,8 @@ import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
-import { Button, Panel, Section, Banner } from "../../components/ui";
+import { Banner, Button, Panel, Section } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -68,7 +69,15 @@ export default function RoomE2eSettingsPage() {
   }, [token, roomId]);
 
   useEffect(() => {
-    void loadRoom();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await loadRoom();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadRoom]);
 
   async function setEnabled(next: boolean) {
@@ -158,10 +167,7 @@ export default function RoomE2eSettingsPage() {
             {roomId.trim() ? (
               <div className="mt-4 space-y-4">
                 {loading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    Loading…
-                  </div>
+                  <Skeleton className="h-24 w-full" />
                 ) : (
                   <>
                     <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +214,7 @@ export default function RoomE2eSettingsPage() {
                     </div>
 
                     {showKey && revealedKey ? (
-                      <pre className="max-h-24 overflow-auto rounded-lg border border-amber-200 bg-amber-50 p-3 font-mono text-[10px] text-amber-900">
+                      <pre className="max-h-24 overflow-auto rounded-lg border border-amber-200/70 bg-amber-500/10 p-3 font-mono text-[10px] text-amber-900 dark:border-amber-900 dark:text-amber-200">
                         {revealedKey}
                       </pre>
                     ) : null}

@@ -13,13 +13,13 @@ export function attachmentUrlToR2Key(urlOrKey) {
     const path = parsed.pathname || "";
     const prefix = "/attachments/";
     const idx = path.indexOf(prefix);
+    // Audit F-09: only `/attachments/<key>` URLs map to a key. The old
+    // "take any 3+ path segments" fallback let a crafted message attachment
+    // URL address arbitrary objects in the shared bucket (cross-tenant read
+    // and, on GDPR erasure, delete).
     if (idx >= 0) {
       const key = path.slice(idx + prefix.length);
       return key ? decodeURIComponent(key) : null;
-    }
-    const segments = path.split("/").filter(Boolean);
-    if (segments.length >= 3) {
-      return segments.join("/");
     }
   } catch {
     return null;
@@ -31,6 +31,18 @@ export function attachmentUrlToR2Key(urlOrKey) {
 export function userUploadR2Prefix(projectId, userId) {
   if (!projectId || !userId) return null;
   return `${projectId}/${userId}/`;
+}
+
+/**
+ * Audit F-09: true when an R2 key belongs to the project's own key space —
+ * uploads (`{projectId}/…`) plus worker-generated `ai-images/{projectId}/…`
+ * and `voice/{projectId}/…`. Everything else must never be read or deleted.
+ */
+export function r2KeyBelongsToProject(key, projectId) {
+  if (!key || !projectId) return false;
+  const parts = key.split("/");
+  if (parts[0] === projectId) return true;
+  return (parts[0] === "ai-images" || parts[0] === "voice") && parts[1] === projectId;
 }
 
 export function collectAttachmentR2Keys(urlOrKeyRows) {
@@ -67,6 +79,12 @@ export async function deleteUserAttachmentObjects(env, projectId, userId, urlOrK
   let deleted = 0;
   const warnings = [];
   for (const key of keys) {
+    // Audit F-09: delete only inside the project's own key space, whatever
+    // crafted URL/row reached collectAttachmentR2Keys.
+    if (!r2KeyBelongsToProject(key, projectId)) {
+      warnings.push(`${key}:outside_project_key_space`);
+      continue;
+    }
     try {
       await env.ATTACHMENTS.delete(key);
       deleted += 1;

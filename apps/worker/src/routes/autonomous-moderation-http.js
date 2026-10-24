@@ -1,5 +1,6 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { resolveMemberContext } from "../lib/admin-route-context.js";
+import { rolesInclude } from "../lib/route-jwt-auth.js";
 import {
   upsertAutoRule,
   listAutoRules,
@@ -10,7 +11,7 @@ import {
 } from "../lib/autonomous-moderation.js";
 
 export async function dispatchAutonomousModRoutes(request, url, h) {
-  const { json, corsHeaders } = pickRouteDeps(h, ["json", "corsHeaders"]);
+  const { json, corsHeaders, hasAnyRole } = pickRouteDeps(h, ["json", "corsHeaders", "hasAnyRole"]);
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -19,8 +20,12 @@ export async function dispatchAutonomousModRoutes(request, url, h) {
   if (ctx.response) return ctx.response;
   const { env, projectId, userId } = ctx;
   const path = url.pathname;
+  // Audit fix A2d: rule management (POST/PATCH) and evaluation apply real
+  // enforcement actions; a plain member or guest must not reach them.
+  const isModerator = rolesInclude(ctx.auth, hasAnyRole, ["owner", "admin", "moderator"]);
 
   if (path === "/auto-mod/rules" && request.method === "POST") {
+    if (!isModerator) return json({ error: "forbidden" }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const result = await upsertAutoRule(env, {
       projectId,
@@ -42,6 +47,7 @@ export async function dispatchAutonomousModRoutes(request, url, h) {
 
   const ruleMatch = path.match(/^\/auto-mod\/rules\/([^/]+)$/);
   if (ruleMatch && request.method === "PATCH") {
+    if (!isModerator) return json({ error: "forbidden" }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const result = await upsertAutoRule(env, {
       projectId,
@@ -68,6 +74,7 @@ export async function dispatchAutonomousModRoutes(request, url, h) {
   }
 
   if (path === "/auto-mod/evaluate" && request.method === "POST") {
+    if (!isModerator) return json({ error: "forbidden" }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const result = await evaluateAndAct(env, {
       projectId,

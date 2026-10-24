@@ -101,7 +101,7 @@ describe("visual-moderation", () => {
 
   it("queues flagged attachment scan", async () => {
     const { env, queue, r2Objects } = createVisualEnv();
-    r2Objects.set("proj/room/img.png", {
+    r2Objects.set("p1/u1/img.png", {
       httpMetadata: { contentType: "image/png" },
       async arrayBuffer() {
         return new TextEncoder().encode("png-bytes").buffer;
@@ -130,7 +130,7 @@ describe("visual-moderation", () => {
       roomId: "r1",
       authorUserId: "u1",
       messageId: 42,
-      attachments: [{ url: "/attachments/proj/room/img.png", kind: "image", name: "img.png" }],
+      attachments: [{ url: "/attachments/p1/u1/img.png", kind: "image", name: "img.png" }],
     });
 
     expect(result.scanned).toBe(1);

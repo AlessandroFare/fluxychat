@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getWorkerUrl } from "@/lib/fluxy-server";
 import { apiError, apiErrorFromUnknown } from "@/lib/api-response";
+import { rejectUnauthorizedProxyRequest } from "@/lib/api-guard";
 
 /**
  * GET /api/gdpr/export — proxy GDPR JSON download (avoids browser CORS to Worker).
@@ -11,6 +12,9 @@ import { apiError, apiErrorFromUnknown } from "@/lib/api-response";
  * (audit P2). All responses set `Cache-Control: no-store`.
  */
 export async function GET(request: Request) {
+  const rejected = await rejectUnauthorizedProxyRequest(request);
+  if (rejected) return rejected;
+
   const auth = request.headers.get("authorization")?.trim();
   if (!auth) {
     return apiError("Authorization header required", 401);

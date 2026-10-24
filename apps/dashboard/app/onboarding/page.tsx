@@ -23,6 +23,16 @@ export default function OnboardingPage() {
         onStepClick={(s) => wizard.setActiveStep(s)}
       />
 
+      {wizard.isReviewMode ? (
+        <p
+          className="mb-4 rounded-xl border border-border bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground"
+          data-testid="onboarding-review-banner"
+        >
+          Review mode — your Quickstart is already complete, so nothing auto-advances. Buttons
+          still act on your project if you click them.
+        </p>
+      ) : null}
+
       {wizard.notice && !wizard.error ? (
         <p className="mb-4 text-center text-xs text-emerald-700">{wizard.notice}</p>
       ) : null}

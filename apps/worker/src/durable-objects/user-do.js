@@ -6,6 +6,7 @@ import {
   shouldDeliverOnUserSocket,
 } from "../lib/user-channel-deliver.js";
 import { withRuntimeConfig } from "../lib/with-runtime-config.js";
+import { isInternalDoRequest } from "./room-do.js";
 
 /**
  * Per-user fan-out channel. DO id scope: one instance per project user
@@ -69,6 +70,10 @@ export class UserDurableObject {
     await this.ensureHydrated();
     const url = new URL(request.url);
     if (url.pathname === "/deliver" && request.method === "POST") {
+      // Audit F-49: fan-out and forced disconnect are worker-internal only.
+      if (!isInternalDoRequest(request, this.env)) {
+        return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+      }
       let body;
       try {
         body = await request.json();
@@ -103,6 +108,10 @@ export class UserDurableObject {
     }
 
     if (url.pathname === "/terminate" && request.method === "POST") {
+      // Audit F-49: fan-out and forced disconnect are worker-internal only.
+      if (!isInternalDoRequest(request, this.env)) {
+        return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+      }
       let body = {};
       try {
         body = await request.json();
@@ -251,10 +260,12 @@ export class UserDurableObject {
       try {
         ws.close(code, reason);
         closed += 1;
+        // Audit fix A2-31: only forget sockets that actually closed — a
+        // socket whose close() threw is still live and must stay tracked.
+        this.onClose(ws);
       } catch {
-        /* ignore */
+        /* keep tracking a socket that failed to close */
       }
-      this.onClose(ws);
     }
     return closed;
   }

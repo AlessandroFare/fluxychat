@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   Pen, FileText, Columns3, Folder, Calendar, FileSpreadsheet, BookOpen, Bot, History,
-  LayoutDashboard, Boxes, Glasses, Wifi, WifiOff, Undo2, Redo2,
+  LayoutDashboard, Boxes, Glasses, Wifi, WifiOff, Undo2, Redo2, MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { useDashboardSession } from "../../components/dashboard-session";
@@ -21,12 +21,13 @@ const CollabSpreadsheet = dynamic(() => import("@/components/collab/collab-sprea
 const CollabFiles = dynamic(() => import("@/components/collab/collab-files"), { ssr: false });
 const CollabCalendar = dynamic(() => import("@/components/collab/collab-calendar"), { ssr: false });
 const CollabSummaries = dynamic(() => import("@/components/collab/collab-summaries"), { ssr: false });
+const CollabComments = dynamic(() => import("@/components/collab/collab-comments"), { ssr: false });
 const CollabVersions = dynamic(() => import("@/components/collab/collab-versions"), { ssr: false });
 const ProjectOverview = dynamic(() => import("@/components/collab/project-overview"), { ssr: false });
 const SpatialView = dynamic(() => import("@/components/collab/spatial-view"), { ssr: false });
 const SpatialWhiteboard = dynamic(() => import("@/components/collab/spatial-whiteboard"), { ssr: false });
 
-type CollabTab = "overview" | "whiteboard" | "notes" | "kanban" | "document" | "spreadsheet" | "files" | "calendar" | "summaries" | "versions" | "spatial" | "spatialBoard";
+type CollabTab = "overview" | "whiteboard" | "notes" | "kanban" | "document" | "spreadsheet" | "files" | "calendar" | "summaries" | "comments" | "versions" | "spatial" | "spatialBoard";
 
 const ALL_TABS: { key: CollabTab; label: string; icon: LucideIcon }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
@@ -38,6 +39,7 @@ const ALL_TABS: { key: CollabTab; label: string; icon: LucideIcon }[] = [
   { key: "files", label: "Files", icon: Folder },
   { key: "calendar", label: "Calendar", icon: Calendar },
   { key: "summaries", label: "AI", icon: Bot },
+  { key: "comments", label: "Comments", icon: MessageSquare },
   { key: "versions", label: "History", icon: History },
   { key: "spatial", label: "Spatial", icon: Boxes },
   { key: "spatialBoard", label: "3D Board", icon: Glasses },
@@ -134,6 +136,7 @@ function CollabLayout({ roomId, tab, setTab }: { roomId: string; tab: CollabTab;
         {tab === "files" && <CollabFiles roomId={roomId} />}
         {tab === "calendar" && <CollabCalendar roomId={roomId} />}
         {tab === "summaries" && <CollabSummaries roomId={roomId} />}
+        {tab === "comments" && <CollabComments roomId={roomId} />}
         {tab === "versions" && <CollabVersions roomId={roomId} />}
         {tab === "spatial" && <SpatialView roomId={roomId} />}
         {tab === "spatialBoard" && <SpatialWhiteboard />}

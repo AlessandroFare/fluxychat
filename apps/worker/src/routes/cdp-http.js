@@ -38,7 +38,7 @@ export async function dispatchCDPRoutes(request, url, h) {
   if (path.match(/^\/api\/cdp\/customers\/[a-z0-9]+\/score$/) && request.method === "POST") {
     const customerId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.updateCustomerScore(env, { customerId, projectId, ...body });
+    const result = await CDP.updateCustomerScore(env, { ...body, customerId, projectId });
     return json(result);
   }
 
@@ -87,14 +87,14 @@ export async function dispatchCDPRoutes(request, url, h) {
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+$/) && request.method === "PATCH") {
     const segmentId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.updateSegment(env, { segmentId, projectId, ...body });
+    const result = await CDP.updateSegment(env, { ...body, segmentId, projectId });
     return json(result);
   }
 
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+\/members$/) && request.method === "POST") {
     const segmentId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.addSegmentMember(env, { segmentId, projectId, ...body });
+    const result = await CDP.addSegmentMember(env, { ...body, segmentId, projectId });
     return json(result);
   }
 
@@ -107,7 +107,7 @@ export async function dispatchCDPRoutes(request, url, h) {
   if (path.match(/^\/api\/cdp\/segments\/[a-z0-9]+\/members\/remove$/) && request.method === "POST") {
     const segmentId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.removeSegmentMember(env, { segmentId, projectId, ...body });
+    const result = await CDP.removeSegmentMember(env, { ...body, segmentId, projectId });
     return json(result);
   }
 
@@ -125,7 +125,7 @@ export async function dispatchCDPRoutes(request, url, h) {
   if (path.match(/^\/api\/cdp\/broadcasts\/[a-z0-9]+$/) && request.method === "PATCH") {
     const broadcastId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await CDP.updateBroadcast(env, { broadcastId, projectId, ...body });
+    const result = await CDP.updateBroadcast(env, { ...body, broadcastId, projectId });
     return json(result);
   }
 

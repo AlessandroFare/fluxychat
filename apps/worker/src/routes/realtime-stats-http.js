@@ -236,7 +236,13 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
     const roomId = url.searchParams.get("roomId");
-    const limit = Number(url.searchParams.get("limit") || "50");
+    const limitRaw = Number(url.searchParams.get("limit") || "50");
+    // Audit fix P11: validate — `limit=-1` (or NaN) made SQLite treat the
+    // LIMIT as unbounded and return the whole history.
+    if (!Number.isFinite(limitRaw) || limitRaw < 1) {
+      return json({ error: "invalid_limit" }, { status: 400 });
+    }
+    const limit = Math.min(Math.floor(limitRaw), 500);
     const before = url.searchParams.get("before") || null;
     const after = url.searchParams.get("after") || url.searchParams.get("start") || null;
     const until = url.searchParams.get("end") || null;
@@ -256,8 +262,14 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     );
 
     let sql =
-      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? ";
+      "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, also_to_channel, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? ";
     const params = [auth.projectId, roomId];
+    // Same visibility predicate as the DO history snapshot: whispers and
+    // role-scoped rows must not leak to other room members over REST.
+    const { messageVisibilitySql } = await import("../lib/message-visibility.js");
+    const vis = messageVisibilitySql(auth.userId);
+    sql += `${vis.sql} `;
+    params.push(...vis.binds);
 
     const parentIdRaw = url.searchParams.get("parentId") || url.searchParams.get("threadParentId");
     if (parentIdRaw) {
@@ -294,11 +306,30 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
       if (!Number.isFinite(beforeSerial) || beforeSerial < 0) {
         return json({ error: "invalid_before_serial" }, { status: 400 });
       }
-      sql += "AND id < ? ";
-      params.push(Math.floor(beforeSerial));
+      const serial = Math.floor(beforeSerial);
+      // Audit fix P5: page by the cursor row's position in (created_at, id)
+      // order. With `id < ?` alone, rows whose id order disagrees with
+      // createdAt (historical imports) were unreachable, and ties were
+      // skipped. `before` alone keeps its documented exclusive semantics.
+      let cursorCreatedAt = null;
+      if (!before) {
+        const cursorRow = await env.DB.prepare(
+          "SELECT created_at FROM messages WHERE project_id = ? AND room_id = ? AND id = ? LIMIT 1",
+        )
+          .bind(auth.projectId, roomId, serial)
+          .first();
+        cursorCreatedAt = cursorRow?.created_at ?? null;
+      }
+      if (cursorCreatedAt != null) {
+        sql += "AND (created_at < ? OR (created_at = ? AND id < ?)) ";
+        params.push(cursorCreatedAt, cursorCreatedAt, serial);
+      } else {
+        sql += "AND id < ? ";
+        params.push(serial);
+      }
     }
 
-    sql += "ORDER BY created_at DESC LIMIT ?";
+    sql += "ORDER BY created_at DESC, id DESC LIMIT ?";
     params.push(limit);
 
     const result = await env.DB.prepare(sql).bind(...params).all();
@@ -690,7 +721,8 @@ export async function dispatchRealtimeStatsRoutes(request, url, h) {
     const estimatedMonthlyRevenue =
       (monthlyMessages / 1_000_000) * pricePerMillionMessages +
       monthlyAgentInvokes * pricePerAgentInvoke;
-    const convertedToPaid = monthlyMessages > freeMessagesQuota || estimatedMonthlyRevenue > 0;
+    // Conversion = left the free tier. Estimated revenue on free usage is not payment.
+    const convertedToPaid = monthlyMessages > freeMessagesQuota;
 
     return json({
       projectId: auth.projectId,

@@ -16,18 +16,24 @@ export async function createSession(env, { projectId, roomId, name, description 
   return { id, status: "recording" };
 }
 
-export async function updateSession(env, { sessionId, status }) {
+export async function updateSession(env, { sessionId, projectId, status }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
   if (status) { sets.push("status = ?"); params.push(status); if (status === "stopped" || status === "archived") { sets.push("stopped_at = ?"); params.push(now); } }
   params.push(sessionId);
-  await env.DB.prepare(`UPDATE replay_sessions SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  let sql = `UPDATE replay_sessions SET ${sets.join(", ")} WHERE id = ?`;
+  // Audit fix A2-8: scope to the caller's project (cross-tenant IDOR guard).
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
-export async function getSession(env, { sessionId }) {
-  const row = await env.DB.prepare("SELECT * FROM replay_sessions WHERE id = ?").bind(sessionId).first();
+export async function getSession(env, { sessionId, projectId }) {
+  let sql = "SELECT * FROM replay_sessions WHERE id = ?";
+  const params = [sessionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapSessionRow(row) : null;
 }
 
@@ -48,39 +54,56 @@ export async function createSnapshot(env, { sessionId, projectId, roomId, snapsh
   const id = `rss_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
 
-  const lastSeq = await env.DB.prepare(
-    "SELECT sequence_number FROM replay_snapshots WHERE session_id = ? ORDER BY sequence_number DESC LIMIT 1"
-  ).bind(sessionId).first();
-  const sequenceNumber = (lastSeq?.sequence_number || 0) + 1;
+  // Audit fix A2-8: refuse to write into a session owned by another project.
+  const owned = await env.DB.prepare(
+    "SELECT id FROM replay_sessions WHERE id = ? AND project_id = ?"
+  ).bind(sessionId, projectId).first();
+  if (!owned) return { error: "not_found" };
 
+  // Audit fix A2-17: the sequence is computed inside the INSERT so two
+  // concurrent snapshots cannot both read the same tip and collide.
   await env.DB.prepare(
     `INSERT INTO replay_snapshots (id, session_id, project_id, room_id, snapshot_type, members, room_config, pinned_messages, metadata, sequence_number, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, sessionId, projectId, roomId, snapshotType, members ? JSON.stringify(members) : null, roomConfig ? JSON.stringify(roomConfig) : null, pinnedMessages ? JSON.stringify(pinnedMessages) : null, metadata ? JSON.stringify(metadata) : null, sequenceNumber, now).run();
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(MAX(sequence_number), 0) + 1, ?
+     FROM replay_snapshots WHERE session_id = ?`
+  ).bind(id, sessionId, projectId, roomId, snapshotType, members ? JSON.stringify(members) : null, roomConfig ? JSON.stringify(roomConfig) : null, pinnedMessages ? JSON.stringify(pinnedMessages) : null, metadata ? JSON.stringify(metadata) : null, now, sessionId).run();
+
+  const inserted = await env.DB.prepare(
+    "SELECT sequence_number FROM replay_snapshots WHERE id = ?"
+  ).bind(id).first();
+  const sequenceNumber = inserted?.sequence_number ?? 1;
 
   await env.DB.prepare(
-    "UPDATE replay_sessions SET snapshot_count = snapshot_count + 1, updated_at = ? WHERE id = ?"
-  ).bind(now, sessionId).run();
+    "UPDATE replay_sessions SET snapshot_count = snapshot_count + 1, updated_at = ? WHERE id = ? AND project_id = ?"
+  ).bind(now, sessionId, projectId).run();
 
   return { id, sequenceNumber };
 }
 
-export async function getSnapshot(env, { snapshotId }) {
-  const row = await env.DB.prepare("SELECT * FROM replay_snapshots WHERE id = ?").bind(snapshotId).first();
+export async function getSnapshot(env, { snapshotId, projectId }) {
+  let sql = "SELECT * FROM replay_snapshots WHERE id = ?";
+  const params = [snapshotId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapSnapshotRow(row) : null;
 }
 
-export async function getSnapshotAtSequence(env, { sessionId, sequenceNumber }) {
-  const row = await env.DB.prepare(
-    "SELECT * FROM replay_snapshots WHERE session_id = ? AND sequence_number <= ? ORDER BY sequence_number DESC LIMIT 1"
-  ).bind(sessionId, sequenceNumber).first();
+export async function getSnapshotAtSequence(env, { sessionId, projectId, sequenceNumber }) {
+  let sql = "SELECT * FROM replay_snapshots WHERE session_id = ? AND sequence_number <= ?";
+  const params = [sessionId, sequenceNumber];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  sql += " ORDER BY sequence_number DESC LIMIT 1";
+  const row = await env.DB.prepare(sql).bind(...params).first();
   return row ? mapSnapshotRow(row) : null;
 }
 
-export async function listSnapshots(env, { sessionId, limit = 50 }) {
-  const rows = await env.DB.prepare(
-    "SELECT * FROM replay_snapshots WHERE session_id = ? ORDER BY sequence_number ASC LIMIT ?"
-  ).bind(sessionId, limit).all();
+export async function listSnapshots(env, { sessionId, projectId, limit = 50 }) {
+  let sql = "SELECT * FROM replay_snapshots WHERE session_id = ?";
+  const params = [sessionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  sql += " ORDER BY sequence_number ASC LIMIT ?";
+  params.push(limit);
+  const rows = await env.DB.prepare(sql).bind(...params).all();
   return (rows.results || []).map(mapSnapshotRow);
 }
 
@@ -89,6 +112,12 @@ export async function listSnapshots(env, { sessionId, limit = 50 }) {
 export async function recordEvent(env, { sessionId, projectId, roomId, eventType, eventData, actorId, actorType }) {
   const id = `re_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
+
+  // Audit fix A2-8: refuse to write into a session owned by another project.
+  const owned = await env.DB.prepare(
+    "SELECT id FROM replay_sessions WHERE id = ? AND project_id = ?"
+  ).bind(sessionId, projectId).first();
+  if (!owned) return { error: "not_found" };
 
   const lastSeq = await env.DB.prepare(
     "SELECT sequence_number FROM replay_events WHERE session_id = ? ORDER BY sequence_number DESC LIMIT 1"
@@ -101,15 +130,16 @@ export async function recordEvent(env, { sessionId, projectId, roomId, eventType
   ).bind(id, sessionId, projectId, roomId, eventType, JSON.stringify(eventData), actorId || null, actorType || null, sequenceNumber, now).run();
 
   await env.DB.prepare(
-    "UPDATE replay_sessions SET event_count = event_count + 1, updated_at = ? WHERE id = ?"
-  ).bind(now, sessionId).run();
+    "UPDATE replay_sessions SET event_count = event_count + 1, updated_at = ? WHERE id = ? AND project_id = ?"
+  ).bind(now, sessionId, projectId).run();
 
   return { id, sequenceNumber };
 }
 
-export async function listEvents(env, { sessionId, eventType, fromSequence, toSequence, limit = 100 }) {
+export async function listEvents(env, { sessionId, projectId, eventType, fromSequence, toSequence, limit = 100 }) {
   let sql = "SELECT * FROM replay_events WHERE session_id = ?";
   const params = [sessionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
   if (eventType) { sql += " AND event_type = ?"; params.push(eventType); }
   if (fromSequence !== undefined) { sql += " AND sequence_number >= ?"; params.push(fromSequence); }
   if (toSequence !== undefined) { sql += " AND sequence_number <= ?"; params.push(toSequence); }
@@ -119,9 +149,10 @@ export async function listEvents(env, { sessionId, eventType, fromSequence, toSe
   return (rows.results || []).map(mapEventRow);
 }
 
-export async function getEventsInRange(env, { sessionId, fromTime, toTime, limit = 500 }) {
+export async function getEventsInRange(env, { sessionId, projectId, fromTime, toTime, limit = 500 }) {
   let sql = "SELECT * FROM replay_events WHERE session_id = ? AND created_at >= ? AND created_at <= ?";
   const params = [sessionId, fromTime, toTime];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
   sql += " ORDER BY sequence_number ASC LIMIT ?";
   params.push(limit);
   const rows = await env.DB.prepare(sql).bind(...params).all();
@@ -133,6 +164,11 @@ export async function getEventsInRange(env, { sessionId, fromTime, toTime, limit
 export async function createBookmark(env, { sessionId, projectId, roomId, name, description, snapshotId, sequenceNumber, createdBy }) {
   const id = `rb_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
+  // Audit fix A2-8: refuse to write into a session owned by another project.
+  const owned = await env.DB.prepare(
+    "SELECT id FROM replay_sessions WHERE id = ? AND project_id = ?"
+  ).bind(sessionId, projectId).first();
+  if (!owned) return { error: "not_found" };
   await env.DB.prepare(
     `INSERT INTO replay_bookmarks (id, session_id, project_id, room_id, name, description, snapshot_id, sequence_number, created_by, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -140,10 +176,12 @@ export async function createBookmark(env, { sessionId, projectId, roomId, name, 
   return { id };
 }
 
-export async function listBookmarks(env, { sessionId }) {
-  const rows = await env.DB.prepare(
-    "SELECT * FROM replay_bookmarks WHERE session_id = ? ORDER BY created_at ASC"
-  ).bind(sessionId).all();
+export async function listBookmarks(env, { sessionId, projectId }) {
+  let sql = "SELECT * FROM replay_bookmarks WHERE session_id = ?";
+  const params = [sessionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  sql += " ORDER BY created_at ASC";
+  const rows = await env.DB.prepare(sql).bind(...params).all();
   return (rows.results || []).map(mapBookmarkRow);
 }
 
@@ -152,6 +190,11 @@ export async function listBookmarks(env, { sessionId }) {
 export async function createDiff(env, { sessionId, projectId, roomId, fromSnapshotId, toSnapshotId, fromSequence, toSequence, addedMessages, removedMessages, addedMembers, removedMembers, configChanges, stateDelta }) {
   const id = `rd_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
+  // Audit fix A2-8: refuse to write into a session owned by another project.
+  const owned = await env.DB.prepare(
+    "SELECT id FROM replay_sessions WHERE id = ? AND project_id = ?"
+  ).bind(sessionId, projectId).first();
+  if (!owned) return { error: "not_found" };
   await env.DB.prepare(
     `INSERT INTO replay_diffs (id, session_id, project_id, room_id, from_snapshot_id, to_snapshot_id, from_sequence, to_sequence, added_messages, removed_messages, added_members, removed_members, config_changes, state_delta, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -159,10 +202,12 @@ export async function createDiff(env, { sessionId, projectId, roomId, fromSnapsh
   return { id };
 }
 
-export async function listDiffs(env, { sessionId }) {
-  const rows = await env.DB.prepare(
-    "SELECT * FROM replay_diffs WHERE session_id = ? ORDER BY created_at DESC"
-  ).bind(sessionId).all();
+export async function listDiffs(env, { sessionId, projectId }) {
+  let sql = "SELECT * FROM replay_diffs WHERE session_id = ?";
+  const params = [sessionId];
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  sql += " ORDER BY created_at DESC";
+  const rows = await env.DB.prepare(sql).bind(...params).all();
   return (rows.results || []).map(mapDiffRow);
 }
 

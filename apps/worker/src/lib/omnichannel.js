@@ -3,6 +3,8 @@
  * Channel abstraction layer, unified view, and routing rules.
  */
 
+import { compileSafeRegex } from "./safe-regex.js";
+
 const VALID_CHANNEL_TYPES = ["chat", "email", "sms", "whatsapp", "telegram", "slack", "discord", "webhook", "custom"];
 
 /**
@@ -339,7 +341,15 @@ function mapThreadLink(row) {
 
 function matchPattern(pattern, { senderId, subject, body }) {
   try {
-    const re = new RegExp(pattern, "i");
+    // Audit F-51: omnichannel patterns are configured rules — reject ReDoS
+    // shapes; an unsafe pattern falls through to a literal comparison.
+    const re = compileSafeRegex(pattern, "i");
+    if (!re) {
+      const needle = String(pattern).toLowerCase();
+      return [senderId, subject, body].some(
+        (value) => String(value || "").toLowerCase().includes(needle),
+      );
+    }
     return re.test(senderId || "") || re.test(subject || "") || re.test(body || "");
   } catch {
     return false;

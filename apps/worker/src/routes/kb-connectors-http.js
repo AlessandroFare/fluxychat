@@ -7,6 +7,8 @@ import {
   ingestKbFromUrl,
   searchKbDocuments,
   buildRagContextFromHits,
+  setKbDocFeedback,
+  listKbDocFeedback,
 } from "../lib/kb-connectors.js";
 
 export async function dispatchKbConnectorRoutes(request, url, h) {
@@ -119,6 +121,23 @@ export async function dispatchKbConnectorRoutes(request, url, h) {
     });
     const rag = buildRagContextFromHits(hits, query);
     return respond(rag, h);
+  }
+
+  if (request.method === "GET" && path === "/admin/kb/feedback") {
+    const feedback = await listKbDocFeedback(env, { projectId });
+    return respond({ feedback }, h);
+  }
+
+  if (request.method === "POST" && path === "/admin/kb/feedback") {
+    const body = await request.json().catch(() => null);
+    const result = await setKbDocFeedback(env, {
+      projectId,
+      docId: body?.docId,
+      verdict: body?.verdict,
+      actor: userId,
+    });
+    if (result.error) return respond(result, h, 400);
+    return respond(result, h);
   }
 
   return null;

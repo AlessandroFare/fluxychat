@@ -5,4 +5,16 @@ description: "Cannot send because the socket is not open"
 
 # 10000 — send_not_open
 
-Client-side: `sendJson` ran while disconnected. Not a Worker close. Call `attach()` / `connect()` first, or wait for `connected`.
+Client-side: `sendJson` ran while the socket was not open. This is not a Worker close, and it is not terminal.
+
+**At a glance** — no HTTP status · SDK `FluxySendError`.
+
+## What to do
+
+- Call `attach()` / `connect()` first, and wait for `connected` before sending.
+- Gate sends on the connection status (`attaching` → `attached`) — see [Connection status](/docs/cookbook/connection-status).
+- The SDK's guard message spells this out: "Cannot send: WebSocket is not open. Call connect() and wait until connected."
+
+## Related
+
+- [50000 connection_failed](/docs/errors/connection_failed)

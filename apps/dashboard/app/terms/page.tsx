@@ -28,7 +28,7 @@ export default function TermsPage() {
         </p>
         <p>
           Free and paid self-serve plans are usage-capped as shown on{" "}
-          <Link className="underline underline-offset-2" href="/pricing">
+          <Link className="text-brand underline underline-offset-2" href="/pricing">
             /pricing
           </Link>
           . Growth, Business, and Enterprise rows on that page are quotes, not a click-to-buy SLA.
@@ -36,18 +36,18 @@ export default function TermsPage() {
         <p>
           We can change the beta, rate-limit, or suspend accounts that break these terms. Data processing
           is in the{" "}
-          <Link className="underline underline-offset-2" href={HOSTED_PATHS.dpa}>
+          <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.dpa}>
             DPA
           </Link>
           . Privacy:{" "}
-          <Link className="underline underline-offset-2" href={HOSTED_PATHS.privacyPolicy}>
+          <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.privacyPolicy}>
             /privacy-policy
           </Link>
           .
         </p>
         <p>
           Contact{" "}
-          <a className="underline underline-offset-2" href="mailto:support@fluxychat.com">
+          <a className="text-brand underline underline-offset-2" href="mailto:support@fluxychat.com">
             support@fluxychat.com
           </a>
           .

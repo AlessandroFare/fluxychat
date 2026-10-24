@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { ROOM_CATALOG, roomPageHref } from "@/lib/room-catalog";
 
 /**
  * Sitemap for Fluxychat. The marketing site + the console are served
@@ -31,5 +32,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${marketing}/for-teams`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${marketing}/trust`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${marketing}/migrate-chatgpt`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    ...ROOM_CATALOG.map((room) => ({
+      url: `${marketing}${roomPageHref(room)}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
   ];
 }

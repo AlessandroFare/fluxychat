@@ -138,6 +138,7 @@ export async function dispatchIntegrationsSentRoutes(request, url, h) {
   if (url.pathname === "/integrations/email/inbound" && request.method === "POST") {
     const secret = env.EMAIL_INBOUND_WEBHOOK_SECRET?.trim();
     const rawBody = await request.text();
+    let jwtAuth = null;
     if (secret) {
       const sig =
         request.headers.get("X-Fluxy-Signature") ||
@@ -150,12 +151,19 @@ export async function dispatchIntegrationsSentRoutes(request, url, h) {
       if (!auth || !hasAnyRole(auth.roles, ["owner", "admin"])) {
         return new Response("Unauthorized", { status: 401, headers: corsHeaders });
       }
+      jwtAuth = auth;
     }
     let body;
     try {
       body = JSON.parse(rawBody);
     } catch {
       body = { raw: rawBody };
+    }
+    // Audit F-80: when this endpoint is authenticated by JWT (no webhook
+    // secret), the signed-in tenant is authoritative — never let the body
+    // redirect the inbound message into another project.
+    if (jwtAuth && body && typeof body === "object") {
+      body = { ...body, projectId: jwtAuth.projectId };
     }
     const result = await handleEmailInbound(env, body);
     return json(result, { status: result.ok ? 200 : result.reject === "no mailbox" ? 404 : 502 });

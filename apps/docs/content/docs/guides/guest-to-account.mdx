@@ -1,0 +1,62 @@
+---
+title: Link a guest to an account
+description: Claim a guest identity into a signed-in account — room memberships move over, nobody loses the room.
+---
+
+Someone joined through a public guest session, then signed up. Linking moves their **room memberships** to the account: they keep every room they were in, and the guest role upgrades to `member`. Each guest can be claimed once.
+
+## How it works
+
+`POST /tokens/link-guest` — the caller proves two things:
+
+1. **Who they are** — a `Bearer` JWT of the target account (non-guest).
+2. **Ownership of the guest** — the guest's own JWT in `guestToken` (guest-only roles, same project).
+
+```bash
+curl -X POST "$WORKER_URL/tokens/link-guest" \
+  -H "Authorization: Bearer $MEMBER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"guestToken": "'"$GUEST_JWT"'"}'
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "guestUserId": "guest_0123456789abcdef012345",
+  "targetUserId": "user_ada",
+  "roomsTransferred": 2,
+  "roomsAlreadyMember": 1
+}
+```
+
+`roomsAlreadyMember` counts rooms the account was already in — the duplicate guest row is dropped and the account's existing role is kept.
+
+SDK:
+
+```ts
+await client.linkGuestAccount(guestJwt);
+```
+
+## What moves, what stays
+
+| Data | After linking |
+|------|----------------|
+| Room membership | Moves to the account (`guest` → `member`); owner/admin roles kept |
+| Message authorship, reactions, read markers | Stays under the guest user id — history is not rewritten |
+| The guest identity | Recorded once; a second claim returns `409 guest_already_linked` |
+
+## Errors
+
+| Status | Error | Meaning |
+|--------|-------|---------|
+| `400` | `guest_token_required` | Missing `guestToken` |
+| `400` | `invalid_guest_token` | Not a valid guest token for this project |
+| `400` | `target_is_guest` | The caller is itself a guest — sign in first |
+| `400` | `same_user` | Guest and target are the same identity |
+| `409` | `guest_already_linked` | Already claimed (response includes the winning `targetUserId`) |
+
+Concurrent claims on the same guest are safe: the first one wins and the rest get the `409`. The successful link is written to the project audit log as `guest.linked`.
+
+**Boundary:** linking is about access, not history. Past messages keep the guest author id — if you mirror authorship elsewhere (analytics, attribution), map it yourself at link time.

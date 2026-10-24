@@ -39,40 +39,56 @@ public sealed class FluxyInboxSummary
 public sealed class FluxyChatClient : IDisposable
 {
     readonly HttpClient _http;
+    readonly bool _ownsHttp;
     readonly FluxyChatOptions _options;
+    string _token;
     static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public FluxyChatClient(FluxyChatOptions options, HttpClient? http = null)
     {
         _options = options;
+        _ownsHttp = http is null;
         _http = http ?? new HttpClient { BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/") };
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.Token);
+        _token = options.Token;
     }
 
-    public void SetToken(string token) =>
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    // Audit F-92: the Bearer token is attached per request. Writing it into
+    // DefaultRequestHeaders leaked the token to every other holder of a shared
+    // HttpClient and made SetToken affect them too.
+    HttpRequestMessage Authed(HttpMethod method, string path)
+    {
+        var request = new HttpRequestMessage(method, path);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+        return request;
+    }
+
+    public void SetToken(string token) => _token = token;
 
     public async Task<IReadOnlyList<FluxyRoom>> ListRoomsAsync(int limit = 25, CancellationToken ct = default)
     {
-        var res = await _http.GetFromJsonAsync<RoomsResponse>($"rooms?limit={limit}", JsonOptions, ct);
-        return res?.Rooms ?? Array.Empty<FluxyRoom>();
+        using var req = Authed(HttpMethod.Get, $"rooms?limit={limit}");
+        var res = await _http.SendAsync(req, ct);
+        res.EnsureSuccessStatusCode();
+        var payload = await res.Content.ReadFromJsonAsync<RoomsResponse>(JsonOptions, ct);
+        return payload?.Rooms ?? Array.Empty<FluxyRoom>();
     }
 
     public async Task<IReadOnlyList<FluxyMessageDto>> ListMessagesAsync(string roomId, int limit = 50, CancellationToken ct = default)
     {
-        var res = await _http.GetFromJsonAsync<MessagesResponse>(
-            $"rooms/{Uri.EscapeDataString(roomId)}/messages?limit={limit}",
-            JsonOptions,
-            ct);
-        return res?.Messages ?? Array.Empty<FluxyMessageDto>();
+        using var req = Authed(
+            HttpMethod.Get,
+            $"rooms/{Uri.EscapeDataString(roomId)}/messages?limit={limit}");
+        var res = await _http.SendAsync(req, ct);
+        res.EnsureSuccessStatusCode();
+        var payload = await res.Content.ReadFromJsonAsync<MessagesResponse>(JsonOptions, ct);
+        return payload?.Messages ?? Array.Empty<FluxyMessageDto>();
     }
 
     public async Task<FluxyMessageDto> SendMessageAsync(string roomId, string content, CancellationToken ct = default)
     {
-        var res = await _http.PostAsJsonAsync(
-            $"rooms/{Uri.EscapeDataString(roomId)}/messages",
-            new { content },
-            ct);
+        using var req = Authed(HttpMethod.Post, $"rooms/{Uri.EscapeDataString(roomId)}/messages");
+        req.Content = JsonContent.Create(new { content });
+        var res = await _http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
         var payload = await res.Content.ReadFromJsonAsync<SendMessageResponse>(JsonOptions, ct);
         return payload?.Message ?? throw new InvalidOperationException("empty_message_response");
@@ -80,17 +96,29 @@ public sealed class FluxyChatClient : IDisposable
 
     public async Task<FluxyInboxSummary> GetInboxAsync(CancellationToken ct = default)
     {
-        return await _http.GetFromJsonAsync<FluxyInboxSummary>("inbox", JsonOptions, ct)
+        using var req = Authed(HttpMethod.Get, "inbox");
+        var res = await _http.SendAsync(req, ct);
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<FluxyInboxSummary>(JsonOptions, ct)
             ?? new FluxyInboxSummary();
     }
 
     public async Task RegisterPushDeviceAsync(string platform, string token, CancellationToken ct = default)
     {
-        var res = await _http.PostAsJsonAsync("push/devices", new { platform, token }, ct);
+        using var req = Authed(HttpMethod.Post, "push/devices");
+        req.Content = JsonContent.Create(new { platform, token });
+        var res = await _http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
     }
 
-    public void Dispose() => _http.Dispose();
+    /// <summary>Disposes the HttpClient only when this client created it (audit F-92).</summary>
+    public void Dispose()
+    {
+        if (_ownsHttp)
+        {
+            _http.Dispose();
+        }
+    }
 
     sealed class RoomsResponse
     {

@@ -62,6 +62,15 @@ await client.cancelAgentSchedule(roomId, pending[0].id);
 
 Four concurrent agents (a restaurant floor, a war room) is a product pattern, not a second protocol. Watch quota and rate limits in the operator console.
 
+## One turn at a time per room
+
+Every room-bound turn — REST/SDK `invokeAgent`, `@handle` auto-invoke, agent schedules — runs on the same per-room agent instance, FIFO: the next turn starts when the current one finishes, so two turns never stream into one room at the same time. Concurrent callers wait their turn (queue of 8):
+
+- `POST /agents/:id/invoke` past the queue answers `429 { "error": "turn_queue_full" }` with `Retry-After` (default 5s).
+- A mention past the queue is dropped and logged (`agent.mention_turn_queue_full`) — the message gets no agent reply.
+
+Self-host without the `AGENT` binding runs invokes inline in the request (no turn queue).
+
 ## Handoff
 
 Check whether a human should take over:

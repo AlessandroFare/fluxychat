@@ -51,24 +51,6 @@ body {
   touch-action: none;
 }
 
-.peer-cursor {
-  position: absolute;
-  pointer-events: none;
-  transform: translate(-2px, -2px);
-  z-index: 2;
-}
-
-.peer-cursor span {
-  display: block;
-  margin-top: 2px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: currentColor;
-  color: #fff;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
 .mode-badge {
   font-size: 0.75rem;
   color: #64748b;

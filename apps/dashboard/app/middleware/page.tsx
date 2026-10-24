@@ -353,7 +353,7 @@ export default function MiddlewarePage() {
                       "rounded-lg border p-3 transition-colors",
                       isActive
                         ? "border-primary/20 bg-primary/5"
-                        : "border-border bg-muted/20 opacity-60",
+                        : "border-border bg-muted/30",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -361,7 +361,7 @@ export default function MiddlewarePage() {
                         <div
                           className={cn(
                             "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                            isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                            isActive ? "bg-primary/10 text-[var(--brand-hover)]" : "bg-muted text-muted-foreground",
                           )}
                         >
                           <Icon className="h-4 w-4" />
@@ -426,6 +426,7 @@ export default function MiddlewarePage() {
                                   {pattern}
                                   <button
                                     onClick={() => removeSafetyPattern(pattern)}
+                                    aria-label={`Remove ${pattern}`}
                                     className="text-red-400 hover:text-red-600"
                                   >
                                     <Trash2 className="h-3 w-3" />
@@ -451,7 +452,7 @@ export default function MiddlewarePage() {
                                 placeholder="Add a blocked pattern…"
                                 className="text-sm"
                               />
-                              <Button variant="outline" size="sm" onClick={addSafetyPattern}>
+                              <Button variant="outline" size="sm" onClick={addSafetyPattern} aria-label="Add blocked pattern">
                                 <Plus className="h-3.5 w-3.5" />
                               </Button>
                             </div>

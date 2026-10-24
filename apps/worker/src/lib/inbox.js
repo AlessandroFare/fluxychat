@@ -206,7 +206,7 @@ export async function getInboxSummary(env, scope) {
   try {
     const { getOpsStore } = await import("../routes/ops-http.js");
     const store = getOpsStore(env);
-    opsTasks = await store.listOpenTasks(projectId, { assignee: userId });
+    opsTasks = await store.listOpenTasks(projectId, { assignee: userId, roles });
   } catch {
     opsTasks = [];
   }

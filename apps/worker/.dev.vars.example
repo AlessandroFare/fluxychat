@@ -395,8 +395,10 @@ AUDIT_CHAIN_ENABLED=true
 # OFFLINE_SMS_PER_USER_PER_HOUR=6
 # SENT_DM_WEBHOOK_SECRET=whsec_...   # verify POST /integrations/sent/webhook
 # PUBLIC_APP_URL=https://app.example.com   # room_url + media_url (relative /attachments/*) in Sent template params
-# HITL one-tap links also use PUBLIC_APP_URL (must be the Worker origin that serves GET /public/hitl/tap).
-# HITL_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # operator webhook only; optional
+# WORKER_PUBLIC_URL=https://api.example.com   # Worker origin when the app is on another host
+# HITL/ops one-tap links prefer WORKER_PUBLIC_URL, then PUBLIC_APP_URL (that origin must serve
+# GET/POST /public/hitl/tap and /public/ops/approvals/tap). Ops tap tokens need ART50_MARK_SECRET in production.
+# HITL_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # operator webhook only; optional; also carries ops approval requests
 # HITL_SLACK_SIGNING_SECRET=   # Slack app signing secret; enables POST /public/hitl/slack buttons
 # Optional: PUT /api/hitl/slack-user-map { slackUserId } so mapped buttons omit the HMAC tap token.
 
@@ -450,3 +452,68 @@ ALLOW_DEV_PROVISION=true
 # --- Data residency enforce (#14) ---
 # DATA_REGION=eu-west
 # DATA_RESIDENCY_ENFORCE=true
+
+# --- Audit remediation knobs (F-02..F-94, Oct 2026) ---
+
+# SSRF gate (F-02): call sites that pass `env` now require the operator allowlist.
+# First-party providers (OpenAI/Anthropic/Google/Stripe/Slack/FCM/GitHub/Pollinations)
+# are always allowed; tenant webhook/tool hosts go in ALLOWED_SSRF_HOSTS
+# (comma-separated). REQUIRE_SSRF_HOST_ALLOWLIST=false|0 restores the legacy
+# "allow everything except private IPs" behaviour (not recommended).
+# Ops MCP servers registered in /ops also need their host here; for per-user
+# OAuth servers add the authorization server host too (often a different host).
+# Enterprise (ID-JAG) servers additionally need the IdP authorize/token/JWKS
+# hosts and the Resource Authorization Server token host.
+# ALLOWED_SSRF_HOSTS=hooks.example.com,api.partner.com
+# REQUIRE_SSRF_HOST_ALLOWLIST=false
+
+# Internal DO service token (F-48): with NODE_ENV=production, /stream, /announce
+# and /live-stats stay CLOSED unless this is set. REQUIRED in production
+# (random, 32+ chars).
+# INTERNAL_DO_TOKEN=
+
+# Deployed workers must set NODE_ENV=production (or ENVIRONMENT=production): the
+# F-73/F-91 key separation (tool-approval HMAC, art. 50 marks) activates only
+# outside development/test; without it those paths keep the legacy JWT_SECRET
+# fallback. Local dev only: see NODE_ENV=development below.
+# NODE_ENV=production
+
+# Tool-approval HMAC key (F-73): falls back to ART50_MARK_SECRET when unset; with
+# neither key a production deploy returns 503 signature_not_configured on signed
+# tool-approval flows. Prefer a dedicated value (key separation). Art. 50 marks
+# (see L212) are unsigned in production without ART50_MARK_SECRET.
+# TOOL_APPROVAL_SECRET=
+
+# Wallet SIWE (F-36): an empty project wallet allowlist denies JWT minting with
+# 403 allowlist_not_configured; set "true" only to accept ANY wallet address.
+# WALLET_SIWE_ALLOW_ANY_WALLET=true
+
+# IP allowlist enforcement (F-35): opt-in. When unset, project IP allowlists are
+# stored/reported but not enforced.
+# ENFORCE_IP_WHITELIST=true
+
+# HITL four-eyes (F-41/F-42): default ON - a requester (or the agent) cannot
+# approve their own request. Single-operator projects can opt out;
+# HITL_MAKER_CHECKER=true forces four-eyes even when self-approval is allowed.
+# HITL_ALLOW_SELF_APPROVAL=true
+# HITL_MAKER_CHECKER=true
+
+# Turnstile hostname pinning (F-34): when set, the solved hostname must match one
+# of these (comma-separated) in addition to siteverify success.
+# DEMO_ALLOW_WITHOUT_TURNSTILE=true skips the demo/public-guest Turnstile
+# requirement (not recommended in production).
+# TURNSTILE_EXPECTED_HOSTNAME=app.example.com
+# DEMO_ALLOW_WITHOUT_TURNSTILE=true
+
+# A2A outbound (F-25): the platform-wide A2A_OUTBOUND_BEARER is never attached to
+# project-controlled A2A endpoints; it is no longer read by the platform.
+
+# Per-minute limits added by the audit (defaults shown; uncomment to override).
+# RATE_LIMIT_MCP_PER_MINUTE=120
+# RATE_LIMIT_AI_STREAM_CHUNKS_PER_MINUTE=120
+# RATE_LIMIT_INTEGRATION_INGEST_PER_MINUTE=120
+# RATE_LIMIT_OPS_WEBHOOK_PER_MINUTE=30
+# RATE_LIMIT_TOTP_VERIFY_PER_MINUTE=5
+# RATE_LIMIT_SMS_OTP_VERIFY_PER_MINUTE=10
+# RATE_LIMIT_AI_IMAGES_PER_MINUTE=10
+# RATE_LIMIT_MODERATION_LABELS_PER_MINUTE=60

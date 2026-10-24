@@ -92,11 +92,12 @@ export async function deleteExportSchedule(env, { id, projectId }) {
   return { deleted: result.meta?.changes || 0 };
 }
 
-export async function toggleExportSchedule(env, { id, enabled }) {
+export async function toggleExportSchedule(env, { id, projectId, enabled }) {
+  // Audit fix A2-9: scope the toggle to the caller's project (cross-tenant guard).
   const result = await env.DB.prepare(
-    "UPDATE audit_export_schedules SET enabled = ? WHERE id = ?"
+    "UPDATE audit_export_schedules SET enabled = ? WHERE id = ? AND project_id = ?"
   )
-    .bind(enabled ? 1 : 0, id)
+    .bind(enabled ? 1 : 0, id, projectId)
     .run();
   return { updated: result.meta?.changes || 0 };
 }
@@ -153,10 +154,18 @@ export async function recordExportRun(env, { scheduleId, projectId, status, even
     .bind(id, scheduleId, projectId, status || "pending", eventCount || 0, error || null, now, status === "completed" ? now : null)
     .run();
 
-  await env.DB.prepare(
-    "UPDATE audit_export_schedules SET last_run_at = ?, next_run_at = ? WHERE id = ?"
+  // Audit fix A2-18: respect the schedule's own frequency (was hardcoded
+  // daily) and scope the update by project.
+  const schedule = await env.DB.prepare(
+    "SELECT frequency FROM audit_export_schedules WHERE id = ? AND project_id = ?"
   )
-    .bind(now, computeNextRun("daily"), scheduleId)
+    .bind(scheduleId, projectId)
+    .first();
+
+  await env.DB.prepare(
+    "UPDATE audit_export_schedules SET last_run_at = ?, next_run_at = ? WHERE id = ? AND project_id = ?"
+  )
+    .bind(now, computeNextRun(schedule?.frequency || "daily"), scheduleId, projectId)
     .run();
 
   return { id };

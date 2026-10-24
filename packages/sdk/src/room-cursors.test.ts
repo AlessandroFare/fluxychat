@@ -71,4 +71,22 @@ describe("FX-CUR-3 cursor history pages", () => {
     const page = await cursors.history({ limit: 10 });
     expect(page.items.map((row) => row.userId)).toEqual(["ada", "lin"]);
   });
+
+  it("keys agent layers separately and keeps them out of getOthers", async () => {
+    let anyHandler: ((event: FluxyChatEvent) => void) | null = null;
+    const cursors = bindRoomCursors({
+      userId: "ada",
+      onAnyEvent(handler: (event: FluxyChatEvent) => void) {
+        anyHandler = handler;
+      },
+      offAnyEvent() {},
+    } as unknown as FluxyChatRoomConnection);
+    anyHandler?.({ type: "cursor", userId: "ada", x: 1, y: 1, ts: 10 } as FluxyChatEvent);
+    anyHandler?.({ type: "cursor", userId: "ada", x: 5, y: 5, presenceKey: "agent", ts: 11 } as FluxyChatEvent);
+    anyHandler?.({ type: "cursor", userId: "bob", x: 9, y: 9, ts: 12 } as FluxyChatEvent);
+
+    expect(Object.keys(cursors.getAll()).sort()).toEqual(["ada", "ada#agent", "bob"]);
+    await expect(cursors.getSelf()).resolves.toMatchObject({ userId: "ada", x: 1, y: 1 });
+    await expect(cursors.getOthers()).resolves.toMatchObject({ bob: { userId: "bob", x: 9, y: 9 } });
+  });
 });

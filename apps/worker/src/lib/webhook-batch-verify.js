@@ -47,9 +47,11 @@ export async function verifyWebhookEventBatch(secret, events, batchSignature) {
   }
 
   const body = JSON.stringify(events);
+  // #23: without a batch signature every event must carry its own signature;
+  // unsigned batches are never treated as authentic.
   const batchResult = batchSignature
     ? await verifyWebhookSignature(secret, body, batchSignature)
-    : { valid: true };
+    : { valid: false, error: "missing_batch_signature" };
 
   const results = [];
   for (let i = 0; i < events.length; i++) {
@@ -74,7 +76,7 @@ export async function verifyWebhookEventBatch(secret, events, batchSignature) {
 
   const allValid = results.every((r) => r.valid);
   return {
-    valid: allValid && batchResult.valid,
+    valid: allValid && (batchResult.valid || !batchSignature),
     batchSignatureValid: batchResult.valid,
     body,
     results,

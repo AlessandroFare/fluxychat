@@ -2,6 +2,7 @@ import { importAdminMessage } from "./message-import.js";
 import { deriveScopedClientMessageId } from "./client-message-id.js";
 import { appendRoomAuditChainEvent } from "./audit-chain.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
+import { sealSecretAtRest, openSecretAtRest } from "./secrets-crypto.js";
 
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -35,7 +36,10 @@ export async function getMatrixBridgeAppserviceToken(env, { bridgeId, projectId 
   )
     .bind(bridgeId, projectId)
     .first();
-  const token = row?.appservice_token;
+  const raw = row?.appservice_token;
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  // Audit F-75: tokens are sealed at rest; legacy plaintext rows pass through.
+  const token = await openSecretAtRest(env, raw);
   return typeof token === "string" && token.trim() ? token.trim() : null;
 }
 
@@ -47,7 +51,7 @@ export async function rotateMatrixAppserviceToken(env, { bridgeId, projectId }) 
   await env.DB.prepare(
     "UPDATE matrix_bridge_configs SET appservice_token = ?, updated_at = ? WHERE id = ? AND project_id = ?",
   )
-    .bind(token, now, bridgeId, projectId)
+    .bind(await sealSecretAtRest(env, token), now, bridgeId, projectId)
     .run();
   return { appserviceToken: token, bridgeId };
 }
@@ -85,7 +89,14 @@ export async function createMatrixBridge(env, { projectId, homeserverUrl, access
     `INSERT INTO matrix_bridge_configs (id, project_id, homeserver_url, access_token, bot_user_id, bot_display_name, sync_mode, status, settings, appservice_token, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, 'disconnected', ?, ?, ?, ?)`
   )
-    .bind(id, projectId, homeserverUrl, accessToken || null, botUserId || null, botDisplayName || null, syncMode || "bidirectional", settings ? JSON.stringify(settings) : null, token, now, now)
+    .bind(
+      id, projectId, homeserverUrl,
+      accessToken ? await sealSecretAtRest(env, accessToken) : null,
+      botUserId || null, botDisplayName || null, syncMode || "bidirectional",
+      settings ? JSON.stringify(settings) : null,
+      await sealSecretAtRest(env, token),
+      now, now,
+    )
     .run();
   return { id, status: "disconnected", appserviceToken: token, appserviceWebhookPath: `/webhooks/matrix/${id}` };
 }
@@ -167,7 +178,7 @@ export async function getMatrixBridgeCredentials(env, { bridgeId, projectId }) {
     id: row.id,
     projectId: row.project_id,
     homeserverUrl: row.homeserver_url,
-    accessToken: row.access_token,
+    accessToken: row.access_token ? await openSecretAtRest(env, row.access_token) : null,
     botUserId: row.bot_user_id,
     status: row.status,
   };
@@ -180,10 +191,12 @@ export async function listMatrixBridges(env, { projectId }) {
   return (rows.results || []).map(mapConfigRow);
 }
 
-export async function deleteMatrixBridge(env, { bridgeId }) {
-  await env.DB.prepare("DELETE FROM matrix_room_mappings WHERE bridge_id = ?").bind(bridgeId).run();
-  await env.DB.prepare("DELETE FROM matrix_message_map WHERE bridge_id = ?").bind(bridgeId).run();
-  const result = await env.DB.prepare("DELETE FROM matrix_bridge_configs WHERE id = ?").bind(bridgeId).run();
+export async function deleteMatrixBridge(env, { bridgeId, projectId }) {
+  // Audit F-70: every statement is scoped to the owning project so a bridge id
+  // (or a guessed one) from another tenant can never be deleted.
+  await env.DB.prepare("DELETE FROM matrix_room_mappings WHERE bridge_id = ? AND project_id = ?").bind(bridgeId, projectId).run();
+  await env.DB.prepare("DELETE FROM matrix_message_map WHERE bridge_id = ? AND project_id = ?").bind(bridgeId, projectId).run();
+  const result = await env.DB.prepare("DELETE FROM matrix_bridge_configs WHERE id = ? AND project_id = ?").bind(bridgeId, projectId).run();
   return { deleted: result.meta?.changes || 0 };
 }
 
@@ -220,8 +233,9 @@ export async function getMatrixMappingByMatrixRoom(env, { bridgeId, matrixRoomId
   return row ? mapMappingRow(row) : null;
 }
 
-export async function deleteMatrixRoomMapping(env, { mappingId }) {
-  const result = await env.DB.prepare("DELETE FROM matrix_room_mappings WHERE id = ?").bind(mappingId).run();
+export async function deleteMatrixRoomMapping(env, { mappingId, projectId }) {
+  // Audit F-70: scoped by project — a foreign mapping id is a no-op.
+  const result = await env.DB.prepare("DELETE FROM matrix_room_mappings WHERE id = ? AND project_id = ?").bind(mappingId, projectId).run();
   return { deleted: result.meta?.changes || 0 };
 }
 
@@ -422,7 +436,7 @@ export async function syncMatrixOutbound(env, { bridgeId, projectId, fluxychatMe
   ).bind(bridgeId, projectId).first();
 
   const base = typeof bridge?.homeserver_url === "string" ? bridge.homeserver_url.replace(/\/$/, "") : "";
-  const token = typeof bridge?.access_token === "string" ? bridge.access_token.trim() : "";
+  const token = bridge?.access_token ? (await openSecretAtRest(env, bridge.access_token) || "").trim() : "";
 
   if (base && token) {
     const txnId = String(fluxychatMessageId).replace(/[^a-zA-Z0-9._~-]/g, "_").slice(0, 64)
@@ -519,7 +533,9 @@ export async function runMatrixBridgeHealthChecks(env, { projectId } = {}) {
   for (const row of rows.results || []) {
     const health = await pingMatrixHomeserver({
       homeserverUrl: row.homeserver_url,
-      accessToken: row.access_token ?? undefined,
+      accessToken: row.access_token
+        ? (await openSecretAtRest(env, row.access_token)) ?? undefined
+        : undefined,
     });
     if (health.ok) {
       healthy++;

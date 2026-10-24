@@ -8,10 +8,11 @@
     "build": "pnpm -r build",
     "lint": "pnpm --filter @fluxy-chat/ui exec eslint src --ext .ts,.tsx",
     "test": "pnpm run test:all",
-    "test:all": "pnpm run test:packages && pnpm run test:worker && pnpm run test:worker:e2e && pnpm run test:dashboard",
-    "test:packages": "pnpm --filter @fluxy-chat/protocol test && pnpm --filter @fluxy-chat/sdk test && pnpm --filter @fluxy-chat/react test && pnpm --filter @fluxy-chat/ui test && pnpm --filter @fluxy-chat/config test && pnpm --filter @fluxy-chat/agent test && pnpm --filter @fluxy-chat/auth test",
+    "test:all": "pnpm run test:packages && pnpm run test:worker && pnpm run test:worker:e2e && pnpm run test:ai-agent && pnpm run test:dashboard",
+    "test:packages": "pnpm --filter @fluxy-chat/protocol test && pnpm --filter @fluxy-chat/sdk test && pnpm --filter @fluxy-chat/react test && pnpm --filter @fluxy-chat/vue test && pnpm --filter @fluxy-chat/svelte test && pnpm --filter @fluxy-chat/ui test && pnpm --filter @fluxy-chat/config test && pnpm --filter @fluxy-chat/agent test && pnpm --filter @fluxy-chat/auth test && pnpm --filter @fluxy-chat/react-native-sdk test && pnpm --filter chat-adapter-fluxychat test && pnpm --filter @fluxy-chat/cloudflare-agents test",
     "test:worker": "pnpm --filter @fluxy-chat/worker test && pnpm --filter @fluxy-chat/worker test:pool",
     "test:worker:e2e": "pnpm --filter @fluxy-chat/worker test:e2e",
+    "test:ai-agent": "pnpm --filter @fluxy-chat/ai-agent test",
     "test:dashboard": "pnpm --filter @fluxy-chat/dashboard test",
     "check:bundle-size": "node scripts/analyze-sdk-bundle.mjs",
     "check:bandwidth-budget": "node scripts/bandwidth-budget.mjs",
@@ -38,10 +39,12 @@
     "first-message": "node scripts/first-message.mjs",
     "import-chat-history": "node scripts/import-chat-history.mjs",
     "smoke:create-fluxy-chat": "node scripts/smoke-create-fluxy-chat.mjs",
+    "smoke:typecheck-templates": "node scripts/typecheck-templates.mjs",
     "smoke:one-click": "node scripts/one-click-smoke.mjs",
     "check:env": "node scripts/check-env-readiness.mjs",
     "check:upptime": "node scripts/validate-upptime-config.mjs",
     "check:mcp-server-json": "node scripts/check-mcp-server-json.mjs",
+    "verify:audit": "node scripts/verify-audit-export.mjs",
     "docs:sync": "node scripts/sync-docs-content.mjs",
     "docs:dev": "pnpm --filter docs dev",
     "docs:build": "pnpm --filter docs build"
@@ -63,6 +66,8 @@
       "postcss": "8.5.25",
       "picomatch": "4.0.4",
       "ajv": ">=8.18.0",
+      "eslint>ajv": "^6.12.4",
+      "@eslint/eslintrc>ajv": "^6.12.4",
       "qs": ">=6.16.0",
       "ws": ">=8.21.0",
       "lodash": ">=4.18.0",
@@ -88,7 +93,7 @@
       "@mermaid-js/parser": "1.2.0",
       "@excalidraw/mermaid-to-excalidraw": "file:./apps/dashboard/lib/stubs/mermaid-to-excalidraw-pkg",
       "sharp": "0.35.5",
-      "next": "16.4.0",
+      "next": "16.4.2",
       "@xmldom/xmldom": "0.9.12",
       "image-size": "2.0.4",
       "devalue": "6.0.2",
@@ -104,9 +109,16 @@
       "esbuild",
       "sharp",
       "workerd"
-    ]
+    ],
+    "auditConfig": {
+      "ignoreCves": [
+        "GHSA-vfj7-8cjw-p6xm"
+      ]
+    }
   },
   "devDependencies": {
+    "@vitest/expect": "4.1.11",
+    "@vitest/spy": "4.1.11",
     "baseline-browser-mapping": "^2.11.22",
     "turbo": "^2.9.14"
   }

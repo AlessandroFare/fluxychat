@@ -13,6 +13,7 @@
  */
 
 import { resolveAppKv } from "./app-kv.js";
+import { internalDoHeaders } from "./room-shard.js";
 
 // =============================================================================
 // Types
@@ -286,6 +287,7 @@ async function broadcastEphemeral(env, roomId, message) {
     const stub = env.ROOM.get(id);
     await stub.fetch("https://internal/announce", {
       method: "POST",
+      headers: internalDoHeaders(env),
       body: JSON.stringify({
         type: "ephemeral",
         message,

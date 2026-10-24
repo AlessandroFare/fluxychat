@@ -3,8 +3,15 @@
 // Generates a per-project EC P-256 key pair on first use, stores the
 // JWK-formatted public/private in D1 (`project_vapid_keys`) and exposes the
 // base64url-encoded public key to the client via /push/web/vapid-public-key.
+import { sealSecretAtRest, openSecretAtRest } from "./secrets-crypto.js";
 
 const SUBJECT_DEFAULT = "mailto:admin@fluxychat.local";
+
+/** Audit F-87: the VAPID private key is sealed at rest; legacy rows stay readable. */
+async function readPrivateJwk(env, storedPrivate) {
+  const jwkJson = await openSecretAtRest(env, storedPrivate);
+  return jwkJson ? JSON.parse(jwkJson) : null;
+}
 
 function base64UrlEncode(bytes) {
   let str = "";
@@ -80,7 +87,7 @@ export async function getOrCreateVapidKeyPair(env, projectId, opts = {}) {
   if (row) {
     return {
       publicKey: JSON.parse(row.public_key),
-      privateKey: JSON.parse(row.private_key),
+      privateKey: await readPrivateJwk(env, row.private_key),
       subject: row.subject || SUBJECT_DEFAULT,
     };
   }
@@ -95,7 +102,7 @@ export async function getOrCreateVapidKeyPair(env, projectId, opts = {}) {
     .bind(
       projectId,
       JSON.stringify(publicKey),
-      JSON.stringify(privateKey),
+      await sealSecretAtRest(env, JSON.stringify(privateKey)),
       subject,
       now,
       now
@@ -110,7 +117,7 @@ export async function getOrCreateVapidKeyPair(env, projectId, opts = {}) {
   if (re) {
     return {
       publicKey: JSON.parse(re.public_key),
-      privateKey: JSON.parse(re.private_key),
+      privateKey: await readPrivateJwk(env, re.private_key),
       subject: re.subject || subject,
     };
   }
@@ -126,6 +133,27 @@ export async function getVapidPublicKeyRaw(publicJwk) {
   const key = await importPublicJwk(publicJwk);
   const raw = await crypto.subtle.exportKey("raw", key);
   return base64UrlEncode(new Uint8Array(raw));
+}
+
+/**
+ * Audit F-91: read-only key lookup for the unauthenticated public-key endpoint.
+ * `getOrCreateVapidKeyPair` there let anyone mint key rows for arbitrary
+ * project ids.
+ */
+export async function getExistingVapidPublicKeyJwk(env, projectId) {
+  if (!env?.DB || !projectId) return null;
+  const row = await env.DB.prepare(
+    "SELECT public_key FROM project_vapid_keys WHERE project_id = ?",
+  )
+    .bind(projectId)
+    .first()
+    .catch(() => null);
+  if (!row?.public_key) return null;
+  try {
+    return JSON.parse(row.public_key);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -294,10 +322,11 @@ export async function encryptWebPushPayload(plaintext, p256dhB64Url, authB64Url)
   };
 }
 
-function buildWebPushInfo(label, ecdhPub, p256dhB64Url) {
-  // "WebPush: info\0" || ua_public || as_public (both as raw 65-byte uncompressed points)
+export function buildWebPushInfo(label, ecdhPub, p256dhB64Url) {
+  // RFC 8291: "WebPush: info\0" || ua_public || as_public (both as raw 65-byte
+  // uncompressed points). Audit fix A2-19: the UA key must come first.
   const prefix = new TextEncoder().encode(`WebPush: info\0`);
-  return concatBytes(prefix, ecdhPub, base64UrlDecodeToBytes(p256dhB64Url));
+  return concatBytes(prefix, base64UrlDecodeToBytes(p256dhB64Url), ecdhPub);
 }
 
 function concatBytes(...arrays) {

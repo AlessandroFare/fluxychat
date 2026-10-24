@@ -8,12 +8,15 @@ test.describe("embed widget smoke", () => {
     ]);
   });
 
-  test("embed widget console page renders", async ({ page }) => {
+  test("embed widget console page renders and gates on a session", async ({ page }) => {
     await page.goto("/embed", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Embed widget" })).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText("Configuration")).toBeVisible();
-    await expect(page.getByText("Install snippet")).toBeVisible();
+    await expect(page.getByText("Sign in required")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open Quickstart" })).toHaveAttribute(
+      "href",
+      "/onboarding",
+    );
   });
 });

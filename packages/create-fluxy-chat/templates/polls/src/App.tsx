@@ -20,6 +20,10 @@ function PollRoom({ roomId }: { roomId: string }) {
 
   async function createTimelinePoll() {
     setError(null);
+    if (!client) {
+      setError("Not connected yet");
+      return;
+    }
     try {
       await client.createPoll(roomId, {
         question,
@@ -62,7 +66,7 @@ function PollRoom({ roomId }: { roomId: string }) {
                       key={option.index}
                       type="button"
                       disabled={message.poll?.closed}
-                      onClick={() => void client.votePoll(message.id, option.index)}
+                      onClick={() => void client?.votePoll(message.id, option.index)}
                     >
                       {option.text} · {option.votes}
                     </button>

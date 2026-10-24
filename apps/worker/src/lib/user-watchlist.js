@@ -1,3 +1,4 @@
+import { internalDoHeaders } from "./room-shard.js";
 import { logError } from "./worker-log.js";
 
 export const WATCHLIST_TARGET_TYPES = new Set(["room", "user"]);
@@ -109,6 +110,7 @@ export async function fanoutWatchlistForTarget(env, {
         const stub = env.USER.get(userDoId(env, projectId, watcherId));
         const res = await stub.fetch("https://internal/deliver", {
           method: "POST",
+          headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
           body: JSON.stringify({
             userId: watcherId,
             name: "watchlist_event",

@@ -567,7 +567,7 @@ export class FluxyChatClient {
   }
 
   async editMessageRest(messageId: number, content: string): Promise<void> {
-    await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${messageId}`, {
+    await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${encodeURIComponent(messageId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.config.token}` },
       body: JSON.stringify({ content }),
@@ -575,14 +575,14 @@ export class FluxyChatClient {
   }
 
   async deleteMessageRest(messageId: number): Promise<void> {
-    await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${messageId}`, {
+    await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${encodeURIComponent(messageId)}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${this.config.token}` },
     });
   }
 
   async sendReactionRest(messageId: number, emoji: string, op: 'add' | 'remove' = 'add'): Promise<void> {
-    await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${messageId}/reactions`, {
+    await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${encodeURIComponent(messageId)}/reactions`, {
       method: op === 'remove' ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.config.token}` },
       body: JSON.stringify({ emoji }),
@@ -934,7 +934,7 @@ export class FluxyChatClient {
   }
 
   async votePoll(messageId: number, optionIndex: number): Promise<{ ok: boolean }> {
-    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/polls/${messageId}/vote`, {
+    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/polls/${encodeURIComponent(messageId)}/vote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.config.token}` },
       body: JSON.stringify({ optionIndex }),
@@ -943,7 +943,7 @@ export class FluxyChatClient {
   }
 
   async getPoll(messageId: number): Promise<Record<string, unknown>> {
-    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/polls/${messageId}`, {
+    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/polls/${encodeURIComponent(messageId)}`, {
       headers: { Authorization: `Bearer ${this.config.token}` },
     });
     if (!res.ok) return {};
@@ -990,7 +990,7 @@ export class FluxyChatClient {
 
   // --- Translation ---
   async translateMessage(messageId: number, targetLanguage: string): Promise<{ translated: string; language: string } | null> {
-    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${messageId}/translate`, {
+    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${encodeURIComponent(messageId)}/translate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.config.token}` },
       body: JSON.stringify({ targetLanguage }),
@@ -1001,7 +1001,7 @@ export class FluxyChatClient {
 
   // --- Delivery Tracking ---
   async markMessageDelivered(messageId: number): Promise<{ ok: boolean }> {
-    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${messageId}/deliver`, {
+    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${encodeURIComponent(messageId)}/deliver`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${this.config.token}` },
     });
@@ -1009,7 +1009,7 @@ export class FluxyChatClient {
   }
 
   async getMessageDeliveries(messageId: number): Promise<Array<{ userId: string; status: string; deliveredAt?: string }>> {
-    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${messageId}/deliveries`, {
+    const res = await fetch(`${trimTrailingSlashes(this.config.apiUrl)}/messages/${encodeURIComponent(messageId)}/deliveries`, {
       headers: { Authorization: `Bearer ${this.config.token}` },
     });
     if (!res.ok) return [];

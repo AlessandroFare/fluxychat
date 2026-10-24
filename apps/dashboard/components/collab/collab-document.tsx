@@ -2,10 +2,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useYjs } from "./yjs-provider";
+import CollabPresenceChip from "./collab-presence-chip";
 import { sanitizeHtmlFragment } from "@/lib/sanitize-html";
 
 export default function CollabDocument() {
-  const { doc, ymap, connected } = useYjs();
+  const { doc, ymap } = useYjs();
   const editorRef = useRef<HTMLDivElement>(null);
   const [html, setHtml] = useState("");
   const syncingRef = useRef(false);
@@ -28,12 +29,21 @@ export default function CollabDocument() {
 
   const handleInput = useCallback(() => {
     if (!editorRef.current || !ymap || !doc) return;
+    // Local typing is already in the DOM: re-rendering dangerouslySetInnerHTML from
+    // state would replace the text node and drop the caret.
     const content = sanitizeHtmlFragment(editorRef.current.innerHTML);
-    setHtml(content);
     syncingRef.current = true;
     doc.transact(() => { ymap.set(docKey, content); });
     requestAnimationFrame(() => { syncingRef.current = false; });
   }, [ymap, doc]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const html = e.clipboardData.getData("text/html");
+    if (!html) return; // plain text: the browser default is already safe
+    e.preventDefault();
+    document.execCommand("insertHTML", false, sanitizeHtmlFragment(html));
+    handleInput();
+  }, [handleInput]);
 
   const execCmd = (cmd: string, val?: string) => {
     document.execCommand(cmd, false, val);
@@ -56,9 +66,8 @@ export default function CollabDocument() {
             {label as string}
           </button>
         ))}
-        <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
-          <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-green-500" : "bg-yellow-500"}`} />
-          {connected ? "Live" : "Offline"}
+        <span className="ml-auto">
+          <CollabPresenceChip />
         </span>
       </div>
       <div
@@ -68,6 +77,7 @@ export default function CollabDocument() {
         className="flex-1 overflow-y-auto p-4 text-sm outline-none leading-relaxed"
         dangerouslySetInnerHTML={{ __html: html }}
         onInput={handleInput}
+        onPaste={handlePaste}
         onBlur={handleInput}
       />
     </div>

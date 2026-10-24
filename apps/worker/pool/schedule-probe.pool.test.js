@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { ScheduleProbeDo } from "./schedule-probe-do.js";
 
-describe("vitest-pool-workers — room schedule + hibernation primitives", () => {
+describe("workerd pool (vitest-plugin) — room schedule + hibernation primitives", () => {
   it("fires the named alarm queue inside workerd", async () => {
     const stub = env.SCHEDULE_PROBE.get(env.SCHEDULE_PROBE.idFromName("alarm-queue"));
     await stub.enqueueJob("expiry", Date.now() + 60_000);

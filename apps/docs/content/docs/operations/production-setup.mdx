@@ -95,7 +95,7 @@ WebRTC SFU runs **outside** Workers. Pick one:
 
 ### Option C — Skip voice SFU for now
 
-Worker returns a **stub** token when `LIVEKIT_*` unset. Text pipeline (`useVoice` simulation) still works on `/voice-ai`.
+Worker answers `503 livekit_not_configured` when `LIVEKIT_*` is unset — it never returns a fake token. Text pipeline (`useVoice` simulation) still works on `/voice-ai`.
 
 ---
 

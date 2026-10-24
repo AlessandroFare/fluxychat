@@ -5,4 +5,16 @@ description: "This room is at capacity"
 
 # 44000 — channel_at_capacity
 
-The room hit its connection cap. Terminal for this attempt. HTTP 429. Try later or another room.
+The room hit its connection cap. Terminal for this attempt.
+
+**At a glance** — HTTP 429 · close 1008 `channel_at_capacity` · terminal for this attempt · SDK `FluxyAuthError` with `refusalCode: "channel_at_capacity"`.
+
+## What to do
+
+- The credential is fine: wait and retry, or point the user at another room.
+- Retrying later can succeed once other clients disconnect — it is not an auth problem.
+- Do not treat it like `rate_limited`: the block is on the room's connections, not on request frequency.
+
+## Related
+
+- [42900 rate_limited](/docs/errors/rate_limited)

@@ -188,10 +188,17 @@ export function createD1ApprovalStore(env) {
       if (existing.currentApproverId && existing.currentApproverId !== userId) {
         throw new Error("not_current_approver");
       }
+      const allowSelfApproval =
+        env.HITL_ALLOW_SELF_APPROVAL === "true" || env.HITL_ALLOW_SELF_APPROVAL === "1";
+      // Audit F-41/F-42: four-eyes is the default — a request without an
+      // explicit chain or env opt-in still cannot be approved by the agent
+      // or by the requester. HITL_ALLOW_SELF_APPROVAL=true restores the old
+      // any-human behaviour for single-operator projects.
       const makerChecker =
         existing.approvalChainSnapshot?.makerChecker === true ||
         env.HITL_MAKER_CHECKER === "true" ||
-        env.HITL_MAKER_CHECKER === "1";
+        env.HITL_MAKER_CHECKER === "1" ||
+        !allowSelfApproval;
       const check = assertMakerCheckerDecision({
         makerChecker,
         requesterUserId: existing.requesterUserId,
@@ -202,13 +209,21 @@ export function createD1ApprovalStore(env) {
 
       const status = decision === "approve" || decision === "approved" ? "approved" : "denied";
       const now = nowIso();
-      await env.DB.prepare(
+      const result = await env.DB.prepare(
         `UPDATE hitl_approval_requests
          SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
          WHERE id = ? AND status = 'pending'`,
       )
         .bind(status, now, userId, note ?? null, id)
         .run();
+
+      // First decision wins: the conditional UPDATE is the atomic gate, so a
+      // concurrent loser gets a conflict instead of the winner's decision echoed
+      // back with double outcome labels and spans.
+      if (!result.meta?.changes) {
+        const current = await this.get(id);
+        throw new Error(`already_${current?.status ?? "decided"}`);
+      }
 
       try {
         const { attachHumanOutcome } = await import("./room-decisions.js");

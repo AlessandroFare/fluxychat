@@ -43,7 +43,8 @@ function makeEnv() {
           },
           run: async () => {
             if (sql.includes("INSERT INTO business_objects")) {
-              store.push({ __table: "objects", id: params[0], project_id: params[1], room_id: params[2], object_type: params[3], object_id: params[4], state: params[5], payload_json: params[6], version: Number(params[7]), created_by: params[8], created_at: params[9], updated_at: params[10] });
+              // version is the literal 1 in the statement, not a bound column.
+              store.push({ __table: "objects", id: params[0], project_id: params[1], room_id: params[2], object_type: params[3], object_id: params[4], state: params[5], payload_json: params[6], version: 1, created_by: params[7], created_at: params[8], updated_at: params[9] });
             } else if (sql.includes("INSERT INTO business_object_events")) {
               store.push({ __table: "events", id: store.filter((r) => r.__table === "events").length + 1, project_id: params[0], room_id: params[1], object_id: params[2], event_type: params[3], payload_json: params[4], actor_user_id: params[5], version: params[6], created_at: params[7] });
             } else if (sql.includes("INSERT INTO business_object_subscriptions")) {
@@ -51,6 +52,10 @@ function makeEnv() {
             } else if (sql.includes("UPDATE business_objects")) {
               const idx = store.findIndex((r) => r.__table === "objects" && r.id === params[4]);
               if (idx >= 0) {
+                // A2-15: honor the optimistic version guard in the statement.
+                if (sql.includes("AND version = ?") && Number(store[idx].version) !== Number(params[5])) {
+                  return { meta: { changes: 0 } };
+                }
                 store[idx].state = params[0];
                 store[idx].payload_json = params[1];
                 store[idx].version = Number(params[2]);
@@ -114,6 +119,21 @@ describe("business-objects", () => {
       const env = makeEnv();
       const result = await updateObject(env, { id: "nonexistent", state: "resolved" });
       expect(result.error).toBe("not_found");
+    });
+
+    it("A2-15: a concurrent update loses to the version guard", async () => {
+      const env = makeEnv();
+      const created = await createObject(env, {
+        projectId: "p1", roomId: "r1", objectType: "ticket", objectId: "T-002",
+        payload: { title: "Bug" }, createdBy: "u1",
+      });
+      const results = await Promise.all([
+        updateObject(env, { id: created.id, state: "resolved", actorUserId: "u1" }),
+        updateObject(env, { id: created.id, state: "in_progress", actorUserId: "u2" }),
+      ]);
+      expect(results.filter((r) => r.error === "edit_conflict")).toHaveLength(1);
+      const obj = await getObject(env, created.id);
+      expect(obj.version).toBe(2);
     });
   });
 
@@ -196,5 +216,21 @@ describe("business-objects", () => {
       });
       expect(result.created).toBe(true);
     });
+  });
+
+  it("A2-10: unsubscribeFromObjectEvents scopes the delete by project", async () => {
+    const calls = [];
+    const chain = {
+      bind: function (...params) {
+        calls.push(params);
+        return this;
+      },
+      run: async () => ({ meta: { changes: 1 } }),
+    };
+    const env = { DB: { prepare: (sql) => { calls.push(sql); return chain; } } };
+    const result = await unsubscribeFromObjectEvents(env, { id: "s1", projectId: "proj_own" });
+    expect(calls[0]).toMatch(/AND project_id = \?/);
+    expect(calls[1][calls[1].length - 1]).toBe("proj_own");
+    expect(result.deleted).toBe(1);
   });
 });

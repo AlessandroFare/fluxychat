@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   saveSearch,
   listSavedSearches,
@@ -10,7 +10,22 @@ import {
   removeFromFolder,
   getFolderItems,
   deleteFolder,
+  unifiedSearch,
 } from "./search-enhancements.js";
+
+vi.mock("./knowledge-graph.js", () => ({
+  queryKnowledgeGraph: vi.fn(async () => ({
+    ok: true,
+    nodes: [
+      { id: "n1", roomId: "r1", label: "Acme", nodeType: "org", sourceMessageId: "m1" },
+      { id: "n2", roomId: "r2", label: "Acme Corp", nodeType: "org", sourceMessageId: "m2" },
+    ],
+  })),
+}));
+
+vi.mock("./room-access.js", () => ({
+  canAccessRoom: vi.fn(async (_env, _auth, roomId) => roomId === "r1"),
+}));
 
 function createMockDb({ savedSearches = [], folders = [], folderItems = [] } = {}) {
   let nextId = 1;
@@ -154,18 +169,19 @@ describe("search-enhancements", () => {
   });
 
   describe("recordSearchUse", () => {
-    it("increments use count", async () => {
+    it("increments use count within the project", async () => {
       const db = createMockDb({
         savedSearches: [
           { id: "s1", project_id: "p1", user_id: "u1", name: "own", query: "q", filters_json: null, use_count: 3, is_shared: 0, last_used_at: null, created_at: "", updated_at: "" },
         ],
       });
-      await recordSearchUse({ DB: db }, "s1");
+      await recordSearchUse({ DB: db }, "s1", "p1");
       expect(db.savedSearches[0].use_count).toBe(4);
     });
-    it("does nothing if no id", async () => {
+    it("does nothing if no id or no project", async () => {
       const db = createMockDb();
-      await recordSearchUse({ DB: db }, null);
+      await recordSearchUse({ DB: db }, null, "p1");
+      await recordSearchUse({ DB: db }, "s1", null);
     });
   });
 
@@ -263,6 +279,26 @@ describe("search-enhancements", () => {
       const result = await deleteFolder({ DB: db }, { projectId: "p1", userId: "u1", folderId: "missing" });
       expect(result.ok).toBe(false);
       expect(result.error).toBe("not_found");
+    });
+  });
+
+  describe("unifiedSearch entity access (audit F-79)", () => {
+    it("drops KG nodes from rooms the member cannot access", async () => {
+      const result = await unifiedSearch(
+        { DB: createMockDb() },
+        { projectId: "p1", userId: "u1", roles: ["member"], query: "acme", mode: "entity" },
+      );
+      expect(result.ok).toBe(true);
+      expect(result.results.map((r) => r.roomId)).toEqual(["r1"]);
+      expect(result.sourcesUsed).toContain("entity");
+    });
+
+    it("keeps all rooms for project-wide roles", async () => {
+      const result = await unifiedSearch(
+        { DB: createMockDb() },
+        { projectId: "p1", userId: "u1", roles: ["admin"], query: "acme", mode: "entity" },
+      );
+      expect(result.results.map((r) => r.roomId).sort()).toEqual(["r1", "r2"]);
     });
   });
 });

@@ -12,6 +12,7 @@ import {
   upsertAgentSchedule,
   validateAgentScheduleInput,
   withAgentScheduleRows,
+  STUCK_CLAIM_MS,
 } from "./agent-schedules.js";
 
 describe("agent schedules", () => {
@@ -128,6 +129,12 @@ describe("agent schedules", () => {
     expect(earliestAgentScheduleDueAt(rows)).toBe(3_000);
     cancelAgentSchedule(rows, a.schedule.id);
     expect(earliestAgentScheduleDueAt(rows)).toBe(3_000);
+  });
+
+  it("A2-29: a running row becomes due when its stuck claim window expires", () => {
+    expect(
+      earliestAgentScheduleDueAt([{ status: "running", nextRunAt: 1_000, claimedAt: 2_000 }]),
+    ).toBe(2_000 + STUCK_CLAIM_MS);
   });
 
   it("persists through KV storage", async () => {

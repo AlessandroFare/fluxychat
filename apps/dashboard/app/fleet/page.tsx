@@ -197,7 +197,11 @@ export default function FleetPage() {
   if (!token) {
     return (
       <ConsoleShell>
-        <div className="flex flex-1 items-center justify-center">
+        <ConsolePageHeader
+          title="Fleet Tracking"
+          description="Real-time GPS tracking, trip management, and geofencing"
+        />
+        <div className="flex flex-1 items-center justify-center py-20">
           <p className="text-muted-foreground">Connect a project session to use Fleet Tracking.</p>
         </div>
       </ConsoleShell>

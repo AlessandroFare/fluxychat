@@ -104,6 +104,7 @@ import { dispatchPresenceEscalationRoutes } from "../routes/presence-escalation-
 import { dispatchRoomConfigRoutes } from "../routes/room-config-http.js";
 import { dispatchRoomExtensionsRoutes } from "../routes/room-extensions-http.js";
 import { dispatchRoomIntelligenceRoutes } from "../routes/room-intelligence-http.js";
+import { dispatchRoomBookmarksRoutes } from "../routes/room-bookmarks-http.js";
 import { dispatchGdprRoutes } from "../routes/gdpr-http.js";
 import { dispatchBillingRoutes } from "../routes/billing-http.js";
 import { dispatchRoomMessageRetentionRoutes } from "../routes/room-message-retention-http.js";
@@ -115,6 +116,7 @@ import { dispatchAdminProjectsRoutes } from "../routes/admin-projects-http.js";
 import { dispatchIntegrationsSentRoutes } from "../routes/integrations-sent-http.js";
 import { dispatchStripeWebhookRoutes } from "../routes/billing-stripe-http.js";
 import { dispatchBridgeWebhookRoutes } from "../routes/bridge-webhook-http.js";
+import { dispatchTranscriptsRoutes } from "../routes/transcripts-http.js";
 
 /**
  * @param {() => Promise<Record<string, Function>>} loader
@@ -189,6 +191,11 @@ const dispatchIntelligenceRoutes = lazyRoute(() => import("../routes/intelligenc
 const dispatchModerationQueueRoutes = lazyRoute(() => import("../routes/moderation-queue-http.js"), "dispatchModerationQueueRoutes");
 const dispatchAdaptersRoutes = lazyRoute(() => import("../routes/adapters-http.js"), "dispatchAdaptersRoutes");
 const dispatchOpsRoutes = lazyRoute(() => import("../routes/ops-http.js"), "dispatchOpsRoutes");
+const dispatchCustomEmojisRoutes = lazyRoute(() => import("../routes/custom-emojis-http.js"), "dispatchCustomEmojisRoutes");
+const dispatchSavedMessagesRoutes = lazyRoute(() => import("../routes/saved-messages-http.js"), "dispatchSavedMessagesRoutes");
+const dispatchUserGroupsRoutes = lazyRoute(() => import("../routes/user-groups-http.js"), "dispatchUserGroupsRoutes");
+const dispatchRoomFoldersRoutes = lazyRoute(() => import("../routes/room-folders-http.js"), "dispatchRoomFoldersRoutes");
+const dispatchNotificationKeywordsRoutes = lazyRoute(() => import("../routes/notification-keywords-http.js"), "dispatchNotificationKeywordsRoutes");
 const dispatchAgentProfilesRoutes = lazyRoute(() => import("../routes/agent-profiles-http.js"), "dispatchAgentProfilesRoutes");
 const dispatchUserBlocksRoutes = lazyRoute(() => import("../routes/user-blocks-http.js"), "dispatchUserBlocksRoutes");
 const dispatchPushRoutes = lazyRoute(() => import("../routes/push-http.js"), "dispatchPushRoutes");
@@ -345,6 +352,12 @@ export const WORKER_ROUTE_DISPATCHERS_BEFORE_PRIVACY = [
   dispatchModerationQueueRoutes,
   dispatchAdaptersRoutes,
   dispatchOpsRoutes,
+  dispatchCustomEmojisRoutes,
+  dispatchSavedMessagesRoutes,
+  dispatchUserGroupsRoutes,
+  dispatchRoomFoldersRoutes,
+  dispatchNotificationKeywordsRoutes,
+  dispatchRoomBookmarksRoutes,
   dispatchAgentProfilesRoutes,
 ];
 
@@ -362,6 +375,7 @@ export const WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY = [
   dispatchStripeWebhookRoutes,
   dispatchBridgeWebhookRoutes,
   dispatchIntegrationKitRoutes,
+  dispatchTranscriptsRoutes,
 ];
 
 const PRIVACY_BILLING_DISPATCHERS = [dispatchGdprRoutes, dispatchBillingRoutes];
@@ -442,6 +456,7 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
     dispatchRoomTranslationSettingsRoutes,
     dispatchAdminProjectsRoutes,
     dispatchIntegrationsSentRoutes,
+    dispatchTranscriptsRoutes,
   ],
   "ag-ui": [
     dispatchMessagesAgentsRoutes,
@@ -533,6 +548,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   ],
   "cross-org": [
     dispatchCrossOrgRoutes,
+  ],
+  "custom-emojis": [
+    dispatchCustomEmojisRoutes,
   ],
   "digest": [
     dispatchDigestRoutes,
@@ -636,6 +654,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "notification": [
     dispatchNotificationControlsRoutes,
   ],
+  "notification-keywords": [
+    dispatchNotificationKeywordsRoutes,
+  ],
   "notifications": [
     dispatchNotificationsRoutes,
   ],
@@ -691,6 +712,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "reports": [
     dispatchReportsWebhooksRoutes,
   ],
+  "room-folders": [
+    dispatchRoomFoldersRoutes,
+  ],
   "room-templates": [
     dispatchMessagesAgentsRoutes,
     dispatchTemplatesRoutes,
@@ -724,6 +748,7 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
     dispatchRoomConfigRoutes,
     dispatchRoomExtensionsRoutes,
     dispatchRoomIntelligenceRoutes,
+    dispatchRoomBookmarksRoutes,
     dispatchRoomMessageRetentionRoutes,
     dispatchRoomVoiceStageRoutes,
     dispatchRoomTranslationSettingsRoutes,
@@ -732,6 +757,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   ],
   "saml": [
     dispatchIdentityRoutes,
+  ],
+  "saved-messages": [
+    dispatchSavedMessagesRoutes,
   ],
   "scim": [
     dispatchIdentityRoutes,
@@ -765,6 +793,9 @@ export const WORKER_ROUTE_PREFIX_INDEX = {
   "user": [
     dispatchCompetitorParityRoutes,
   ],
+  "user-groups": [
+    dispatchUserGroupsRoutes,
+  ],
   "users": [
     dispatchMessagesAgentsRoutes,
   ],
@@ -793,8 +824,8 @@ export const WORKER_ROUTE_DISPATCHER_COUNT =
   PRIVACY_BILLING_DISPATCHERS.length +
   WORKER_ROUTE_DISPATCHERS_AFTER_PRIVACY.length;
 
-export const WORKER_ROUTE_LAZY_COUNT = 54;
-export const WORKER_ROUTE_EAGER_COUNT = 110;
+export const WORKER_ROUTE_LAZY_COUNT = 59;
+export const WORKER_ROUTE_EAGER_COUNT = 112;
 
 /**
  * @param {Array<(request: Request, url: URL, deps: Record<string, unknown>) => Promise<Response|null>>} ordered

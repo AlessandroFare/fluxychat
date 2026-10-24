@@ -23,6 +23,8 @@ const nextConfig = {
     dangerouslyAllowSVG: false,
   },
   experimental: {
+    globalNotFound: true,
+    agentUpgrade: 'security',
     serverActions: {
       bodySizeLimit: '5mb',
     },

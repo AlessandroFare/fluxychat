@@ -14,7 +14,10 @@ React 18+, zustand 5+. Yjs editors also need `yjs` and `@fluxy-chat/sdk/yjs`.
 <Cards>
   <Card title="@fluxy-chat/sdk" description="Client, REST, createFluxyRoomSession, verticals." href="/docs/packages/sdk" />
   <Card title="@fluxy-chat/react" description="FluxyRealtimeProvider, hooks." href="/docs/packages/react" />
-  <Card title="@fluxy-chat/ui" description="Cursors, Thread, AiChat, AvatarStack." href="/docs/packages" />
+  <Card title="@fluxy-chat/ui" description="Cursors, Thread, AiChat, AvatarStack." href="/docs/packages/ui" />
+  <Card title="@fluxy-chat/agent" description="Server-side bots, message streaming, waitFor." href="/docs/packages/agent" />
+  <Card title="@fluxy-chat/auth" description="Clerk and Auth.js helpers to mint a member JWT." href="/docs/packages/auth" />
+  <Card title="@fluxy-chat/protocol" description="Shared wire protocol for clients and the worker." href="/docs/packages/protocol" />
 </Cards>
 
 Read [Concepts](/docs/concepts) before mixing primitives.
@@ -41,6 +44,7 @@ import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
 |-------|-----------|
 | [Rooms](/docs/rooms) | attach, messages, occupancy, typing, locks, cursors |
 | [useChat](/docs/core/use-chat) | Chat timeline, agents, most room APIs |
+| [Read receipts](/docs/core/read-receipts) | Unread counts and mark-read |
 | [Presence & typing](/docs/core/presence-typing) | Now (cursors, selections) |
 | [Broadcast](/docs/core/broadcast) | Pulse (`sendClientEvent`) |
 | [Storage](/docs/core/storage) | Yjs document, Tiptap, whiteboard |

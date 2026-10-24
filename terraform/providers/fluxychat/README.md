@@ -57,7 +57,14 @@ output "project_id" {
 
 | Resource | API | Notes |
 |----------|-----|-------|
-| `fluxychat_project` | `POST/GET /admin/projects` | Delete is state-only until Worker DELETE exists |
+| `fluxychat_project` | `POST/GET /admin/projects` | Delete is state-only until Worker DELETE exists (a warning is emitted) |
+| `fluxychat_webhook` | `POST /admin/webhooks`, `PATCH/DELETE /webhooks/:id` | `url` must be https (localhost http allowed) |
+
+## State & secrets
+
+- `webhook.url` must be an https URL (http is accepted only for `localhost`); `worker_url` follows the same rule so the admin JWT never travels in clear.
+- `secret` is marked sensitive but is still stored in the Terraform state file — use an encrypted remote backend for workspaces that set it.
+- `go.sum` is not checked in; run `go mod tidy` before the first build.
 
 ## Cloudflare bindings module
 

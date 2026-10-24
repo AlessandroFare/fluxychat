@@ -87,6 +87,32 @@ export async function notifyMentionedUsers(
   );
 }
 
+export async function notifyKeywordWatchers(
+  env,
+  { projectId, roomId, fromUserId, toUserIds, messageId, preview },
+) {
+  if (!Array.isArray(toUserIds) || !toUserIds.length) return;
+  const snippet =
+    typeof preview === "string" && preview.length
+      ? preview.slice(0, 120)
+      : "A message matched one of your keywords.";
+  await Promise.all(
+    toUserIds
+      .filter((uid) => uid && uid !== fromUserId)
+      .map((userId) =>
+        createInAppNotification(env, {
+          projectId,
+          userId,
+          kind: "keyword",
+          title: "Keyword alert",
+          body: snippet,
+          roomId,
+          messageId,
+        }),
+      ),
+  );
+}
+
 export async function notifyDmRecipient(
   env,
   { projectId, roomId, fromUserId, messageId, preview },

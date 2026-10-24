@@ -124,7 +124,7 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const labelId = decodeURIComponent(labelPatchMatch[1]);
     const body = await request.json().catch(() => null);
-    const updated = await updateLabel(env, { projectId: auth.projectId, labelId, ...body });
+    const updated = await updateLabel(env, { ...body, labelId, projectId: auth.projectId });
     if (!updated) return json({ error: "not_found" }, { status: 404 });
     return json(updated);
   }
@@ -236,7 +236,7 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const policyId = decodeURIComponent(retPatchMatch[1]);
     const body = await request.json().catch(() => null);
-    const updated = await updateRetentionPolicy(env, { projectId: auth.projectId, policyId, ...body });
+    const updated = await updateRetentionPolicy(env, { ...body, policyId, projectId: auth.projectId });
     if (!updated) return json({ error: "not_found" }, { status: 404 });
     return json(updated);
   }
@@ -357,7 +357,7 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const ruleId = decodeURIComponent(dlpPatchMatch[1]);
     const body = await request.json().catch(() => null);
-    const updated = await updateDlpRule(env, { projectId: auth.projectId, ruleId, ...body });
+    const updated = await updateDlpRule(env, { ...body, ruleId, projectId: auth.projectId });
     if (!updated) return json({ error: "not_found" }, { status: 404 });
     return json(updated);
   }
@@ -460,7 +460,7 @@ export async function dispatchEnterpriseComplianceRoutes(request, url, h) {
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const policyId = decodeURIComponent(aiPatchMatch[1]);
     const body = await request.json().catch(() => null);
-    const updated = await updatePolicy(env, { projectId: auth.projectId, policyId, ...body });
+    const updated = await updatePolicy(env, { ...body, policyId, projectId: auth.projectId });
     if (!updated) return json({ error: "not_found" }, { status: 404 });
     return json(updated);
   }

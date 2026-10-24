@@ -68,6 +68,39 @@ describe("embed-config", () => {
     expect(bad.ok).toBe(false);
     expect(bad.error).toBe("embed_origin_forbidden");
   });
+
+  it("binds the claimed parent origin to the caller (audit F-85)", async () => {
+    const env = createEmbedEnv();
+    const embedConfig = { enabled: true, allowedOrigins: ["https://acme.com"] };
+
+    // A foreign site claiming an allowlisted parent is rejected.
+    const foreign = await validateEmbedParentOrigin(
+      env,
+      new Request("https://chat.acme.com/embed/frame", {
+        headers: { Origin: "https://evil.example" },
+      }),
+      { projectId: "proj_1", embedConfig, parentOrigin: "https://acme.com" },
+    );
+    expect(foreign.ok).toBe(false);
+
+    // The served frame (own origin) claiming an allowlisted parent passes.
+    const frame = await validateEmbedParentOrigin(
+      env,
+      new Request("https://chat.acme.com/embed/frame", {
+        headers: { Origin: "https://chat.acme.com" },
+      }),
+      { projectId: "proj_1", embedConfig, parentOrigin: "https://acme.com" },
+    );
+    expect(frame.ok).toBe(true);
+
+    // A malformed parent origin is rejected outright.
+    const malformed = await validateEmbedParentOrigin(env, new Request("https://chat.acme.com/embed/frame"), {
+      projectId: "proj_1",
+      embedConfig,
+      parentOrigin: "not a url",
+    });
+    expect(malformed.ok).toBe(false);
+  });
 });
 
 function createEmbedEnv() {

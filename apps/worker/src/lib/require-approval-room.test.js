@@ -41,4 +41,33 @@ describe("requireApprovalRoom", () => {
     expect(runs.some((r) => String(r.sql).includes("INSERT INTO rooms"))).toBe(true);
     expect(runs.some((r) => r.sql === "batch" && r.n === 2)).toBe(true);
   });
+
+  it("never adds the requester as their own approver (audit F-26)", async () => {
+    const members = [];
+    const env = {
+      DB: {
+        prepare(sql) {
+          return {
+            bind: (...args) => ({
+              run: async () => {
+                if (String(sql).includes("INSERT INTO room_members")) members.push(args[1]);
+                return { meta: { changes: 1 } };
+              },
+            }),
+          };
+        },
+        batch: async (list) => {
+          for (const stmt of list) await stmt.run();
+        },
+      },
+    };
+    const result = await requireApprovalRoom(env, {
+      projectId: "p1",
+      requesterUserId: "u1",
+      toolName: "deleteFile",
+      approverIds: ["u1", "u2"],
+    });
+    expect(result.ok).toBe(true);
+    expect(members).toEqual(["u1", "u2"]);
+  });
 });

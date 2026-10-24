@@ -39,6 +39,24 @@ export interface ExportSnapshot {
   completedAt: string | null;
 }
 
+export interface ClassificationLabel {
+  id: string;
+  projectId: string;
+  name: string;
+  level: number;
+  color: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface RoomClassification {
+  roomId: string;
+  projectId: string;
+  labelId: string;
+  classifiedBy: string;
+  classifiedAt: string;
+}
+
 function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
@@ -94,5 +112,53 @@ export async function createExportSnapshot(
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+export async function listClassificationLabels(
+  token: string,
+): Promise<{ labels: ClassificationLabel[] }> {
+  return fetchWorkerJson(`${BASE}/enterprise/classification/labels`, { headers: authHeaders(token) });
+}
+
+export async function createClassificationLabel(
+  token: string,
+  body: { name: string; level?: number; color?: string; description?: string },
+): Promise<ClassificationLabel> {
+  return fetchWorkerJson(`${BASE}/enterprise/classification/labels`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteClassificationLabel(
+  token: string,
+  labelId: string,
+): Promise<{ ok: boolean }> {
+  return fetchWorkerJson(`${BASE}/enterprise/classification/labels/${encodeURIComponent(labelId)}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export async function classifyRoom(
+  token: string,
+  roomId: string,
+  labelId: string,
+): Promise<RoomClassification> {
+  return fetchWorkerJson(`${BASE}/enterprise/classification/rooms/${encodeURIComponent(roomId)}`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ labelId }),
+  });
+}
+
+export async function getRoomClassification(
+  token: string,
+  roomId: string,
+): Promise<{ classification: RoomClassification | null }> {
+  return fetchWorkerJson(`${BASE}/enterprise/classification/rooms/${encodeURIComponent(roomId)}`, {
+    headers: authHeaders(token),
   });
 }

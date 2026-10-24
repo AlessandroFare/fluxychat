@@ -61,7 +61,7 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+$/) && request.method === "PATCH") {
     const eventId = path.split("/").pop();
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.updateEvent(env, { eventId, ...body });
+    const result = await Live.updateEvent(env, { ...body, eventId });
     return json(result);
   }
 
@@ -104,7 +104,7 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+\/rules$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.upsertChatRules(env, { eventId, ...body });
+    const result = await Live.upsertChatRules(env, { ...body, eventId });
     return json(result);
   }
 
@@ -142,14 +142,14 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+\/join$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.joinEvent(env, { eventId, ...body, userId: auth.userId });
+    const result = await Live.joinEvent(env, { ...body, eventId, userId: auth.userId });
     return json(result);
   }
 
   if (path.match(/^\/api\/live\/events\/[^/]+\/leave$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.leaveEvent(env, { eventId, ...body, userId: auth.userId });
+    const result = await Live.leaveEvent(env, { ...body, eventId, userId: auth.userId });
     return json(result);
   }
 
@@ -183,21 +183,21 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+\/ban$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.banViewer(env, { eventId, ...body });
+    const result = await Live.banViewer(env, { ...body, eventId });
     return json(result);
   }
 
   if (path.match(/^\/api\/live\/events\/[^/]+\/mute$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.muteViewer(env, { eventId, ...body });
+    const result = await Live.muteViewer(env, { ...body, eventId });
     return json(result);
   }
 
   if (path.match(/^\/api\/live\/events\/[^/]+\/pin$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.pinMessage(env, { eventId, ...body });
+    const result = await Live.pinMessage(env, { ...body, eventId });
     return json(result);
   }
 
@@ -216,7 +216,7 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+\/messages$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.sendLiveMessage(env, { eventId, ...body });
+    const result = await Live.sendLiveMessage(env, { ...body, eventId });
     return json(result);
   }
 
@@ -232,7 +232,7 @@ export async function dispatchLiveStreamingRoutes(request, url, h) {
   if (path.match(/^\/api\/live\/events\/[^/]+\/analytics$/) && request.method === "POST") {
     const eventId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await Live.recordAnalyticsBucket(env, { eventId, ...body });
+    const result = await Live.recordAnalyticsBucket(env, { ...body, eventId });
     return json(result);
   }
 

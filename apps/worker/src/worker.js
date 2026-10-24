@@ -85,8 +85,17 @@ import { withRuntimeConfig } from "./lib/with-runtime-config.js";
 import { handleFetchThrownError } from "./lib/http-cors.js";
 import { checkAndConsumeRateLimit } from "./lib/rate-limit.js";
 import "./lib/adapter-web.js"; // P22-A2: Register web adapter on startup
-import { registerMockAdapter } from "./lib/mock-adapter.js"; // P22-F11: Register mock adapter for testing
-registerMockAdapter();
+import { registerMockAdapter } from "./lib/mock-adapter.js"; // P22-F11: mock adapter for tests
+// Audit F-19: the mock adapter fakes successful sends — registering it in
+// production let a project select slug "mock" and have deliveries no-op.
+let mockAdapterRegistered = false;
+function registerMockAdapterForEnv(env) {
+  if (mockAdapterRegistered) return;
+  const nodeEnv = String(env?.NODE_ENV || "").trim().toLowerCase();
+  if (nodeEnv === "production") return;
+  registerMockAdapter();
+  mockAdapterRegistered = true;
+}
 
 export { RoomDurableObject } from "./durable-objects/room-do.js";
 export { UserDurableObject } from "./durable-objects/user-do.js";
@@ -137,7 +146,7 @@ function validateRoomName(name) {
   return { valid: true, name: trimmed };
 }
 
-function validateRoles(roles, options = {}) {
+export function validateRoles(roles, options = {}) {
   if (!Array.isArray(roles)) return { valid: false, error: "roles must be an array" };
   // Audit fix M-5: when minting tokens via the public /auth/token path
   // (API-key-authenticated), prevent callers from self-assigning elevated
@@ -146,12 +155,21 @@ function validateRoles(roles, options = {}) {
   // paths that legitimately need admin tokens use internal helpers directly.
   const elevateCap = options.capElevated === true;
   const validRoles = elevateCap
-    ? ["member", "guest", "mod"]
-    : ["owner", "admin", "member", "guest", "mod"];
-  const sanitized = roles
-    .filter((r) => typeof r === "string")
-    .map((r) => r.trim().toLowerCase())
-    .filter((r) => validRoles.includes(r));
+    ? ["member", "guest", "mod", "moderator"]
+    : ["owner", "admin", "member", "guest", "mod", "moderator"];
+  // Audit fix A2c: "mod" is the legacy alias of "moderator" (see
+  // `ROLE_ALIASES` in message-decisions.js). Issue tokens with the canonical
+  // spelling so every gate matches one vocabulary; before this, callers
+  // asking for "moderator" were silently downgraded to "member".
+  const sanitized = [
+    ...new Set(
+      roles
+        .filter((r) => typeof r === "string")
+        .map((r) => r.trim().toLowerCase())
+        .filter((r) => validRoles.includes(r))
+        .map((r) => (r === "mod" ? "moderator" : r)),
+    ),
+  ];
   if (sanitized.length === 0) {
     return { valid: true, roles: ["member"] };
   }
@@ -245,6 +263,7 @@ function generateJwtSecret() {
 }
 
 async function workerFetch(request, env, ctx) {
+    registerMockAdapterForEnv(env);
     const url = new URL(request.url);
     const traceId = getOrCreateTraceId(request);
     let resolvedProjectIdForMetrics = env.DEFAULT_PROJECT_ID || "default";
@@ -483,6 +502,7 @@ async function workerFetch(request, env, ctx) {
 }
 
 async function workerScheduled(event, env, ctx) {
+    registerMockAdapterForEnv(env);
     const cron = event.cron || "";
     logInfo("scheduled.triggered", { scheduledTime: event.scheduledTime, cron });
 
@@ -507,7 +527,9 @@ export default {
     const { handleCloudflareEmailMessage } = await import("./lib/email-inbound.js");
     try {
       const result = await handleCloudflareEmailMessage(message, withRuntimeConfig(env));
-      if (!result.ok && result.reject === "no mailbox" && typeof message?.setReject === "function") {
+      // Audit fix A2-22: reject on every failure that carries a reason — a
+      // "temporary failure" that is silently accepted loses the mail.
+      if (!result.ok && result.reject && typeof message?.setReject === "function") {
         message.setReject(result.reject);
       }
     } catch (err) {
@@ -567,9 +589,14 @@ async function insertNewProject(env, ctx, name, options = {}) {
     env.DB.prepare(
       "INSERT OR IGNORE INTO project_secrets (project_id, jwt_secret, created_at) VALUES (?, ?, ?)",
     ).bind(projectId, jwtSecret, now),
+    // Audit #28: the secret key (fc_) is never persisted in plaintext — `id` is
+    // an opaque UUID and rows are matched by key_hash/key_hmac at auth time.
+    // The publishable key (pk_) keeps a recoverable id by design: it is a public
+    // browser-side identifier (guest-session/anonymous tokens only) that the CLI
+    // bootstrap re-reads to rebuild .env.local.
     env.DB.prepare(
       "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-    ).bind(apiKey, projectId, keyPrefix, keyHash, keyHmac, now),
+    ).bind(crypto.randomUUID(), projectId, keyPrefix, keyHash, keyHmac, now),
     env.DB.prepare(
       "INSERT INTO api_keys (id, project_id, key_prefix, key_hash, key_hmac, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     ).bind(publishableKey, projectId, pkPrefix, pkHash, pkHash, now),
@@ -637,45 +664,12 @@ async function insertNewProject(env, ctx, name, options = {}) {
 
 /**
  * Seed a "general" public room with one welcome message so a brand-new
- * project has something to look at (Area 5.1).
+ * project has something to look at (Area 5.1). Implementation lives in
+ * lib/demo-room-seed.js (A2-21: project-scoped room id).
  */
 async function seedDemoRoom(env, projectId) {
-  const { ensureDemoRoomSeeded } = await import("./lib/demo-room-seed.js");
-  const now = new Date().toISOString();
-  const configuredDemoRoom = String(env.DEMO_ROOM_ID || "").trim();
-  const roomIds = configuredDemoRoom
-    ? ["general", configuredDemoRoom]
-    : ["general"];
-  for (const roomId of roomIds) {
-    await env.DB.prepare(
-      "INSERT OR IGNORE INTO rooms (id, project_id, type, name, created_at) VALUES (?, ?, 'public', ?, ?)"
-    )
-      .bind(roomId, projectId, roomId, now)
-      .run();
-    await env.DB.prepare(
-      "INSERT OR IGNORE INTO room_members (room_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)"
-    )
-      .bind(roomId, "fluxybot", now)
-      .run();
-  }
-  const roomId = "general";
-  // Welcome message.
-  await env.DB.prepare(
-    `INSERT INTO messages (project_id, room_id, user_id, content, created_at)
-     VALUES (?, ?, ?, ?, ?)`
-  )
-    .bind(
-      projectId,
-      roomId,
-      "fluxybot",
-      "Welcome to FluxyChat! This is your first room. Say hi 👋",
-      now,
-    )
-    .run();
-
-  if (configuredDemoRoom && projectId) {
-    await ensureDemoRoomSeeded(env, projectId, configuredDemoRoom, "fluxybot").catch(() => {});
-  }
+  const { seedDemoRooms } = await import("./lib/demo-room-seed.js");
+  return seedDemoRooms(env, projectId);
 }
 
 function canBypassRoomMembership(roles) {
@@ -685,14 +679,20 @@ function canBypassRoomMembership(roles) {
 }
 
 export function hasAnyRole(roles, allowedRoles) {
-  if (!Array.isArray(roles) || roles.length === 0) return false;
-  return roles.some((role) => allowedRoles.includes(role));
+  // Gate callers pass either a roles array or the auth context object; accept
+  // both shapes and stay fail-closed when no roles are present (A2-1).
+  const list = Array.isArray(roles) ? roles : Array.isArray(roles?.roles) ? roles.roles : [];
+  if (list.length === 0) return false;
+  return list.some((role) => allowedRoles.includes(role));
 }
 
 async function signJwtHs256(secret, payload) {
+  // Audit F-04: every project token carries a revocable `jti`; verification
+  // rejects tokens without one.
+  const body = payload?.jti ? payload : { ...payload, jti: crypto.randomUUID() };
   const header = { alg: "HS256", typ: "JWT" };
   const headerB64 = base64urlEncode(JSON.stringify(header));
-  const payloadB64 = base64urlEncode(JSON.stringify(payload));
+  const payloadB64 = base64urlEncode(JSON.stringify(body));
   const signingInput = `${headerB64}.${payloadB64}`;
   const key = await crypto.subtle.importKey(
     "raw",
@@ -738,29 +738,57 @@ function summarizeString(value) {
   return `${value.slice(0, 32)}…(${value.length} chars)`;
 }
 
-function sanitizeLogContext(ctx) {
+const SENSITIVE_LOG_KEYS = [
+  "apikey", "api_key", "token", "secret", "password", "jwt", "auth",
+  "authorization", "cookie", "session", "credential", "key", "sig",
+  "signature", "private", "private_key",
+];
+
+function isSensitiveLogKey(name) {
+  const lower = String(name || "").toLowerCase();
+  return SENSITIVE_LOG_KEYS.some((sk) => lower.includes(sk));
+}
+
+function redactLogSecret(value) {
+  if (typeof value !== "string") return REDACTED;
+  return value.length > 8 ? value.slice(0, 4) + "..." + value.slice(-4) : "***";
+}
+
+/**
+ * Audit F-01: query strings reach requestLogCtx.search and get logged as-is,
+ * so `?token=…` / `?apiKey=…` leaked verbatim. Redact sensitive param VALUES.
+ */
+function redactQueryForLog(rawSearch) {
+  if (typeof rawSearch !== "string" || rawSearch.length === 0) return rawSearch;
+  try {
+    const params = new URLSearchParams(rawSearch.replace(/^\?/, ""));
+    const out = new URLSearchParams();
+    for (const [name, value] of params) {
+      out.append(name, isSensitiveLogKey(name) ? redactLogSecret(value) : value);
+    }
+    const serialized = out.toString();
+    return serialized ? `?${serialized}` : "";
+  } catch {
+    return "[redacted]";
+  }
+}
+
+export function sanitizeLogContext(ctx) {
   if (!ctx || typeof ctx !== "object") return ctx;
   const sanitized = { ...ctx };
-  const sensitiveKeys = [
-    "apikey", "api_key", "token", "secret", "password", "jwt", "auth",
-    "authorization", "cookie", "session", "credential", "key", "sig",
-    "signature", "private", "private_key",
-  ];
+  const sensitiveKeys = SENSITIVE_LOG_KEYS;
   const piiKeys = [
     "content", "body", "payload", "text", "message", "preview",
     "html", "markdown", "subject", "description",
   ];
   for (const key of Object.keys(sanitized)) {
     const lowerKey = key.toLowerCase();
+    if (lowerKey === "search" && typeof sanitized[key] === "string") {
+      sanitized[key] = redactQueryForLog(sanitized[key]);
+      continue;
+    }
     if (sensitiveKeys.some((sk) => lowerKey.includes(sk))) {
-      const value = sanitized[key];
-      if (typeof value === "string" && value.length > 8) {
-        sanitized[key] = value.slice(0, 4) + "..." + value.slice(-4);
-      } else if (typeof value === "string") {
-        sanitized[key] = "***";
-      } else {
-        sanitized[key] = REDACTED;
-      }
+      sanitized[key] = redactLogSecret(sanitized[key]);
       continue;
     }
     if (piiKeys.some((pk) => lowerKey === pk || lowerKey.endsWith("_" + pk))) {

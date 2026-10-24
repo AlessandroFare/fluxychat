@@ -201,12 +201,37 @@ describe("voice stage", () => {
     const res = await dispatchRoomVoiceStageRoutes(
       req,
       new URL(req.url),
-      deps({ db: bindsDb({ first: { ok: 1, id: "room-1", type: "public" } }) }),
+      deps({
+        db: bindsDb({ first: { ok: 1, id: "room-1", type: "public" } }),
+        env: {
+          LIVEKIT_API_KEY: "lk_test_key",
+          LIVEKIT_API_SECRET: "lk_test_secret",
+          LIVEKIT_URL: "wss://livekit.test",
+        },
+      }),
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.token.payload.sub).toBe("u1");
-    expect(body.token.payload.sub).not.toBe("attacker");
+    const claims = JSON.parse(
+      Buffer.from(String(body.token.token).split(".")[1], "base64url").toString("utf8"),
+    );
+    expect(claims.sub).toBe("u1");
+    expect(claims.sub).not.toBe("attacker");
+  });
+
+  it("POST /rooms/:id/voice/token is 503 livekit_not_configured without LIVEKIT keys", async () => {
+    const req = jsonReq("/rooms/room-1/voice/token", {
+      method: "POST",
+      body: { provider: "livekit" },
+    });
+    const res = await dispatchRoomVoiceStageRoutes(
+      req,
+      new URL(req.url),
+      deps({ db: bindsDb({ first: { ok: 1, id: "room-1", type: "public" } }) }),
+    );
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe("livekit_not_configured");
   });
 });
 
@@ -231,20 +256,31 @@ describe("fleet GPS", () => {
     expect(body.error).toBe("lat/lng out of range");
   });
 
-  it("POST /fleet/gps with a fleet_ key for a different vehicle is 403", async () => {
-    const db = bindsDb({
-      first: (sql) =>
-        String(sql).includes("api_key_hash") ? { id: "v_1", fleet_id: "p1" } : null,
+  it("POST /fleet/gps with a fleet_ key ignores a spoofed vehicleId", async () => {
+    const inserts = [];
+    const inner = bindsDb({
+      first: (sql) => (String(sql).includes("api_key_hash") ? { id: "v_1", fleet_id: "p1" } : null),
     });
+    const db = {
+      prepare(sql) {
+        const stmt = inner.prepare(sql);
+        return {
+          bind(...args) {
+            if (String(sql).includes("INSERT OR IGNORE INTO gps_raw")) inserts.push(args);
+            return stmt.bind(...args);
+          },
+        };
+      },
+    };
+    const kv = { get: async () => null, put: async () => {} };
     const req = jsonReq("/fleet/gps", {
       method: "POST",
       body: { vehicleId: "v_OTHER", lat: 45, lng: 9 },
       headers: { Authorization: "Bearer fleet_" + "b".repeat(32) },
     });
-    const res = await dispatchFleetTrackingRoutes(req, new URL(req.url), deps({ db }));
-    expect(res.status).toBe(403);
-    const body = await res.json();
-    expect(body.error).toBe("vehicle_mismatch");
+    const res = await dispatchFleetTrackingRoutes(req, new URL(req.url), deps({ db, kv }));
+    expect(res.status).toBe(200);
+    expect(inserts[0][0]).toBe("v_1");
   });
 
   it("POST /fleet/gps over per-vehicle quota is 429", async () => {
@@ -335,9 +371,15 @@ describe("IoT ingest", () => {
 });
 
 describe("webhooks", () => {
+  const adminJwt = async () => ({ userId: "u1", projectId: "p1", roles: ["admin"] });
+
   it("POST /webhooks/register with an invalid body is 400", async () => {
     const req = jsonReq("/webhooks/register", { method: "POST", body: { url: "not-a-url" } });
-    const res = await dispatchReportsWebhooksRoutes(req, new URL(req.url), deps());
+    const res = await dispatchReportsWebhooksRoutes(
+      req,
+      new URL(req.url),
+      deps({ verifyJwt: adminJwt }),
+    );
     expect(res.status).toBe(400);
   });
 
@@ -350,12 +392,25 @@ describe("webhooks", () => {
     expect(res.status).toBe(401);
   });
 
+  it("POST /webhooks/register with a member JWT is 403 (audit #17)", async () => {
+    const req = jsonReq("/webhooks/register", {
+      method: "POST",
+      body: { url: "https://example.com/hook", eventTypes: ["message.created"] },
+    });
+    const res = await dispatchReportsWebhooksRoutes(req, new URL(req.url), deps());
+    expect(res.status).toBe(403);
+  });
+
   it("POST /webhooks/register to a private URL is 400 ssrf_blocked", async () => {
     const req = jsonReq("/webhooks/register", {
       method: "POST",
       body: { url: "http://127.0.0.1/hook", eventTypes: ["message.created"] },
     });
-    const res = await dispatchReportsWebhooksRoutes(req, new URL(req.url), deps());
+    const res = await dispatchReportsWebhooksRoutes(
+      req,
+      new URL(req.url),
+      deps({ verifyJwt: adminJwt }),
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("ssrf_blocked");

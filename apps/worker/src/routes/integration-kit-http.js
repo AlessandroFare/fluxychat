@@ -1,4 +1,5 @@
 import { pickRouteDeps } from "./route-http-deps.js";
+import { checkAndConsumeIpRateLimit } from "../lib/ip-rate-limit.js";
 import {
   approveWriteIntent,
   createWriteIntent,
@@ -25,6 +26,7 @@ export async function dispatchIntegrationKitRoutes(request, url, h) {
 
   const {
     env,
+    ctx,
     json,
     corsHeaders,
     verifyJwtAndGetContext,
@@ -34,6 +36,7 @@ export async function dispatchIntegrationKitRoutes(request, url, h) {
     requestLogCtx,
   } = pickRouteDeps(h, [
     "env",
+    "ctx",
     "json",
     "corsHeaders",
     "verifyJwtAndGetContext",
@@ -47,6 +50,17 @@ export async function dispatchIntegrationKitRoutes(request, url, h) {
   if (hook && request.method === "POST") {
     const projectId = decodeURIComponent(hook[1]);
     const provider = decodeURIComponent(hook[2]).toLowerCase();
+    // Audit F-69: the ingest endpoint is unauthenticated by design — rate limit
+    // it per client IP.
+    const limited = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: "integrations-ingest",
+      limit: Number(env.RATE_LIMIT_INTEGRATION_INGEST_PER_MINUTE || 120),
+      windowSeconds: 60,
+    }).catch(() => ({ allowed: true }));
+    if (limited && limited.allowed === false) {
+      return json({ error: "rate_limited" }, { status: 429, headers: corsHeaders });
+    }
     const rawBody = await request.text();
     const signature = signatureHeaderFor(provider, request);
     const result = await ingestIntegrationWebhook(env, {
@@ -54,9 +68,24 @@ export async function dispatchIntegrationKitRoutes(request, url, h) {
       provider,
       rawBody,
       signature,
+      // Audit F-76: Slack signs over the request timestamp too.
+      timestamp: request.headers.get("X-Slack-Request-Timestamp"),
+      // Ambient agent runs are heavy: answer the provider now, finish in the
+      // request lifetime.
+      waitUntil:
+        typeof ctx?.waitUntil === "function"
+          ? (promise) => ctx.waitUntil(promise)
+          : undefined,
     });
     if (!result.ok) {
-      return json({ error: result.error }, { status: result.status || 400, headers: corsHeaders });
+      // Audit F-69: 404 (unknown project/connection) vs 401 (bad signature) let
+      // an attacker enumerate connections — pre-verification failures collapse
+      // into one generic response.
+      const invalidJson = result.error === "invalid_json";
+      return json(
+        { error: invalidJson ? "invalid_json" : "unauthorized" },
+        { status: invalidJson ? 400 : 401, headers: corsHeaders },
+      );
     }
     return json(result, { headers: corsHeaders });
   }
@@ -165,6 +194,10 @@ export async function dispatchIntegrationKitRoutes(request, url, h) {
 
   const approve = path.match(/^\/integrations\/write-intents\/([^/]+)\/approve$/);
   if (approve && request.method === "POST") {
+    // Audit F-24: approvals are an admin action (and never the requester's, see lib).
+    if (!hasAnyRole(auth.roles, ["owner", "admin"])) {
+      return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+    }
     const result = await approveWriteIntent(env, {
       projectId: auth.projectId,
       intentId: decodeURIComponent(approve[1]),

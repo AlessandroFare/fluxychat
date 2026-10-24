@@ -17,9 +17,9 @@
     "testing-integration",
     "auth-jwt",
     "publishable-keys",
+    "guest-to-account",
     "migrate-from-pusher",
     "migrate-from-twilio",
-    "migrate-from-portal",
     "room-tickets",
     "integration-kit",
     "processes",
@@ -65,6 +65,7 @@
     "announcement-channels",
     "telephony-handoff",
     "advanced",
-    "ecosystem"
+    "ecosystem",
+    "..."
   ]
 }

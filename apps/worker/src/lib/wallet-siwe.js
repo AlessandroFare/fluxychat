@@ -11,10 +11,6 @@ function normalizeAddress(address) {
   return trimmed.toLowerCase();
 }
 
-function nonceKey(projectId, address) {
-  return `wallet-siwe:${projectId}:${address}`;
-}
-
 function allowlistKey(projectId) {
   return `wallet-allowlist:${projectId}`;
 }
@@ -69,14 +65,25 @@ export function recoverPersonalSignAddress(message, signatureHex) {
 export async function issueWalletNonce(env, { projectId, address, domain, uri }) {
   const addr = normalizeAddress(address);
   if (!addr) return { error: "invalid_address", status: 400 };
-  const kv = getKv(env);
-  if (!kv) return { error: "kv_unavailable", status: 503 };
+  if (!env?.DB) return { error: "kv_unavailable", status: 503 };
   const nonce = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   const issuedAt = new Date().toISOString();
   const message = buildSiweMessage({ domain, uri, address: addr, nonce, issuedAt });
-  await kv.put(nonceKey(projectId, addr), JSON.stringify({ nonce, issuedAt, message }), {
-    expirationTtl: Math.ceil(NONCE_TTL_MS / 1000),
-  });
+  const expiresAt = new Date(Date.now() + NONCE_TTL_MS).toISOString();
+  // Audit F-36: nonces live in D1 because single-use verification needs an
+  // atomic claim (delete-if-matching). KV could not provide that: two
+  // concurrent replays of the same signature both passed the read.
+  await env.DB.prepare(
+    `INSERT INTO wallet_siwe_nonces (project_id, address, nonce, message, issued_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(project_id, address) DO UPDATE SET
+       nonce = excluded.nonce,
+       message = excluded.message,
+       issued_at = excluded.issued_at,
+       expires_at = excluded.expires_at`,
+  )
+    .bind(projectId, addr, nonce, message, issuedAt, expiresAt)
+    .run();
   return { nonce, issuedAt, message, address: addr };
 }
 
@@ -89,17 +96,24 @@ export async function verifyWalletSiwe(env, { projectId, address, message, signa
   if (domain && !message.startsWith(`${domain} wants you to sign in`)) {
     return { error: "invalid_domain", status: 400 };
   }
-  const kv = getKv(env);
-  if (!kv) return { error: "kv_unavailable", status: 503 };
-  const raw = await kv.get(nonceKey(projectId, addr));
-  if (!raw) return { error: "nonce_expired", status: 401 };
-  let stored;
-  try {
-    stored = JSON.parse(raw);
-  } catch {
+  if (!env?.DB) return { error: "kv_unavailable", status: 503 };
+  const row = await env.DB.prepare(
+    `SELECT nonce, message, expires_at FROM wallet_siwe_nonces
+     WHERE project_id = ? AND address = ?`,
+  )
+    .bind(projectId, addr)
+    .first()
+    .catch(() => null);
+  if (!row) return { error: "nonce_expired", status: 401 };
+  if (Date.parse(String(row.expires_at)) < Date.now()) {
+    await env.DB.prepare(
+      `DELETE FROM wallet_siwe_nonces WHERE project_id = ? AND address = ? AND nonce = ?`,
+    )
+      .bind(projectId, addr, String(row.nonce))
+      .run();
     return { error: "nonce_expired", status: 401 };
   }
-  if (stored.message !== message) return { error: "message_mismatch", status: 401 };
+  if (String(row.message) !== message) return { error: "message_mismatch", status: 401 };
   let recovered;
   try {
     recovered = recoverPersonalSignAddress(message, signature);
@@ -109,7 +123,14 @@ export async function verifyWalletSiwe(env, { projectId, address, message, signa
   if (recovered !== addr) return { error: "address_mismatch", status: 401 };
   const gate = await assertWalletAllowlisted(env, projectId, addr);
   if (gate.error) return gate;
-  await kv.delete(nonceKey(projectId, addr));
+  // Audit F-36: atomic single-use claim — the second concurrent replay of the
+  // same signed message deletes zero rows and is rejected.
+  const claimed = await env.DB.prepare(
+    `DELETE FROM wallet_siwe_nonces WHERE project_id = ? AND address = ? AND nonce = ?`,
+  )
+    .bind(projectId, addr, String(row.nonce))
+    .run();
+  if (!Number(claimed.meta?.changes || 0)) return { error: "nonce_expired", status: 401 };
   return { address: addr };
 }
 
@@ -139,7 +160,12 @@ export async function setWalletAllowlist(env, projectId, addresses) {
 
 export async function assertWalletAllowlisted(env, projectId, address) {
   const { addresses } = await getWalletAllowlist(env, projectId);
-  if (addresses.length === 0) return { ok: true };
+  if (addresses.length === 0) {
+    // Audit F-36: an empty allowlist used to mean "any wallet can mint a member
+    // JWT". It must now be configured, unless the operator opts in explicitly.
+    if (env?.WALLET_SIWE_ALLOW_ANY_WALLET === "true") return { ok: true };
+    return { error: "allowlist_not_configured", status: 403 };
+  }
   if (!addresses.includes(address)) return { error: "not_allowlisted", status: 403 };
   return { ok: true };
 }

@@ -1,11 +1,16 @@
 ---
 title: "Transcripts API"
-description: "`createTranscriptsApi()` provides per-user message persistence keyed by a stable cross-platform identifier, backed by in-memory storage with configurable retent"
+description: "`createTranscriptsApi()` provides per-user message persistence keyed by a stable cross-platform identifier — in-memory by default, or in the Worker (D1) with `worker` config."
 ---
 
 # Transcripts API
 
-`createTranscriptsApi()` provides per-user message persistence keyed by a stable cross-platform identifier, backed by in-memory storage with configurable retention and capping.
+`createTranscriptsApi()` provides per-user message persistence keyed by a stable cross-platform identifier and capped per user.
+
+Two stores:
+
+- **In-memory (default)** — nothing is persisted; entries are gone on reload. Fine for tests and demos.
+- **Worker (D1)** — pass `worker: { baseUrl, token }`; entries persist in `user_transcripts` and show up in the console at `/transcripts`.
 
 ## Usage
 
@@ -15,6 +20,10 @@ import { createTranscriptsApi } from "@fluxy-chat/sdk";
 const api = createTranscriptsApi({
   retention: "30d",
   maxPerUser: 200,
+  worker: {
+    baseUrl: "https://fluxychat-worker.example.workers.dev",
+    token: adminJwt, // admin JWT for /admin/transcripts
+  },
 });
 
 // Append user message
@@ -33,10 +42,13 @@ const total = await api.count({ userKey: "user@example.com" });
 const result = await api.delete({ userKey: "user@example.com" });
 ```
 
+Drop `worker` for the in-memory store.
+
 ## Configuration
 
-- `retention`: TTL for entries (ms or duration string like `"30d"`, `"6h"`, `"45s"`). Refreshed on append.
+- `retention`: TTL for entries (ms or duration string like `"30d"`, `"6h"`, `"45s"`). Applied at append time; expired entries are hidden from lists and counts. Refreshed on append.
 - `maxPerUser`: Hard cap per user. Older entries evicted on append (default: 200).
+- `worker`: `{ baseUrl, token }` — route the API through the Worker. Records are scoped by the JWT's project, so one project never reads another's transcripts.
 
 ## Filtering
 
@@ -46,3 +58,14 @@ await api.list({ userKey: "u1", threadId: "slack\:C123:1234" });
 await api.list({ userKey: "u1", roles: ["user"] });
 await api.list({ userKey: "u1", limit: 50 });
 ```
+
+## HTTP routes
+
+The Worker store uses these admin routes (all project-scoped by the JWT):
+
+| Route | Purpose |
+|-------|---------|
+| `POST /admin/transcripts` | Append `{ userKey, role, text, platform, threadId?, platformMessageId?, maxPerUser?, retentionMs? }` |
+| `GET /admin/transcripts?userKey=…` | List entries (filters: `platforms`, `roles`, `threadId`, `limit`) |
+| `GET /admin/transcripts/count?userKey=…` | Count live entries |
+| `DELETE /admin/transcripts?userKey=…` | Delete all entries for the user |

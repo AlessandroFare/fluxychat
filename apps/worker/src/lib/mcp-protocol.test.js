@@ -4,13 +4,25 @@ import {
   MCP_ERROR_UNSUPPORTED_PROTOCOL,
   MCP_PROTOCOL_VERSION,
   detectMcpEra,
+  elicitationInputRequired,
+  emptyResourceTemplatesList,
   isJsonRpcNotification,
+  mcpRequestMetricName,
   rejectUnknownProtocolVersion,
   validateModernStreamableHeaders,
   decodeMcpHeaderValue,
+  encodeMcpHeaderValue,
   negotiateLegacyInitializeVersion,
   mergeMcpInputResponses,
 } from "./mcp-protocol.js";
+
+describe("mcpRequestMetricName", () => {
+  it("slugs the method into a per-method mcp_requests metric name", () => {
+    expect(mcpRequestMetricName("tools/call")).toBe("mcp_requests.tools_call");
+    expect(mcpRequestMetricName("server/discover")).toBe("mcp_requests.server_discover");
+    expect(mcpRequestMetricName("")).toBe("mcp_requests.unknown");
+  });
+});
 
 describe("mcp protocol dual-era", () => {
   it("treats initialize as legacy", () => {
@@ -79,6 +91,13 @@ describe("mcp protocol dual-era", () => {
     expect(decodeMcpHeaderValue(`=?base64?${btoa("file:///a b")}?=`)).toBe("file:///a b");
   });
 
+  it("round-trips non-ASCII header values through the Base64 sentinel", () => {
+    expect(encodeMcpHeaderValue("send_message")).toBe("send_message");
+    const encoded = encodeMcpHeaderValue("café ☕");
+    expect(encoded.startsWith("=?base64?")).toBe(true);
+    expect(decodeMcpHeaderValue(encoded)).toBe("café ☕");
+  });
+
   it("negotiates legacy initialize versions", () => {
     expect(negotiateLegacyInitializeVersion({}).protocolVersion).toBe("2024-11-05");
     expect(negotiateLegacyInitializeVersion({ protocolVersion: "2025-11-25" }).protocolVersion).toBe(
@@ -94,5 +113,22 @@ describe("mcp protocol dual-era", () => {
     });
     expect(args.roomId).toBe("room_1");
     expect(args.content).toBe("hi");
+  });
+
+  it("merges the spec map inputResponses shape too", () => {
+    const args = mergeMcpInputResponses({
+      arguments: { roomId: "room_1" },
+      inputResponses: { "elicit-1": { action: "accept", content: { content: "hi" } } },
+    });
+    expect(args).toEqual({ roomId: "room_1", content: "hi" });
+  });
+
+  it("keys elicitation inputRequests by request id and adds an empty templates list", () => {
+    const elicited = elicitationInputRequired({ message: "Which env?" });
+    expect(elicited.inputRequests["elicit-1"].method).toBe("elicitation/create");
+    expect(emptyResourceTemplatesList("modern", { name: "s" })).toMatchObject({
+      resourceTemplates: [],
+      resultType: "complete",
+    });
   });
 });

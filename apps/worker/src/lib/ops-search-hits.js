@@ -63,3 +63,23 @@ export function citationsFromDocuments(documents) {
     }),
   ).filter(Boolean);
 }
+
+/**
+ * Onyx-style per-document feedback applied at result normalization: hidden docs
+ * drop out, boosted docs move to the front, everything else keeps its order.
+ * @param {Array<object>} items
+ * @param {Map<string, "boost"|"hide">} feedback keyed by document id
+ */
+export function applyDocFeedback(items, feedback, keyOf = (item) => item?.id) {
+  if (!Array.isArray(items)) return [];
+  if (!(feedback instanceof Map) || feedback.size === 0) return items;
+  const boosted = [];
+  const rest = [];
+  for (const item of items) {
+    const verdict = feedback.get(String(keyOf(item) ?? ""));
+    if (verdict === "hide") continue;
+    if (verdict === "boost") boosted.push(item);
+    else rest.push(item);
+  }
+  return [...boosted, ...rest];
+}

@@ -36,6 +36,18 @@ describe("url-ssrf (P1 ENG-05)", () => {
     expect(isPrivateUrl("https://hooks.stripe.com/")).toBe(false);
   });
 
+  it("A2e: does not flag DNS hostnames that merely start with fc/fd/fe80", () => {
+    expect(isPrivateUrl("https://fda.gov/")).toBe(false);
+    expect(isPrivateUrl("https://fcbank.com/")).toBe(false);
+    expect(isPrivateUrl("https://fe80.example.com/")).toBe(false);
+  });
+
+  it("A2e: still blocks IPv6 ULA / link-local literals", () => {
+    expect(isPrivateUrl("http://[fc00::1]/")).toBe(true);
+    expect(isPrivateUrl("http://[fd12:3456::1]/")).toBe(true);
+    expect(isPrivateUrl("http://[fe80::1]/")).toBe(true);
+  });
+
   it("assertSafeOutboundUrl throws ssrf_blocked", () => {
     expect(() => assertSafeOutboundUrl("http://127.0.0.1/")).toThrow("ssrf_blocked");
     expect(assertSafeOutboundUrl("https://example.com/").href).toBe("https://example.com/");
@@ -56,6 +68,21 @@ describe("url-ssrf (P1 ENG-05)", () => {
     const env = { REQUIRE_SSRF_HOST_ALLOWLIST: "true", ALLOWED_SSRF_HOSTS: "hooks.stripe.com" };
     expect(isPrivateUrl("https://hooks.stripe.com/", env)).toBe(false);
     expect(isPrivateUrl("https://example.com/webhook", env)).toBe(true);
+  });
+
+  it("requires the allowlist by default when env is provided (audit F-02)", () => {
+    const env = { ALLOWED_SSRF_HOSTS: "internal.acme.com" };
+    expect(isPrivateUrl("https://internal.acme.com/hook", env)).toBe(false);
+    expect(isPrivateUrl("https://example.com/webhook", env)).toBe(true);
+    // First-party platform egress stays reachable without operator config.
+    expect(isPrivateUrl("https://api.stripe.com/v1/charges", env)).toBe(false);
+    expect(isPrivateUrl("https://api.openai.com/v1/chat", env)).toBe(false);
+  });
+
+  it("honours an explicit opt-out of the allowlist requirement", () => {
+    const env = { REQUIRE_SSRF_HOST_ALLOWLIST: "false" };
+    expect(isPrivateUrl("https://example.com/webhook", env)).toBe(false);
+    expect(isPrivateUrl("http://127.0.0.1/", env)).toBe(true);
   });
 
   it("honours ALLOWED_SSRF_HOSTS operator allowlist", () => {

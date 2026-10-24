@@ -29,7 +29,7 @@ export async function dispatchReplayRoutes(request, url, h) {
 
   if (path.match(/^\/api\/replay\/sessions\/[a-z0-9]+$/) && request.method === "GET") {
     const sessionId = path.split("/").pop();
-    const result = await Replay.getSession(env, { sessionId });
+    const result = await Replay.getSession(env, { sessionId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
@@ -44,26 +44,28 @@ export async function dispatchReplayRoutes(request, url, h) {
     const sessionId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
     const result = await Replay.createSnapshot(env, { sessionId, ...body });
+    if (result.error) return json(result, 404);
     return json(result);
   }
 
   if (path.match(/^\/api\/replay\/sessions\/[a-z0-9]+\/snapshots$/) && request.method === "GET") {
     const sessionId = path.split("/")[4];
     const result = await Replay.listSnapshots(env, {
-      sessionId, limit: parseInt(url.searchParams.get("limit") || "50"),
+      sessionId, projectId, limit: parseInt(url.searchParams.get("limit") || "50"),
     });
     return json(result);
   }
 
   if (path.match(/^\/api\/replay\/snapshots\/[a-z0-9]+$/) && request.method === "GET") {
     const snapshotId = path.split("/").pop();
-    const result = await Replay.getSnapshot(env, { snapshotId });
+    const result = await Replay.getSnapshot(env, { snapshotId, projectId });
     return result ? json(result) : json({ error: "not_found" }, 404);
   }
 
   if (path.match(/^\/api\/replay\/snapshots\/sequence$/) && request.method === "GET") {
     const result = await Replay.getSnapshotAtSequence(env, {
       sessionId: url.searchParams.get("sessionId"),
+      projectId,
       sequenceNumber: parseInt(url.searchParams.get("sequenceNumber") || "0"),
     });
     return result ? json(result) : json({ error: "not_found" }, 404);
@@ -73,13 +75,14 @@ export async function dispatchReplayRoutes(request, url, h) {
     const sessionId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
     const result = await Replay.recordEvent(env, { sessionId, ...body });
+    if (result.error) return json(result, 404);
     return json(result);
   }
 
   if (path.match(/^\/api\/replay\/sessions\/[a-z0-9]+\/events$/) && request.method === "GET") {
     const sessionId = path.split("/")[4];
     const result = await Replay.listEvents(env, {
-      sessionId, eventType: url.searchParams.get("eventType"),
+      sessionId, projectId, eventType: url.searchParams.get("eventType"),
       fromSequence: url.searchParams.get("fromSequence") ? parseInt(url.searchParams.get("fromSequence")) : undefined,
       toSequence: url.searchParams.get("toSequence") ? parseInt(url.searchParams.get("toSequence")) : undefined,
       limit: parseInt(url.searchParams.get("limit") || "100"),
@@ -90,6 +93,7 @@ export async function dispatchReplayRoutes(request, url, h) {
   if (path === "/api/replay/events/range" && request.method === "GET") {
     const result = await Replay.getEventsInRange(env, {
       sessionId: url.searchParams.get("sessionId"),
+      projectId,
       fromTime: url.searchParams.get("fromTime"),
       toTime: url.searchParams.get("toTime"),
       limit: parseInt(url.searchParams.get("limit") || "500"),
@@ -101,12 +105,13 @@ export async function dispatchReplayRoutes(request, url, h) {
     const sessionId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
     const result = await Replay.createBookmark(env, { sessionId, ...body });
+    if (result.error) return json(result, 404);
     return json(result);
   }
 
   if (path.match(/^\/api\/replay\/sessions\/[a-z0-9]+\/bookmarks$/) && request.method === "GET") {
     const sessionId = path.split("/")[4];
-    const result = await Replay.listBookmarks(env, { sessionId });
+    const result = await Replay.listBookmarks(env, { sessionId, projectId });
     return json(result);
   }
 
@@ -114,12 +119,13 @@ export async function dispatchReplayRoutes(request, url, h) {
     const sessionId = path.split("/")[4];
     const body = withAuthProjectId(await request.json(), projectId);
     const result = await Replay.createDiff(env, { sessionId, ...body });
+    if (result.error) return json(result, 404);
     return json(result);
   }
 
   if (path.match(/^\/api\/replay\/sessions\/[a-z0-9]+\/diffs$/) && request.method === "GET") {
     const sessionId = path.split("/")[4];
-    const result = await Replay.listDiffs(env, { sessionId });
+    const result = await Replay.listDiffs(env, { sessionId, projectId });
     return json(result);
   }
 

@@ -24,6 +24,7 @@ async function adminJwt(overrides = {}) {
     sub: "user_admin",
     tid: "proj_1",
     roles: ["admin"],
+    jti: "jti_test",
     exp: Math.floor(Date.now() / 1000) + 3600,
     ...overrides,
   };
@@ -158,5 +159,31 @@ describe("dispatchIdentityRoutes  SAML", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Missing SAMLResponse");
+  });
+
+  it("rejects a publishable key on /webauthn/login/verify (audit F-22)", async () => {
+    const req = new Request("http://127.0.0.1:8787/webauthn/login/verify", {
+      method: "POST",
+      headers: { "X-Fluxy-Api-Key": "pk_browser_key", "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "u1", response: {}, roles: ["admin"] }),
+    });
+    const res = await dispatchIdentityRoutes(req, new URL(req.url), {
+      env: { DB: buildDb() },
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe("publishable_key_not_allowed");
+  });
+
+  it("rejects a publishable key on /webauthn/login/options (audit F-22)", async () => {
+    const req = new Request("http://127.0.0.1:8787/webauthn/login/options", {
+      method: "POST",
+      headers: { "X-Fluxy-Api-Key": "pk_browser_key", "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "u1" }),
+    });
+    const res = await dispatchIdentityRoutes(req, new URL(req.url), {
+      env: { DB: buildDb() },
+    });
+    expect(res.status).toBe(403);
   });
 });

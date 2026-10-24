@@ -7,7 +7,6 @@ import {
   Copy,
   ExternalLink,
   Loader2,
-  Package,
   Terminal as TerminalIcon,
   ArrowRight,
 } from "lucide-react";
@@ -208,9 +207,8 @@ export default function CLIPage() {
               key={cmd.label}
               className="min-w-0 rounded-lg border border-border bg-muted/30 p-3"
             >
-              <div className="mb-1 flex items-center gap-2">
-                <TerminalIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-foreground">{cmd.label}</span>
+              <div className="mb-1">
+                <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{cmd.label}</span>
               </div>
               <CodeBlock command={cmd.command} />
               <p className="mt-1.5 text-xs text-muted-foreground">{cmd.description}</p>
@@ -316,8 +314,7 @@ export default function CLIPage() {
               key={tpl.id}
               className="min-w-0 rounded-xl border border-border bg-muted/20 p-4 transition-shadow hover:shadow-md"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <Package className="h-4 w-4 text-brand" />
+              <div className="mb-2">
                 <h3 className="font-mono text-sm font-semibold text-foreground">{tpl.name}</h3>
               </div>
               <p className="mb-3 text-xs text-muted-foreground">{tpl.description}</p>

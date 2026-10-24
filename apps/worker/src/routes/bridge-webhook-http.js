@@ -1,5 +1,5 @@
 import { pickRouteDeps } from "./route-http-deps.js";
-import { getBridgeConfig, syncInboundMessage, recordBridgeEvent } from "../lib/bridge.js";
+import { getBridgeConfig, getBridgeSigningSecret, syncInboundMessage, recordBridgeEvent } from "../lib/bridge.js";
 import {
   getMatrixBridge,
   processMatrixAppserviceTransaction,
@@ -7,6 +7,7 @@ import {
   verifyMatrixAppserviceWebhook,
 } from "../lib/matrix-bridge.js";
 import { parseDiscordWebhookBody, parseSlackWebhookBody } from "../lib/bridge-webhook-parsers.js";
+import { verifyDiscordSignature, verifySlackSignature } from "../lib/bridge-webhook-verify.js";
 
 export async function dispatchBridgeWebhookRoutes(request, url, h) {
   const { env, json, corsHeaders } = pickRouteDeps(h, ["env", "json", "corsHeaders"]);
@@ -20,9 +21,24 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
       return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
     }
 
+    const rawBody = await request.text();
+    const signingSecret = await getBridgeSigningSecret(env, { bridgeId });
+    if (!signingSecret) {
+      return json({ error: "signature_not_configured" }, { status: 503, headers: corsHeaders });
+    }
+    const verdict = await verifySlackSignature({
+      signingSecret,
+      timestamp: request.headers.get("x-slack-request-timestamp"),
+      signature: request.headers.get("x-slack-signature"),
+      rawBody,
+    });
+    if (!verdict.ok) {
+      return json({ error: verdict.error }, { status: 401, headers: corsHeaders });
+    }
+
     let body;
     try {
-      body = await request.json();
+      body = JSON.parse(rawBody);
     } catch {
       return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
     }
@@ -69,9 +85,24 @@ export async function dispatchBridgeWebhookRoutes(request, url, h) {
       return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
     }
 
+    const rawBody = await request.text();
+    const publicKey = await getBridgeSigningSecret(env, { bridgeId });
+    if (!publicKey) {
+      return json({ error: "signature_not_configured" }, { status: 503, headers: corsHeaders });
+    }
+    const verdict = await verifyDiscordSignature({
+      publicKey,
+      timestamp: request.headers.get("x-signature-timestamp"),
+      signature: request.headers.get("x-signature-ed25519"),
+      rawBody,
+    });
+    if (!verdict.ok) {
+      return json({ error: verdict.error }, { status: 401, headers: corsHeaders });
+    }
+
     let body;
     try {
-      body = await request.json();
+      body = JSON.parse(rawBody);
     } catch {
       return json({ error: "invalid_json" }, { status: 400, headers: corsHeaders });
     }

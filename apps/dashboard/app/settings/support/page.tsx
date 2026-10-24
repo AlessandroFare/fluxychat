@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Clock, Headphones, Loader2, Plus, Trash2 } from "lucide-react";
+import { Clock, Headphones, Plus, Trash2 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Banner, Button, Input, Panel, Section } from "../../components/ui";
+import { Banner, Button, EmptyState, Input, Panel, Section, SkeletonCard } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -84,7 +84,15 @@ export default function SupportSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function handleCreateMacro() {
@@ -165,8 +173,9 @@ export default function SupportSettingsPage() {
       <ConsoleFeedback error={error} notice={notice} />
 
       {loading ? (
-        <div className="flex items-center text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <>
@@ -201,7 +210,12 @@ export default function SupportSettingsPage() {
           <Section title="Canned responses">
             <Panel className="space-y-4 p-4">
               {responses.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No macros yet. Create one below.</p>
+                <EmptyState
+                  compact
+                  className="border-0 bg-transparent"
+                  title="No canned responses"
+                  description="Create one below to reuse in support replies."
+                />
               ) : (
                 <ul className="space-y-2">
                   {responses.map((r) => (

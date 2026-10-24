@@ -34,7 +34,7 @@ function Board({ roomId, selfUserId }: { roomId: string; selfUserId: string }) {
   } = useThreads({ roomId });
   const { liveCursors, sendCursor, connected } = useChat({
     roomId,
-    replay: "off",
+    replay: "request",
     onServerEvent: (ev) => {
       if (ev.name.startsWith("comment.")) void reload();
     },

@@ -108,7 +108,7 @@ export default function CollabVersions({ roomId }: { roomId: string }) {
                 onClick={() => restoreVersion(v)}
                 className={cn(
                   "w-full rounded-lg px-3 py-2 text-left text-xs transition-colors",
-                  selectedVersion === v.id ? "bg-primary/10 text-primary" : "hover:bg-muted",
+                  selectedVersion === v.id ? "bg-primary/10 text-[var(--brand-hover)]" : "hover:bg-muted",
                 )}
               >
                 <div className="flex items-center gap-2">

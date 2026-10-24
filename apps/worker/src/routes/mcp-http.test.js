@@ -21,6 +21,8 @@ function buildDeps(overrides = {}) {
         roles: ["member"],
       })),
     logError: () => {},
+    // Audit F-71: MCP calls are rate limited now.
+    checkAndConsumeRateLimit: async () => ({ allowed: true, retryAfterSeconds: 0 }),
   };
 }
 
@@ -82,6 +84,8 @@ describe("dispatchMcpRoutes conformance", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.result.supportedVersions).toContain(MCP_PROTOCOL_VERSION);
-    expect(body.result.capabilities.elicitation).toBeDefined();
+    // elicitation is a client capability; a server must not advertise it (2026-07-28).
+    expect(body.result.capabilities.elicitation).toBeUndefined();
+    expect(body.result.capabilities.tools).toBeDefined();
   });
 });

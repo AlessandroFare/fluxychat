@@ -12,6 +12,7 @@ import {
   ingestAlert, acknowledgeAlert, linkAlertToIncident, listAlerts,
   setPostmortem, getIncidentStats,
 } from "../lib/incident-response.js";
+import { indexIncidentReport } from "../lib/incident-knowledge.js";
 
 export async function dispatchIncidentRoutes(request, url, h) {
   const {
@@ -69,11 +70,18 @@ export async function dispatchIncidentRoutes(request, url, h) {
     const auth = await adminAuth();
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const body = await request.json().catch(() => null);
+    const incidentId = decodeURIComponent(incMatch[1]);
     const inc = await updateIncident(env, {
-      projectId: auth.projectId, incidentId: decodeURIComponent(incMatch[1]),
+      projectId: auth.projectId, incidentId,
       status: body?.status, severity: body?.severity,
       commanderId: body?.commanderId, oncallUserId: body?.oncallUserId,
     });
+    if (inc?.status === "resolved") {
+      // Best-effort: an indexing miss must not fail the resolve.
+      await indexIncidentReport(env, { projectId: auth.projectId, incidentId }).catch((err) => {
+        logError("incident.knowledge_index_failed", err, requestLogCtx);
+      });
+    }
     return json(inc);
   }
 
@@ -107,10 +115,17 @@ export async function dispatchIncidentRoutes(request, url, h) {
     const auth = await adminAuth();
     if (!auth) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     const body = await request.json().catch(() => null);
+    const incidentId = decodeURIComponent(pmMatch[1]);
     const inc = await setPostmortem(env, {
-      projectId: auth.projectId, incidentId: decodeURIComponent(pmMatch[1]),
+      projectId: auth.projectId, incidentId,
       postmortem: body?.postmortem, rootCause: body?.rootCause, actionItems: body?.actionItems,
     });
+    if (inc) {
+      // The postmortem text is the richest knowledge; refresh the report.
+      await indexIncidentReport(env, { projectId: auth.projectId, incidentId }).catch((err) => {
+        logError("incident.knowledge_index_failed", err, requestLogCtx);
+      });
+    }
     return json(inc);
   }
 

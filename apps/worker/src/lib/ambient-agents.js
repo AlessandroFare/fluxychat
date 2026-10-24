@@ -5,6 +5,8 @@
 import { executeAgentRun } from "./agent-runtime.js";
 import { chatCompletion, isAiConfigured } from "./ai-chat-completion.js";
 import { validateMessageContent, MAX_MESSAGE_LENGTH } from "./message-validation.js";
+import { internalDoHeaders } from "./room-shard.js";
+import { compileSafeRegex } from "./safe-regex.js";
 import { logInfo, logError } from "./worker-log.js";
 
 const VALID_TRIGGER_TYPES = new Set(["webhook", "message_keyword", "room_event", "cron"]);
@@ -82,11 +84,11 @@ export function policyPatternMatches(pattern, haystack) {
     if (lastSlash > 0) {
       const body = p.slice(1, lastSlash);
       const flags = p.slice(lastSlash + 1);
-      try {
-        return new RegExp(body, flags).test(h);
-      } catch {
-        return h.toLowerCase().includes(body.toLowerCase());
-      }
+      // Audit F-51: reject patterns that can blow up (ReDoS) and fall back to
+      // literal matching.
+      const re = compileSafeRegex(body, flags);
+      if (re) return re.test(h);
+      return h.toLowerCase().includes(body.toLowerCase());
     }
   }
   return h.toLowerCase().includes(p.toLowerCase());
@@ -154,6 +156,15 @@ export async function createAgentPolicy(env, input) {
   if (!VALID_AUTONOMY.has(maxAutonomy)) return { ok: false, reason: "invalid_max_autonomy" };
   const roomId = String(input.roomId ?? "").trim();
   if (cronPolicyNeedsRoom(triggerType, roomId)) return { ok: false, reason: "room_id_required" };
+  // Audit F-52: a policy may only target a room of its own project.
+  if (roomId) {
+    const room = await env.DB.prepare(
+      `SELECT id FROM rooms WHERE id = ? AND project_id = ?`,
+    )
+      .bind(roomId, input.projectId)
+      .first();
+    if (!room) return { ok: false, reason: "room_not_found" };
+  }
 
   const agent = await env.DB.prepare(`SELECT id FROM bots WHERE project_id = ? AND id = ?`)
     .bind(input.projectId, agentId)
@@ -226,6 +237,7 @@ async function postAgentRoomMessage(env, { projectId, roomId, agentId, content }
     const stub = env.ROOM.get(id);
     await stub.fetch("https://internal/announce", {
       method: "POST",
+      headers: internalDoHeaders(env),
       body: JSON.stringify({ id: messageId, content: text, userId: agentId, createdAt }),
     });
   } catch {
@@ -251,6 +263,14 @@ export async function executeAmbientPolicy(env, policy, event) {
   if (env.AMBIENT_REQUIRE_HUMANS === "true" || env.AMBIENT_REQUIRE_HUMANS === "1") {
     const humans = await roomHasLiveHumans(env, roomId);
     if (!humans) return { ok: false, reason: "no_humans_online", policyId: policy.id };
+  }
+
+  // Audit F-46: a room under human handoff must not be auto-answered by an
+  // ambient agent — same gate as the mention-driven invoke path.
+  const { isHumanHandoffActive } = await import("./room-handoff.js");
+  if (await isHumanHandoffActive(env, policy.projectId, roomId)) {
+    logInfo("ambient.policy_skipped_handoff", { policyId: policy.id, roomId });
+    return { ok: false, reason: "human_handoff_active", policyId: policy.id };
   }
 
   const runId = generateId("aprun");

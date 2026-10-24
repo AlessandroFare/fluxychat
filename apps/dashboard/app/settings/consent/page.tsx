@@ -6,7 +6,7 @@ import { FileCheck2, Loader2, Save } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section, SkeletonCard } from "../../components/ui";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -64,7 +64,15 @@ export default function ConsentSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function handleSave() {
@@ -114,9 +122,10 @@ export default function ConsentSettingsPage() {
       {!token ? (
         <Panel className="p-6 text-sm text-muted-foreground">Admin JWT required.</Panel>
       ) : loading ? (
-        <p className="text-sm text-muted-foreground">
-          <Loader2 className="inline h-4 w-4 animate-spin" /> Loading…
-        </p>
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       ) : (
         <div className="space-y-8">
           <Section title="Policy">
@@ -183,7 +192,11 @@ export default function ConsentSettingsPage() {
 
           <Section title="Consent audit log">
             {events.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No consent events yet.</p>
+              <EmptyState
+                compact
+                title="No consent events"
+                description="Accept and decline events appear here as tenants respond."
+              />
             ) : (
               <ul className="divide-y rounded-lg border border-border text-sm">
                 {events.map((ev) => (

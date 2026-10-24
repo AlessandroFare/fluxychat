@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getWorkerUrl } from "@/lib/fluxy-server";
 import { messageFromUnknown } from "@/lib/error-message";
+import { rejectUnauthorizedProxyRequest } from "@/lib/api-guard";
 
 interface RouteContext {
   params: Promise<{ eventId: string }>;
@@ -8,6 +9,9 @@ interface RouteContext {
 
 /** POST /api/fluxy/live/events/:eventId/moderate-frame */
 export async function POST(request: Request, context: RouteContext) {
+  const rejected = await rejectUnauthorizedProxyRequest(request);
+  if (rejected) return rejected;
+
   const auth = request.headers.get("authorization")?.trim();
   if (!auth) {
     return NextResponse.json({ error: "Authorization header required" }, { status: 401 });

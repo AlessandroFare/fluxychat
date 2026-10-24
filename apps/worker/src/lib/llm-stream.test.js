@@ -88,6 +88,22 @@ describe("callLlmOpenAIStream", () => {
     );
   });
 
+  it("blocks private baseUrl before any fetch (audit F-23)", async () => {
+    const fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy;
+    await expect(
+      callLlmOpenAIStream(
+        "http://127.0.0.1:9999/v1",
+        "k",
+        "m",
+        [{ role: "user", content: "hi" }],
+        {},
+        async () => {},
+      ),
+    ).rejects.toThrow("ssrf_blocked");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("maps an aborted signal to stream_stopped", async () => {
     const abort = new AbortController();
     globalThis.fetch = vi.fn(async () => ({

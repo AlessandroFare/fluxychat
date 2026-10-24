@@ -11,6 +11,8 @@
  */
 
 import { resolveImageTransport } from "./ai-gateway.js";
+import { classifyContentLabels } from "./moderation-labels.js";
+import { analyzeVisualImage, isVisualModerationEnabled } from "./visual-moderation.js";
 import { safeOutboundFetch } from "./url-ssrf.js";
 
 const ALLOWED_SIZES = ["1024x1024", "1024x1792", "1792x1024"];
@@ -49,7 +51,12 @@ export async function generateImage(env, {
   const selectedSize = ALLOWED_SIZES.includes(size) ? size : "1024x1024";
   const selectedQuality = ALLOWED_QUALITIES.includes(quality) ? quality : "standard";
   const selectedStyle = ALLOWED_STYLESS.includes(style) ? style : "vivid";
-  const selectedModel = model || getDefaultModel(env);
+  // Audit F-65: the model lands in the upstream query string — reject anything
+  // that is not a plain model id (`flux&width=4096` used to inject params).
+  const requestedModel = typeof model === "string" ? model.trim() : "";
+  const selectedModel = /^[A-Za-z0-9._:-]{1,64}$/.test(requestedModel)
+    ? requestedModel
+    : getDefaultModel(env);
   const id = crypto.randomUUID();
   const startTime = Date.now();
 
@@ -73,8 +80,8 @@ export async function generateImage(env, {
     if (env.AI_IMAGE_PROVIDER === "pollinations") {
       // Pollinations.ai: simple GET, returns image bytes directly
       const [w, h] = selectedSize.split("x");
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${selectedModel}&nologo=true`;
-      const pollRes = await fetch(pollinationsUrl);
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${encodeURIComponent(selectedModel)}&nologo=true`;
+      const pollRes = await safeOutboundFetch(pollinationsUrl, {}, env);
       if (!pollRes.ok) {
         const errText = await pollRes.text().catch(() => "unknown");
         await env.DB.prepare(
@@ -126,6 +133,27 @@ export async function generateImage(env, {
       }
       b64 = imageData.b64_json;
       revisedPrompt = imageData.revised_prompt || prompt;
+    }
+
+    // Audit F-63: scan the generated image before it is published, when the
+    // project has visual moderation enabled.
+    if (b64 && isVisualModerationEnabled(env)) {
+      const scan = await analyzeVisualImage(env, {
+        imageBase64: b64,
+        contentType: "image/png",
+        projectId,
+        roomId,
+        userId,
+        source: "ai_generated",
+      }).catch(() => null);
+      if (scan?.ok && (scan.severity === "high" || scan.severity === "critical")) {
+        await env.DB.prepare(
+          `UPDATE ai_image_generations SET status = 'blocked', error = ?, processing_time_ms = ? WHERE id = ?`
+        )
+          .bind(`moderation_${scan.severity}: ${(scan.categories || []).join(",")}`, Date.now() - startTime, id)
+          .run();
+        return { ok: false, error: "image_blocked_by_moderation", status: 422 };
+      }
     }
 
     // Upload to R2 if binding available
@@ -237,7 +265,9 @@ export async function deleteImageGeneration(env, { projectId, id }) {
 }
 
 /**
- * Basic content policy check.
+ * Content policy check. Audit F-63: the 7-term blocklist was the only prompt
+ * screen — the pattern classifier is layered on top (severe categories block)
+ * and the generated image is scanned afterwards when visual moderation is on.
  */
 function checkContentPolicy(prompt) {
   const lower = prompt.toLowerCase();
@@ -249,6 +279,10 @@ function checkContentPolicy(prompt) {
     if (lower.includes(term)) {
       return { ok: false, error: `content_policy_violation: ${term}` };
     }
+  }
+  const labels = classifyContentLabels(prompt);
+  if (labels.severity === "high" || labels.severity === "critical") {
+    return { ok: false, error: `content_policy_violation: ${labels.labels.join(",") || "severity"}` };
   }
   return { ok: true };
 }

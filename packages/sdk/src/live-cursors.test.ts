@@ -5,6 +5,7 @@ import {
   clampCursorCoordinate,
   createCursorBatcher,
   createCursorDispenser,
+  cursorLayerKey,
   parseCursorBatchPoints,
   parseLiveCursorEvent,
   shouldSendCursor,
@@ -112,5 +113,30 @@ describe("live cursors", () => {
       { label: "Ada" },
     );
     expect(parseCursorBatchPoints(frame)?.map((p) => p.x)).toEqual([1, 3]);
+  });
+
+  it("carries presenceKey layers through parse, build and batching", () => {
+    expect(
+      parseLiveCursorEvent({ type: "cursor", userId: "bot_ada", x: 1, y: 2, presenceKey: "agent" }),
+    ).toMatchObject({ userId: "bot_ada", presenceKey: "agent" });
+    expect(parseLiveCursorEvent({ type: "cursor", userId: "ada", x: 1, y: 2 })?.presenceKey).toBeUndefined();
+
+    expect(buildCursorOutbound({ x: 0, y: 0, presenceKey: "agent" })).toMatchObject({ presenceKey: "agent" });
+    expect(buildCursorOutbound({ x: 0, y: 0 })).not.toHaveProperty("presenceKey");
+    expect(String(buildCursorOutbound({ x: 0, y: 0, presenceKey: "k".repeat(80) }).presenceKey)).toHaveLength(64);
+
+    vi.useFakeTimers();
+    const send = vi.fn();
+    const batcher = createCursorBatcher(10);
+    batcher.publish({ x: 1, y: 1, presenceKey: "agent" }, send);
+    vi.advanceTimersByTime(10);
+    expect((send.mock.calls[0]![0] as Record<string, unknown>).presenceKey).toBe("agent");
+    batcher.dispose();
+    vi.useRealTimers();
+  });
+
+  it("keys presence layers without touching the default layer key", () => {
+    expect(cursorLayerKey({ userId: "u1" })).toBe("u1");
+    expect(cursorLayerKey({ userId: "u1", presenceKey: "agent" })).toBe("u1#agent");
   });
 });

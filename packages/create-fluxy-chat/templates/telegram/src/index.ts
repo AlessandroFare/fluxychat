@@ -1,11 +1,11 @@
-import { handleTelegramUpdate } from "./bot.js";
+import { handleTelegramUpdate, type BotEnv } from "./bot.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/telegram/webhook" && request.method === "POST") {
-      const update = await request.json();
+      const update = (await request.json()) as Record<string, unknown>;
       return handleTelegramUpdate(update, env);
     }
 

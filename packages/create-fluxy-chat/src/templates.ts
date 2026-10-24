@@ -8,7 +8,7 @@ export function generatePackageJson(
   config: ProjectConfig,
 ): Record<string, unknown> {
   const deps: Record<string, string> = {
-    "@fluxy-chat/sdk": "^0.6.10",
+    "@fluxy-chat/sdk": "^0.7.0",
   };
 
   const devDeps: Record<string, string> = {
@@ -263,12 +263,12 @@ MIT
 export function generateWorkerIndex(config: ProjectConfig): string {
   switch (config.adapter) {
     case "slack":
-      return `import { handleSlackRequest, createSlackBot } from "./bot.js";
+      return `import { handleSlackRequest, createSlackBot, type BotEnv } from "./bot.js";
 
 const bot = createSlackBot();
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/slack/events" || url.pathname === "/slack/interactive") {
@@ -284,14 +284,14 @@ export default {
 };
 `;
     case "telegram":
-      return `import { handleTelegramUpdate } from "./bot.js";
+      return `import { handleTelegramUpdate, type BotEnv } from "./bot.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/telegram/webhook" && request.method === "POST") {
-      const update = await request.json();
+      const update = (await request.json()) as Record<string, unknown>;
       return handleTelegramUpdate(update, env);
     }
 
@@ -304,10 +304,10 @@ export default {
 };
 `;
     case "discord":
-      return `import { handleDiscordInteraction } from "./bot.js";
+      return `import { handleDiscordInteraction, type BotEnv } from "./bot.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/discord/interactions" && request.method === "POST") {
@@ -323,10 +323,10 @@ export default {
 };
 `;
     case "web":
-      return `import { handleWebChat } from "./bot.js";
+      return `import { handleWebChat, type BotEnv } from "./bot.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/chat" && request.method === "POST") {
@@ -342,10 +342,10 @@ export default {
 };
 `;
     default:
-      return `import { handleWebhook } from "./bot.js";
+      return `import { handleWebhook, type BotEnv } from "./bot.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/webhook" && request.method === "POST") {
@@ -370,7 +370,7 @@ export function generateBotHandler(config: ProjectConfig): string {
     case "slack":
       return `import { FluxyChatClient } from "@fluxy-chat/sdk";
 
-interface BotEnv {
+export interface BotEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
   SLACK_BOT_TOKEN: string;
@@ -432,7 +432,7 @@ export async function handleSlackRequest(
     case "telegram":
       return `import { FluxyChatClient } from "@fluxy-chat/sdk";
 
-interface BotEnv {
+export interface BotEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
   TELEGRAM_BOT_TOKEN: string;
@@ -481,7 +481,7 @@ export async function handleTelegramUpdate(
     case "discord":
       return `import { FluxyChatClient } from "@fluxy-chat/sdk";
 
-interface BotEnv {
+export interface BotEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
   DISCORD_BOT_TOKEN: string;
@@ -542,7 +542,7 @@ export async function handleDiscordInteraction(
     case "web":
       return `import { FluxyChatClient } from "@fluxy-chat/sdk";
 
-interface BotEnv {
+export interface BotEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
 }
@@ -594,7 +594,7 @@ export async function handleWebChat(
     default:
       return `import { FluxyChatClient } from "@fluxy-chat/sdk";
 
-interface BotEnv {
+export interface BotEnv {
   FLUXY_BASE_URL: string;
   FLUXY_API_KEY: string;
 }

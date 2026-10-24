@@ -10,6 +10,7 @@ import { ConsoleShell } from "@/app/components/console-shell";
 import { ConsolePageHeader } from "@/app/components/console-page-header";
 import { ConsoleProjectRoomBar } from "@/app/components/console-project-room-bar";
 import { WorkerBackendBadge } from "@/app/components/worker-backend-badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { useWorkerChatClient } from "@/lib/use-worker-chat-client";
 import {
@@ -98,6 +99,7 @@ export default function AgentPlatformPage() {
         requireProject
         hint={workerPlatform ? "Agents, versions, deploy, memory, spend, and A/B counters are D1. Personality and tier tables stay SDK helpers." : "Sign in so listAgents hits the Worker."}
       />
+
       {workerError ? (
         <p className="mx-4 mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{workerError}</p>
       ) : null}
@@ -198,7 +200,11 @@ function AgentsPanel({
         Worker agents ({workerAgents.length})
       </h3>
       {workerAgents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None yet. Use No-Code Builder; that POST goes to D1.</p>
+        <EmptyState
+          compact
+          title="No worker agents yet"
+          description="Create one with the No-Code Builder — it lands here after the D1 write."
+        />
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {workerAgents.map((agent) => (

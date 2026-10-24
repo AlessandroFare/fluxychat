@@ -164,7 +164,7 @@ Honest inventory. Tools are not legal advice. Hosted is beta. Do not claim Chat 
 11. **Stripe metering** of *our* tenant (`project_plans.stripe_customer_id`) — optional `STRIPE_AGENT_METER_EVENT_NAME` posts Billing Meter events on completed agent runs (token sum). Operator cap: Rooms → Advanced → Room insights. Not Stripe of the tenant’s customers. Not a live Marketplace SKU.
 12. **Import ChatGPT/Claude JSON** — `POST /rooms/import-transcript` + Rooms file picker. Cap 400 messages. No scraping.
 13. **Public read-only live link** — `/share/:roomId` (Clerk-public) + `GET /public/share/:id` (`type=public` only, no keys). Rooms → Copy public share link. `ChatWindow` / widget `readOnly`. Optional `?pk=pk_…`. `PUBLIC_GUEST_READ_ONLY` still gates other guest writes. Not an unlisted-private product.
-14. **Vertical landing pages** — `/landing/incident`, `/landing/support`, `/landing/pr-review`. Honest: war-room / shared-ai-room / deal-room scaffolds, not new vertical SKUs.
+14. **Vertical landing pages** — `/incident`, `/support`, `/pr-review`. Honest: war-room / shared-ai-room / deal-room scaffolds, not new vertical SKUs.
 15. **EAA / WCAG 2.2** — widget live region, labels, skip-to-composer, Escape, composer + `ChatWindow` border `#5c5c5c`. Dashboard public axe in `a11y.axe.spec.ts`. Status note: `operations/accessibility-conformance`. Not a certificate or a completed VPAT.
 16. **Vercel Marketplace / native integration** listing — draft only: `docs/marketplace/vercel-integration.draft.json` + `operations/vercel-marketplace`. Not listed. `vercel integration add` is not an install path.
 17. **`npx fluxy-migrate`** Pusher/Ably/Stream/PartyKit **export JSON** → import-chat-history rows (cap 400). Then `pnpm import-chat-history`. Not a live channel proxy.

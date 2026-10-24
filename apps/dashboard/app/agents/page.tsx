@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bot, Download, Loader2, Puzzle, Sparkles } from "lucide-react";
@@ -68,6 +68,14 @@ const STARTER_TEMPLATES: MarketplaceAgent[] = [
   },
 ];
 
+/** Category already renders as its own chip: drop it (and repeats) from the tag list. */
+function templateTags(template: MarketplaceAgent): string[] {
+  const category = String(template.category || "").toLowerCase();
+  return [...new Set(template.tags ?? [])]
+    .filter((tag) => tag.toLowerCase() !== category)
+    .slice(0, 2);
+}
+
 export default function AgentsIndexPage() {
   const router = useRouter();
   const { adminJwt, memberJwt } = useDashboardSession();
@@ -77,18 +85,19 @@ export default function AgentsIndexPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const loadTemplates = useCallback(async () => {
-    try {
-      const remote = await listMarketplaceAgents({ sort: "featured", limit: 12 });
-      if (remote.length > 0) setTemplates(remote);
-    } catch {
-      // Keep built-in starters when marketplace is empty or unreachable.
-    }
-  }, []);
-
   useEffect(() => {
-    void loadTemplates();
-  }, [loadTemplates]);
+    let cancelled = false;
+    listMarketplaceAgents({ sort: "featured", limit: 12 })
+      .then((remote) => {
+        if (!cancelled && remote.length > 0) setTemplates(remote);
+      })
+      .catch(() => {
+        // Keep built-in starters when marketplace is empty or unreachable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function installTemplate(template: MarketplaceAgent) {
     if (!token) {
@@ -157,7 +166,7 @@ export default function AgentsIndexPage() {
                       <Badge variant="outline" className="text-[9px]">
                         {template.category}
                       </Badge>
-                      {template.tags?.slice(0, 2).map((tag) => (
+                      {templateTags(template).map((tag) => (
                         <Badge key={tag} variant="secondary" className="text-[9px]">
                           {tag}
                         </Badge>
@@ -167,6 +176,7 @@ export default function AgentsIndexPage() {
                 </div>
                 <Button
                   size="sm"
+                  variant={template.featured ? "default" : "outline"}
                   className="mt-4 w-full"
                   disabled={!token || busy}
                   onClick={() => void installTemplate(template)}

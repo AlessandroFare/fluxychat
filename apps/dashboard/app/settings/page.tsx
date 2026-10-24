@@ -49,7 +49,17 @@ export default function SettingsPage() {
     } catch {}
   }, [token, memberUserId]);
 
-  useEffect(() => { void loadStatus(); }, [loadStatus]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await loadStatus();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadStatus]);
 
   const handleSaveStatus = async (emoji: string | null, text: string | null) => {
     if (!token || !memberUserId) return;
@@ -75,22 +85,24 @@ export default function SettingsPage() {
       />
 
       <section className="mb-8">
-        <h2 className="mb-3 font-heading text-sm font-semibold text-foreground">Browse settings</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <h2 className="mb-3 font-mono text-[10px] uppercase tracking-[0.09em] text-muted-foreground">
+          Browse settings
+        </h2>
+        <div className="grid items-start gap-4 sm:grid-cols-2">
           {SETTINGS_CATALOG.map((group) => (
             <div
               key={group.label}
-              className="rounded-2xl bg-card p-4 shadow-[var(--shadow-2)]"
+              className="self-start rounded-sm border border-border bg-card p-4"
             >
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.09em] text-muted-foreground">
                 {group.label}
               </h3>
               <ul className="space-y-1">
                 {group.items.map((item) => (
-                  <li key={item.href}>
+                  <li key={`${item.href}-${item.label}`}>
                     <Link
                       href={item.href}
-                      className="block rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
+                      className="block rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
                     >
                       <span className="font-medium text-foreground">{item.label}</span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
@@ -113,9 +125,12 @@ export default function SettingsPage() {
       ) : null}
 
       {statusError && (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{statusError}</div>
+        <Banner variant="error" className="mb-4">
+          {statusError}
+        </Banner>
       )}
 
+      <h2 className="mb-3 mt-8 font-heading text-sm font-semibold text-foreground">Your account</h2>
       <div className="grid gap-4 md:grid-cols-2">
         <SettingsCard
           title="Profile"
@@ -133,7 +148,6 @@ export default function SettingsPage() {
         <SettingsCard
           title="Custom Status"
           description="Set an emoji and message to let others know what you're up to."
-          cta={{ label: "", href: "" }}
         >
           <div className="flex items-center gap-3">
             <UserStatusBadge emoji={statusEmoji} text={statusText} className="text-xs px-2 py-1" />
@@ -161,151 +175,9 @@ export default function SettingsPage() {
           description="Per-room and per-event preferences. Mentions, DMs, quiet hours."
           cta={{ label: "Open notifications →", href: "/notifications" }}
         />
+      </div>
 
-        <SettingsCard
-          title="Identity &amp; access"
-          description="SAML SSO for your IdP and SCIM tokens for automated user provisioning."
-          cta={{ label: "Configure SAML / SCIM →", href: "/settings/identity" }}
-        />
-
-        <SettingsCard
-          title="Push notifications"
-          description="Per-environment FCM, APNs, and Web Push credentials."
-          cta={{ label: "Configure push →", href: "/settings/push" }}
-        />
-
-        <SettingsCard
-          title="Support vertical"
-          description="Canned responses, business hours, and ticket stats for agent workflows."
-          cta={{ label: "Configure support →", href: "/settings/support" }}
-        />
-
-        <SettingsCard
-          title="Agent tool policy"
-          description="JSON policy-as-code: allow, deny, or require approval per tool."
-          cta={{ label: "Configure tool policy →", href: "/settings/agent-tools" }}
-        />
-
-        <SettingsCard
-          title="Semantic search"
-          description="Hybrid FTS + vector search, auto-embed toggle, and embedding backfill for existing messages."
-          cta={{ label: "Open search settings →", href: "/settings/search" }}
-        />
-
-        <SettingsCard
-          title="Retention &amp; legal hold"
-          description="Message retention policies, legal holds, and chain-of-custody export snapshots."
-          cta={{ label: "Open retention →", href: "/settings/retention" }}
-        />
-
-        <SettingsCard
-          title="Data residency"
-          description="Region pinning for message writes and AI inference. GDPR and HIPAA data location controls."
-          cta={{ label: "Configure residency →", href: "/settings/residency" }}
-        />
-
-        <SettingsCard
-          title="EU consent &amp; DPA"
-          description="Auto consent banner for EU tenants with auditable accept/decline events. Pairs with data residency settings."
-          cta={{ label: "Configure consent →", href: "/settings/consent" }}
-        />
-
-        <SettingsCard
-          title="Room auto-translate"
-          description="Per-room target language. Auto-translate new messages and cache in D1."
-          cta={{ label: "Configure translation →", href: "/settings/translation" }}
-        />
-
-        <SettingsCard
-          title="Media pipeline"
-          description="Upload size limits, async AV scan (EICAR plus optional ClamAV), and image thumbnail jobs."
-          cta={{ label: "Configure media →", href: "/settings/media" }}
-        />
-
-        <SettingsCard
-          title="Slash commands"
-          description="Built-in /poll, /remind, /assign plus tenant custom commands in room_commands."
-          cta={{ label: "Configure commands →", href: "/settings/commands" }}
-        />
-
-        <SettingsCard
-          title="Room firmware"
-          description="Per-room PII veto, rate limits, and denylist hooks before message fan-out."
-          cta={{ label: "Configure firmware →", href: "/settings/firmware" }}
-        />
-
-        <SettingsCard
-          title="Public status page"
-          description="Upptime config and deploy checklist for status.fluxychat.com."
-          cta={{ label: "Status page ops →", href: "/settings/status" }}
-        />
-
-        <SettingsCard
-          title="Usage & cost"
-          description="Monthly message volume, MAU, attachment storage, and indicative cost estimate."
-          cta={{ label: "View usage →", href: "/settings/usage" }}
-        />
-
-        <SettingsCard
-          title="Room E2E encryption"
-          description="Enable shared-key encryption, rotate keys on compromise, and distribute to members."
-          cta={{ label: "Configure E2E →", href: "/settings/e2e" }}
-        />
-
-        <SettingsCard
-          title="Ephemeral room TTL"
-          description="Per-room ephemeral mode and message TTL. Complements compliance retention policies."
-          cta={{ label: "Configure ephemeral →", href: "/settings/ephemeral" }}
-        />
-
-        <SettingsCard
-          title="E-discovery"
-          description="Legal cases, custodians, preservation orders, and evidence chain-of-custody."
-          cta={{ label: "Open e-discovery →", href: "/ediscovery" }}
-        />
-
-        <SettingsCard
-          title="DLP &amp; encryption keys"
-          description="Custom DLP rules, PHI/PCI scan, policy versioning, and customer-managed keys."
-          cta={{ label: "Configure DLP →", href: "/settings/dlp" }}
-        />
-
-        <SettingsCard
-          title="HIPAA &amp; BAA"
-          description="Business Associate Agreement tracking, readiness checklist, and PHI metrics."
-          cta={{ label: "Open HIPAA →", href: "/settings/hipaa" }}
-        />
-
-        <SettingsCard
-          title="SOC 2 evidence"
-          description="Control dashboard, DLP smoke tests, audit log and evidence JSON export."
-          cta={{ label: "Open SOC 2 →", href: "/soc2" }}
-        />
-
-        <SettingsCard
-          title="MCP identity"
-          description="MCP server registry, tool provenance, and tool-call audit log."
-          cta={{ label: "Open MCP settings →", href: "/settings/mcp" }}
-        />
-
-        <SettingsCard
-          title="Automation (Activepieces)"
-          description="No-code flows with FluxyChat webhooks as triggers and CRM connectors via Activepieces."
-          cta={{ label: "Open integrations →", href: "/settings/integrations" }}
-        />
-
-        <SettingsCard
-          title="CRM &amp; helpdesk"
-          description="Salesforce, Zendesk, HubSpot, Intercom. Sync contacts, tickets, and agent handoff."
-          cta={{ label: "Configure CRM →", href: "/settings/crm" }}
-        />
-
-        <SettingsCard
-          title="Telephony handoff"
-          description="Telnyx/Twilio inbound to human handoff, Voice AI, and support routing."
-          cta={{ label: "Configure telephony →", href: "/settings/telephony" }}
-        />
-
+      <div className="mt-8">
         <SettingsCard
           title="Danger zone"
           description="Delete a project, revoke API keys, force-expire sessions. These actions are irreversible."
@@ -348,7 +220,7 @@ export default function SettingsPage() {
 function SettingsCard(props: {
   title: string;
   description: string;
-  cta: { label: string; href: string };
+  cta?: { label: string; href: string };
   danger?: boolean;
   children?: React.ReactNode;
 }) {
@@ -359,25 +231,27 @@ function SettingsCard(props: {
         (props.danger ? "border-l-[3px] border-l-red-700" : "")
       }
     >
-      <h2
+      <h3
         className={
           "font-heading text-base font-semibold " +
-          (props.danger ? "text-red-600 dark:text-red-400" : "text-foreground")
+          (props.danger ? "text-[color:var(--destructive)]" : "text-foreground")
         }
       >
         {props.title}
-      </h2>
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">{props.description}</p>
       {props.children ? <div className="mt-3">{props.children}</div> : null}
-      <Link
-        href={props.cta.href}
-        className={
-          "mt-4 inline-flex text-sm font-medium underline-offset-4 hover:underline " +
-          (props.danger ? "text-red-700" : "text-primary")
-        }
-      >
-        {props.cta.label}
-      </Link>
+      {props.cta?.label ? (
+        <Link
+          href={props.cta.href}
+          className={
+            "mt-4 inline-flex text-sm font-medium underline-offset-4 hover:underline " +
+            (props.danger ? "text-red-700" : "text-primary")
+          }
+        >
+          {props.cta.label}
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -413,14 +287,14 @@ function UiKitConfigurator() {
     <div className="grid gap-4 sm:grid-cols-2">
       {/* ChannelList */}
       <Panel className="p-4">
-        <h4 className="flex items-center gap-2 text-sm font-medium"><Layout className="h-4 w-4 text-blue-500" /> ChannelList</h4>
+        <h3 className="flex items-center gap-2 text-sm font-medium"><Layout className="h-4 w-4 text-blue-500" /> ChannelList</h3>
         <div className="mt-3 space-y-2">
           <ToggleRow icon={Eye} label="Show unread" checked={channelList.showUnread} onChange={(v) => setChannelList((p) => ({ ...p, showUnread: v }))} />
           <ToggleRow icon={Eye} label="Show avatars" checked={channelList.showAvatars} onChange={(v) => setChannelList((p) => ({ ...p, showAvatars: v }))} />
           <div className="flex items-center gap-2">
             <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Sort by:</span>
-            <select className="rounded-md border border-border bg-background px-2 py-1 text-xs" value={channelList.sortBy}
+            <select aria-label="Sort by" className="rounded-md border border-border bg-background px-2 py-1 text-xs" value={channelList.sortBy}
               onChange={(e) => setChannelList((p) => ({ ...p, sortBy: e.target.value as any }))}>
               <option value="name">Name</option>
               <option value="lastMessage">Last message</option>
@@ -432,13 +306,13 @@ function UiKitConfigurator() {
 
       {/* ThreadView */}
       <Panel className="p-4">
-        <h4 className="flex items-center gap-2 text-sm font-medium"><MessagesSquare className="h-4 w-4 text-emerald-500" /> ThreadView</h4>
+        <h3 className="flex items-center gap-2 text-sm font-medium"><MessagesSquare className="h-4 w-4 text-emerald-500" /> ThreadView</h3>
         <div className="mt-3 space-y-2">
           <ToggleRow icon={Eye} label="Show replies" checked={threadView.showReplies} onChange={(v) => setThreadView((p) => ({ ...p, showReplies: v }))} />
           <ToggleRow icon={Eye} label="Show reactions" checked={threadView.showReactions} onChange={(v) => setThreadView((p) => ({ ...p, showReactions: v }))} />
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Reply order:</span>
-            <select className="rounded-md border border-border bg-background px-2 py-1 text-xs" value={threadView.sortReplies}
+            <select aria-label="Reply order" className="rounded-md border border-border bg-background px-2 py-1 text-xs" value={threadView.sortReplies}
               onChange={(e) => setThreadView((p) => ({ ...p, sortReplies: e.target.value as any }))}>
               <option value="asc">Oldest first</option>
               <option value="desc">Newest first</option>
@@ -446,7 +320,7 @@ function UiKitConfigurator() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Max depth:</span>
-            <input type="number" className="w-16 rounded-md border border-border bg-background px-2 py-0.5 text-xs" value={threadView.maxThreadDepth}
+            <input type="number" aria-label="Max depth" className="w-16 rounded-md border border-border bg-background px-2 py-0.5 text-xs" value={threadView.maxThreadDepth}
               onChange={(e) => setThreadView((p) => ({ ...p, maxThreadDepth: parseInt(e.target.value) || 1 }))} />
           </div>
         </div>
@@ -454,7 +328,7 @@ function UiKitConfigurator() {
 
       {/* MessageList */}
       <Panel className="p-4">
-        <h4 className="flex items-center gap-2 text-sm font-medium"><MessagesSquare className="h-4 w-4 text-purple-500" /> MessageList</h4>
+        <h3 className="flex items-center gap-2 text-sm font-medium"><MessagesSquare className="h-4 w-4 text-purple-500" /> MessageList</h3>
         <div className="mt-3 space-y-2">
           <ToggleRow icon={Eye} label="Show timestamps" checked={messageList.showTimestamps} onChange={(v) => setMessageList((p) => ({ ...p, showTimestamps: v }))} />
           <ToggleRow icon={Eye} label="Show avatars" checked={messageList.showAvatars} onChange={(v) => setMessageList((p) => ({ ...p, showAvatars: v }))} />
@@ -463,7 +337,7 @@ function UiKitConfigurator() {
           <ToggleRow icon={Eye} label="Group by date" checked={messageList.groupByDate} onChange={(v) => setMessageList((p) => ({ ...p, groupByDate: v }))} />
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Max visible:</span>
-            <input type="number" className="w-16 rounded-md border border-border bg-background px-2 py-0.5 text-xs" value={messageList.maxVisible}
+            <input type="number" aria-label="Max visible" className="w-16 rounded-md border border-border bg-background px-2 py-0.5 text-xs" value={messageList.maxVisible}
               onChange={(e) => setMessageList((p) => ({ ...p, maxVisible: parseInt(e.target.value) || 1 }))} />
           </div>
         </div>
@@ -471,7 +345,7 @@ function UiKitConfigurator() {
 
       {/* Composer */}
       <Panel className="p-4">
-        <h4 className="flex items-center gap-2 text-sm font-medium"><Pencil className="h-4 w-4 text-amber-500" /> Composer</h4>
+        <h3 className="flex items-center gap-2 text-sm font-medium"><Pencil className="h-4 w-4 text-amber-500" /> Composer</h3>
         <div className="mt-3 space-y-2">
           <ToggleRow icon={Eye} label="Enable mentions" checked={composer.enableMentions} onChange={(v) => setComposer((p) => ({ ...p, enableMentions: v }))} />
           <ToggleRow icon={Eye} label="Enable emoji" checked={composer.enableEmoji} onChange={(v) => setComposer((p) => ({ ...p, enableEmoji: v }))} />
@@ -479,7 +353,7 @@ function UiKitConfigurator() {
           <ToggleRow icon={Eye} label="Enable markdown" checked={composer.enableMarkdown} onChange={(v) => setComposer((p) => ({ ...p, enableMarkdown: v }))} />
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Max length:</span>
-            <input type="number" className="w-20 rounded-md border border-border bg-background px-2 py-0.5 text-xs" value={composer.maxLength}
+            <input type="number" aria-label="Max length" className="w-20 rounded-md border border-border bg-background px-2 py-0.5 text-xs" value={composer.maxLength}
               onChange={(e) => setComposer((p) => ({ ...p, maxLength: parseInt(e.target.value) || 1 }))} />
           </div>
           <Input className="text-xs" value={composer.placeholder} onChange={(e) => setComposer((p) => ({ ...p, placeholder: e.target.value }))} placeholder="Placeholder text" />
@@ -512,6 +386,7 @@ function ToggleRow({ icon: Icon, label, checked, onChange }: { icon: typeof Eye;
       </span>
       <button
         role="switch"
+        aria-label={label}
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}
@@ -551,36 +426,37 @@ function TranslationPreferences() {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Panel className="p-4">
-        <h4 className="flex items-center gap-2 text-sm font-medium"><Globe className="h-4 w-4 text-blue-500" /> Language</h4>
+        <h3 className="flex items-center gap-2 text-sm font-medium"><Globe className="h-4 w-4 text-blue-500" /> Language</h3>
         <div className="mt-3 space-y-3">
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground w-20">Source:</span>
-            <select className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" value={sourceLang} onChange={(e) => setSourceLang(e.target.value)}>
+            <select aria-label="Source language" className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" value={sourceLang} onChange={(e) => setSourceLang(e.target.value)}>
               {Object.entries(LANGUAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground w-20">Target:</span>
-            <select className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" value={targetLang} onChange={(e) => setTargetLang(e.target.value)}>
+            <select aria-label="Target language" className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" value={targetLang} onChange={(e) => setTargetLang(e.target.value)}>
               {Object.entries(LANGUAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
-          <div className="flex items-center justify-between">
+          <label className="flex items-center justify-between cursor-pointer">
             <span className="text-xs">Auto-detect language</span>
             <button
               role="switch"
+              aria-label="Auto-detect language"
               aria-checked={autoDetect}
               onClick={() => setAutoDetect(!autoDetect)}
               className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${autoDetect ? "bg-primary" : "bg-muted"}`}
             >
               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${autoDetect ? "translate-x-4" : "translate-x-0.5"}`} />
             </button>
-          </div>
+          </label>
         </div>
       </Panel>
 
       <Panel className="p-4">
-        <h4 className="flex items-center gap-2 text-sm font-medium"><Languages className="h-4 w-4 text-amber-500" /> Glossary</h4>
+        <h3 className="flex items-center gap-2 text-sm font-medium"><Languages className="h-4 w-4 text-amber-500" /> Glossary</h3>
         <div className="mt-3 space-y-2">
           <div className="flex gap-2">
             <Input placeholder="Source term" className="flex-1" value={glossarySource} onChange={(e) => setGlossarySource(e.target.value)}

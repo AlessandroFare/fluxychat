@@ -69,10 +69,13 @@ export async function fetchRoomLivePresenceUserIds(env, { projectId, roomId }) {
   }
 
   try {
-    const { getRoomStubForProject } = await import("./room-shard.js");
+    const { getRoomStubForProject, internalDoHeaders } = await import("./room-shard.js");
     const stub = await getRoomStubForProject(env, projectId, roomId, "__support_routing__");
     const res = await stub.fetch(
-      new Request("https://do-internal/live-stats", { method: "GET" }),
+      new Request("https://do-internal/live-stats", {
+        method: "GET",
+        headers: internalDoHeaders(env),
+      }),
     );
     if (res.ok) {
       const data = await res.json();

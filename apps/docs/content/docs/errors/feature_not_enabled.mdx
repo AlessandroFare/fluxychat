@@ -5,4 +5,12 @@ description: "This room feature is turned off"
 
 # 40040 — feature_not_enabled
 
-You subscribed to occupancy, presence, or raw message reactions while that feature is off on this room (`enableEvents: false` or `rawMessageReactions: false`). REST `get()` still works. Flip the room option or skip the subscribe.
+The client subscribed to a room feature that is off: occupancy, presence, or raw message reactions (`enableEvents: false` or `rawMessageReactions: false`). Not terminal.
+
+**At a glance** — HTTP 400 · terminal: no.
+
+## What to do
+
+- Turn the room option on, or skip the subscribe on clients that do not need it.
+- REST `get()` still works with the feature off — only the realtime subscribe is refused.
+- Check the room options before mounting the feature's UI so the subscribe never fires in the first place.

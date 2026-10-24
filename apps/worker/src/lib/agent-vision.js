@@ -1,4 +1,4 @@
-import { attachmentUrlToR2Key } from "./attachment-storage.js";
+import { attachmentUrlToR2Key, r2KeyBelongsToProject } from "./attachment-storage.js";
 
 const MAX_VISION_IMAGES = 4;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -23,19 +23,20 @@ export async function attachmentToDataUrl(env, attachment, projectId) {
   if (!env?.ATTACHMENTS || !isImageAttachment(attachment)) return null;
   const key = attachmentUrlToR2Key(attachment.url);
   if (!key) return null;
-  const prefix = String(key.split("/")[0] || "");
-  if (prefix !== projectId && prefix !== "ai-images" && prefix !== "voice") return null;
-  if (prefix === "ai-images" && key.split("/")[1] !== projectId) return null;
+  // Audit F-09: reads are scoped to this project's key space.
+  if (!r2KeyBelongsToProject(key, projectId)) return null;
 
   try {
     const object = await env.ATTACHMENTS.get(key);
     if (!object) return null;
     const buf = await object.arrayBuffer();
     if (!buf || buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES) return null;
+    // Audit F-65: trust the stored object metadata over the declared attachment
+    // row — a row can claim `image/*` for bytes that are not an image.
     const mime =
+      object.httpMetadata?.contentType ||
       attachment.contentType ||
       attachment.content_type ||
-      object.httpMetadata?.contentType ||
       "image/png";
     if (!String(mime).startsWith("image/")) return null;
     const b64 = bytesToBase64(new Uint8Array(buf));

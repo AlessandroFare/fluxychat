@@ -146,6 +146,8 @@ jobs:
         run: pnpm run test:worker
       - name: Worker e2e (in-process)
         run: pnpm run test:worker:e2e
+      - name: AI agent service tests
+        run: pnpm run test:ai-agent
 
   test-dashboard:
     name: Tests: dashboard
@@ -225,7 +227,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Dependency audit (high/critical)
-        run: pnpm audit --audit-level=high
+        # GHSA-vfj7-8cjw-p6xm: braces (via @excalidraw/excalidraw → sass →
+        # chokidar) has no patched release upstream. Remove the ignore once the
+        # chain ships a fixed braces; re-evaluated at each audit.
+        run: pnpm audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm
 
       - name: Secret scanning (gitleaks)
         uses: gitleaks/gitleaks-action@83373cf2f8c4db6e24b41c1a9b086bb9619e9cd3
@@ -247,7 +252,7 @@ jobs:
 
       - name: Upload Semgrep SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@4b1d7ae6b0a2a1a1a1cbb3f2b1d0f1e6ba4c8f6f
+        uses: github/codeql-action/upload-sarif@ce5e7eeac396d720fe2d802714996c8ce561e311
         with:
           sarif_file: semgrep.sarif
         continue-on-error: true
@@ -278,13 +283,13 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Initialise CodeQL
-        uses: github/codeql-action/init@4b1d7ae6b0a2a1a1a1cbb3f2b1d0f1e6ba4c8f6f
+        uses: github/codeql-action/init@ce5e7eeac396d720fe2d802714996c8ce561e311
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
           config-file: .github/codeql/codeql-config.yml
       - name: Analyse
-        uses: github/codeql-action/analyze@4b1d7ae6b0a2a1a1a1cbb3f2b1d0f1e6ba4c8f6f
+        uses: github/codeql-action/analyze@ce5e7eeac396d720fe2d802714996c8ce561e311
 
   # ──────────────────────────────────────────────────────────────────────────
   # End-to-end

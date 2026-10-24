@@ -47,7 +47,7 @@ export async function dispatchEdiscoveryRoutes(request, url, h) {
   if (request.method === "PATCH" && path.match(/^\/admin\/ediscovery\/cases\/[^/]+$/)) {
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await updateCase(env, { id, projectId, ...body });
+    const result = await updateCase(env, { ...body, id, projectId });
     return respond(result, h);
   }
 

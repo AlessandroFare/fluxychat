@@ -90,6 +90,22 @@ export function lintOpsDefinition(raw, { tools, policy } = {}) {
       }
     }
     if (step.type === "tool_call" && !step.tool) add(bag, "errors", "tool_required", "tool_call needs tool", step.id);
+    if (step.type === "tool_call" && step.tool) {
+      const required = registry.get(step.tool)?.inputSchema?.required;
+      const input = step.input || {};
+      const missing = (Array.isArray(required) ? required : []).filter((key) => input[key] === undefined);
+      if (missing.length) {
+        // The run context may still supply these (trigger body, toolInputs), so
+        // this is advisory: it catches drafts that would fail at runtime.
+        add(
+          bag,
+          "warnings",
+          "tool_input_missing",
+          `${step.tool} is missing required input ${missing.join(", ")} — set it in the step input or provide it from the run context`,
+          step.id,
+        );
+      }
+    }
     if (step.type === "wait_for_guest" && !step.guest?.can?.length) {
       add(bag, "errors", "guest_scope", "Guest steps need a can[] scope", step.id);
     }

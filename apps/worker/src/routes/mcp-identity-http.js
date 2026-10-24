@@ -31,7 +31,7 @@ export async function dispatchMcpIdentityRoutes(request, url, h) {
 
   if (request.method === "POST" && path === "/admin/mcp-identity/servers") {
     const body = await request.json().catch(() => null);
-    const result = await registerMcpServer(env, { projectId, ...body });
+    const result = await registerMcpServer(env, { ...body, projectId });
     if (result.error) return respond(result, h, 400);
     return respond(result, h, 201);
   }

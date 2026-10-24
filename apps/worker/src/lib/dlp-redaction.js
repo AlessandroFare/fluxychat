@@ -3,6 +3,8 @@
  * Built-in regex patterns for sensitive data detection, custom DLP rules, and redaction.
  */
 
+import { compileSafeRegex } from "./safe-regex.js";
+
 function generateId() {
   return `dlp_${crypto.randomUUID().slice(0, 12)}`;
 }
@@ -172,7 +174,9 @@ export async function scanContent(env, { projectId, text }) {
   for (const rule of customRules) {
     if (!rule.enabled) continue;
     try {
-      const regex = new RegExp(rule.pattern, "gi");
+      // Audit F-51: DLP patterns are project-configured — reject ReDoS shapes.
+      const regex = compileSafeRegex(rule.pattern, "gi");
+      if (!regex) continue;
       let m;
       while ((m = regex.exec(text)) !== null) {
         matches.push({

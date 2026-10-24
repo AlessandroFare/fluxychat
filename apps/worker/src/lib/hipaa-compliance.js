@@ -16,14 +16,16 @@ export async function createBAA(env, { projectId, entityName, entityType, contac
   return { id };
 }
 
-export async function updateBAA(env, { baaId, status, signedBy }) {
+export async function updateBAA(env, { baaId, projectId, status, signedBy }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
   if (status) { sets.push("status = ?"); params.push(status); if (status === "active") { sets.push("signed_at = ?"); params.push(now); } }
   if (signedBy) { sets.push("signed_by = ?"); params.push(signedBy); }
   params.push(baaId);
-  await env.DB.prepare(`UPDATE hipaa_baa SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  params.push(projectId);
+  // Audit fix A2-5: scope the update to the caller's project (IDOR guard).
+  await env.DB.prepare(`UPDATE hipaa_baa SET ${sets.join(", ")} WHERE id = ? AND project_id = ?`).bind(...params).run();
   return { updated: true };
 }
 
@@ -83,11 +85,12 @@ export async function listPHIDetections(env, { projectId, roomId, detectedType, 
   return (rows.results || []).map(mapPHIDetectionRow);
 }
 
-export async function reviewPHIDetection(env, { detectionId, actionTaken, reviewedBy }) {
+export async function reviewPHIDetection(env, { detectionId, projectId, actionTaken, reviewedBy }) {
   const now = new Date().toISOString();
+  // Audit fix A2-5: scope the update to the caller's project (IDOR guard).
   await env.DB.prepare(
-    "UPDATE hipaa_phi_detection SET action_taken = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?"
-  ).bind(actionTaken, reviewedBy, now, detectionId).run();
+    "UPDATE hipaa_phi_detection SET action_taken = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ? AND project_id = ?"
+  ).bind(actionTaken, reviewedBy, now, detectionId, projectId).run();
   return { reviewed: true };
 }
 
@@ -103,7 +106,7 @@ export async function createBreach(env, { projectId, title, description, phiType
   return { id };
 }
 
-export async function updateBreach(env, { breachId, status, rootCause, remediation }) {
+export async function updateBreach(env, { breachId, projectId, status, rootCause, remediation }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -111,7 +114,9 @@ export async function updateBreach(env, { breachId, status, rootCause, remediati
   if (rootCause) { sets.push("root_cause = ?"); params.push(rootCause); }
   if (remediation) { sets.push("remediation = ?"); params.push(remediation); }
   params.push(breachId);
-  await env.DB.prepare(`UPDATE hipaa_breach_log SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  params.push(projectId);
+  // Audit fix A2-5: scope the update to the caller's project (IDOR guard).
+  await env.DB.prepare(`UPDATE hipaa_breach_log SET ${sets.join(", ")} WHERE id = ? AND project_id = ?`).bind(...params).run();
   return { updated: true };
 }
 
@@ -137,11 +142,12 @@ export async function assignTraining(env, { projectId, userId, trainingType, exp
   return { id };
 }
 
-export async function completeTraining(env, { trainingId, score, certificateUrl }) {
+export async function completeTraining(env, { trainingId, projectId, score, certificateUrl }) {
   const now = new Date().toISOString();
+  // Audit fix A2-5: scope the update to the caller's project (IDOR guard).
   await env.DB.prepare(
-    "UPDATE hipaa_training SET status = 'completed', completed_at = ?, score = ?, certificate_url = ? WHERE id = ?"
-  ).bind(now, score || null, certificateUrl || null, trainingId).run();
+    "UPDATE hipaa_training SET status = 'completed', completed_at = ?, score = ?, certificate_url = ? WHERE id = ? AND project_id = ?"
+  ).bind(now, score || null, certificateUrl || null, trainingId, projectId).run();
   return { completed: true };
 }
 

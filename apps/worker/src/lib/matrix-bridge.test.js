@@ -116,9 +116,9 @@ describe('matrix-bridge lib', () => {
   });
 
   describe('deleteMatrixBridge', () => {
-    it('cascades and deletes', async () => {
+    it('cascades and deletes within the project (audit F-70)', async () => {
       const env = createEnv();
-      const result = await deleteMatrixBridge(env, { bridgeId: 'mb-1' });
+      const result = await deleteMatrixBridge(env, { bridgeId: 'mb-1', projectId: 'p1' });
       expect(result.deleted).toBe(1);
     });
   });
@@ -305,9 +305,9 @@ describe('matrix-bridge lib', () => {
   });
 
   describe('deleteMatrixRoomMapping', () => {
-    it('deletes', async () => {
+    it('deletes within the project (audit F-70)', async () => {
       const env = createEnv();
-      const result = await deleteMatrixRoomMapping(env, { mappingId: 'mmr-1' });
+      const result = await deleteMatrixRoomMapping(env, { mappingId: 'mmr-1', projectId: 'p1' });
       expect(result.deleted).toBe(1);
     });
   });

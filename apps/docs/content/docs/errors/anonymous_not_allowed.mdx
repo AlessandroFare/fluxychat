@@ -5,6 +5,17 @@ description: "This room does not allow anonymous access"
 
 # 40103 — anonymous_not_allowed
 
-The room is not public. A `pk_` / guest JWT cannot join. Use a member JWT.
+The room is not public: a `pk_` publishable key or a guest JWT cannot join. Terminal.
 
-HTTP 401. Close 1008, reason `anonymous_not_allowed`.
+**At a glance** — HTTP 401 · close 1008 `anonymous_not_allowed` · terminal · SDK `FluxyAnonymousNotAllowedError`.
+
+## What to do
+
+- Connect with a member JWT minted for the user (`POST /auth/token`, roles `member`) instead of the guest path.
+- A public room accepts the `pk_` path; this room does not. Either join as a member or use a room configured for anonymous access.
+- The refusal is terminal — retrying the guest connection cannot succeed.
+
+## Related
+
+- [40100 token_expired](/docs/errors/token_expired)
+- [40108 auth_refused](/docs/errors/auth_refused)

@@ -15,7 +15,6 @@ export const SETTINGS_CATALOG: SettingsCatalogGroup[] = [
     label: "Identity",
     items: [
       { href: "/settings/identity", label: "Identity", description: "Passkeys, SSO, SCIM" },
-      { href: "/profile", label: "Profile", description: "Your user profile" },
     ],
   },
   {
@@ -30,6 +29,7 @@ export const SETTINGS_CATALOG: SettingsCatalogGroup[] = [
     label: "Messages & media",
     items: [
       { href: "/settings/media", label: "Media", description: "Uploads and attachments" },
+      { href: "/settings/chat-tools", label: "Chat tools", description: "Keyword alerts, groups, custom emoji" },
       { href: "/settings/e2e", label: "E2E encryption", description: "Client-side encryption" },
       { href: "/settings/ephemeral", label: "Ephemeral", description: "Disappearing messages" },
       { href: "/settings/translation", label: "Translation", description: "Room language settings" },
@@ -50,6 +50,7 @@ export const SETTINGS_CATALOG: SettingsCatalogGroup[] = [
     label: "Channels",
     items: [
       { href: "/settings/integrations", label: "Integrations", description: "Turnstile, SMS, WhatsApp" },
+      { href: "/settings/integrations", label: "Automation", description: "Activepieces no-code flows" },
       { href: "/settings/telephony", label: "Telephony", description: "Voice / PSTN handoff" },
       { href: "/settings/crm", label: "CRM", description: "CRM adapters" },
       { href: "/settings/support", label: "Support", description: "Support routing" },
@@ -59,9 +60,11 @@ export const SETTINGS_CATALOG: SettingsCatalogGroup[] = [
     label: "Compliance",
     items: [
       { href: "/settings/retention", label: "Retention", description: "Message retention policies" },
+      { href: "/ediscovery", label: "E-discovery", description: "Cases and evidence export" },
       { href: "/settings/dlp", label: "DLP", description: "Data loss prevention" },
       { href: "/settings/consent", label: "Consent", description: "Consent records" },
       { href: "/settings/hipaa", label: "HIPAA", description: "HIPAA workspace flags" },
+      { href: "/soc2", label: "SOC 2", description: "Control evidence export" },
       { href: "/settings/residency", label: "Residency", description: "Data region" },
       { href: "/settings/firmware", label: "Room firmware", description: "Room policy packs" },
       { href: "/privacy", label: "Privacy", description: "GDPR export and deletion" },

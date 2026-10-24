@@ -33,7 +33,8 @@ export class WebSocketClient {
     }
 
     this.setStatus('connecting');
-    const url = `${this.wsUrl}/ws?roomId=${roomId}&token=${this.token}&projectId=${this.projectId}`;
+    // Audit F-92: escape every query value — a raw token can carry '+'/'='/'&'.
+    const url = `${this.wsUrl}/ws?roomId=${encodeURIComponent(roomId)}&token=${encodeURIComponent(this.token)}&projectId=${encodeURIComponent(this.projectId)}`;
 
     try {
       this.ws = new WebSocket(url);

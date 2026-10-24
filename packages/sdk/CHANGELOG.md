@@ -1,5 +1,16 @@
 # @fluxy-chat/sdk
 
+## 0.7.0 (2026-10-23)
+
+### Added
+
+- Worker fleet client (`createWorkerFluxyFleetClient`) and expanded live-stream replay, viewer, chat, gift, sentiment, moderation and turn-credential types.
+- Adapter error taxonomy (`AdapterError` and subclasses), typed WebSocket disconnect reasons, `cursorLayerKey`, Yjs collaboration helpers, public guest sessions, transcripts and live-cursor utilities.
+
+### Changed
+
+- Publish after `@fluxy-chat/protocol@0.1.7`; no protocol bump is required.
+
 ## 0.6.17 (2026-10-15)
 
 ### Added

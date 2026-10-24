@@ -4,7 +4,7 @@ What to build next. No third-party writeup names. Hosted is beta. No traction cl
 
 ## Now
 
-1. Guest first: `pk_` + `joinPublicRoomAsGuest` / `--example shared-ai-room`. Console signup is ops, not the first click.
+1. Guest first: `pk_` + `joinPublicRoomAsGuest` / `--example shared-ai-room`. Console signup is ops, not the first click. Link later: `POST /tokens/link-guest` / `client.linkGuestAccount` moves the guest's rooms onto the account (second claim `409`); authorship stays with the guest id.
 2. Hosted 60s clip: two humans, one agent, refresh, tool approval (`deal-room` capture). Record it; do not invent views.
 3. Cloudflare Agent → room: helper + [guide](/docs/guides/cloudflare-agents-room). Generation off the Room DO (`AgentDurableObject` `room_invoke`).
 4. Activation: `GET /stats/launch-kpis` `activeProject` = ≥100 messages in 7 days (`ACTIVE_PROJECT_MESSAGES_7D`). Funnel checks: API key, room, first message, first invoke. `POST /public/activation-ping` `{ event: cli_launched | first_message | first_agent_invoke }` (no PII).

@@ -54,4 +54,17 @@ describe("IpRateLimiterDurableObject", () => {
     await limiter.alarm();
     expect(storage.has("bucket")).toBe(false);
   });
+
+  it("re-arms the alarm when it fires before expiry (audit F-55)", async () => {
+    const { limiter, storage, getAlarm } = createLimiter();
+    await limiter.consume(5, 60_000);
+    const bucket = storage.get("bucket");
+    expect(getAlarm()).toBeGreaterThan(Date.now());
+    // Early wake-up: the window is still open, so the bucket must stay AND a
+    // cleanup alarm must be re-armed.
+    storage.set("bucket", { ...bucket, expiresAt: Date.now() + 30_000 });
+    await limiter.alarm();
+    expect(storage.has("bucket")).toBe(true);
+    expect(getAlarm()).toBeGreaterThan(Date.now());
+  });
 });

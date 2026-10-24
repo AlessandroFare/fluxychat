@@ -1,6 +1,5 @@
 # FluxyChat voice — flagship load report
 
-Generated: **2026-08-26T15:02:18.664Z**  
 Runtime: Node v24.13.0 · win32 x64
 
 This is a **product report**. Every millisecond below was measured with `performance.now()` in `packages/sdk/src/voice-load-bench.test.ts`. Re-run: `pnpm --filter @fluxy-chat/sdk exec vitest run src/voice-load-bench.test.ts`.
@@ -29,8 +28,8 @@ This is a **product report**. Every millisecond below was measured with `perform
 
 | Series | n | min | p50 | p90 | p95 | p99 | max | mean |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| sdk_useVoice_text_only_tick_ms | 400 | 0.006 | 0.012 | 0.015 | 0.032 | 0.066 | 2.463 | 0.019 |
-| slo_tracker_ingest_ms | 5000 | 0.001 | 0.001 | 0.003 | 0.003 | 0.005 | 0.129 | 0.002 |
+| sdk_useVoice_text_only_tick_ms | 400 | 0.010 | 0.015 | 0.021 | 0.043 | 0.101 | 3.594 | 0.030 |
+| slo_tracker_ingest_ms | 5000 | 0.002 | 0.002 | 0.003 | 0.003 | 0.006 | 0.089 | 0.003 |
 | worker_health_ms | skipped | FLUXY_WORKER_URL unset | | | | | | |
 | voice_ai_providers_ms | skipped | FLUXY_WORKER_URL unset | | | | | | |
 

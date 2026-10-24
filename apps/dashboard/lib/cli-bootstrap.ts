@@ -28,16 +28,6 @@ export interface CliBootstrapPayload {
   publishableKey?: string;
 }
 
-export function isAllowedCliRedirectUri(raw: string): boolean {
-  try {
-    const url = new URL(raw);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
-    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  } catch {
-    return false;
-  }
-}
-
 async function ensureAssistantAgent(
   workerUrl: string,
   adminJwt: string,

@@ -34,7 +34,7 @@ class WebSocketClient {
     _currentRoomId = roomId;
     _setStatus(ConnectionStatus.connecting);
 
-    final url = '$wsUrl/ws?roomId=$roomId&token=$token&projectId=$projectId';
+    final url = '$wsUrl/ws?roomId=${Uri.encodeComponent(roomId)}&token=${Uri.encodeComponent(token)}&projectId=${Uri.encodeComponent(projectId)}';
     _channel = WebSocketChannel.connect(Uri.parse(url));
 
     _channel!.stream.listen(

@@ -2,7 +2,7 @@
  * Shared scheduled task runners (P12-L).
  * Invoked from Workflow schedules and legacy Worker `scheduled` handler.
  */
-import { logInfo } from "./worker-log.js";
+import { logInfo, logError } from "./worker-log.js";
 import { runDailyDigest } from "./daily-digest.js";
 import { flushDueNotificationBatches } from "./notification-batch.js";
 import { processPendingWebhookDeliveries } from "./webhook-delivery.js";
@@ -32,78 +32,16 @@ export async function purgeExpiredData(env) {
   ).all();
 
   for (const policy of policies.results || []) {
-    const cutoff = new Date(now.getTime() - policy.retention_days * 86400000).toISOString();
-
-    if (policy.data_type === "messages") {
-      const result = await env.DB.prepare(
-        "DELETE FROM messages WHERE project_id = ? AND created_at < ? AND deleted_at IS NOT NULL",
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.messages", {
+    // Audit F-86: one failing policy (D1 hiccup, schema drift) must not abort
+    // the remaining policies — log and continue.
+    try {
+      await purgePolicy(env, policy, now);
+    } catch (err) {
+      logError("retention.purge.policy_failed", err, {
         projectId: policy.project_id,
-        cutoff,
-        changes: result.meta?.changes || 0,
+        dataType: policy.data_type,
       });
     }
-
-    if (policy.data_type === "audit_events") {
-      const result = await env.DB.prepare(
-        "DELETE FROM operational_audit_events WHERE project_id = ? AND created_at < ?",
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.audit_events", {
-        projectId: policy.project_id,
-        cutoff,
-        changes: result.meta?.changes || 0,
-      });
-    }
-
-    if (policy.data_type === "agent_runs") {
-      const result = await env.DB.prepare(
-        "DELETE FROM agent_runs WHERE project_id = ? AND created_at < ?",
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.agent_runs", {
-        projectId: policy.project_id,
-        cutoff,
-        changes: result.meta?.changes || 0,
-      });
-    }
-
-    if (policy.data_type === "usage_monthly") {
-      const result = await env.DB.prepare(
-        "DELETE FROM project_usage_monthly WHERE project_id = ? AND month_key < ?",
-      )
-        .bind(policy.project_id, cutoff.slice(0, 7))
-        .run();
-      logInfo("retention.purge.usage_monthly", {
-        projectId: policy.project_id,
-        cutoff: cutoff.slice(0, 7),
-        changes: result.meta?.changes || 0,
-      });
-    }
-
-    if (policy.data_type === "webhook_deliveries") {
-      const result = await env.DB.prepare(
-        "DELETE FROM webhook_delivery_queue WHERE project_id = ? AND created_at < ?",
-      )
-        .bind(policy.project_id, cutoff)
-        .run();
-      logInfo("retention.purge.webhook_deliveries", {
-        projectId: policy.project_id,
-        cutoff,
-        changes: result.meta?.changes || 0,
-      });
-    }
-
-    await env.DB.prepare(
-      "UPDATE data_retention_policies SET last_purged_at = ? WHERE project_id = ? AND data_type = ?",
-    )
-      .bind(nowIso, policy.project_id, policy.data_type)
-      .run();
   }
 
   const roomTtl = await purgeAllConfiguredRoomRetention(env).catch(() => ({ purged: 0, rooms: 0 }));
@@ -121,6 +59,88 @@ export async function purgeExpiredData(env) {
   logInfo("matrix.health_check", matrixHealth);
 
   logInfo("retention.purge.completed", { at: nowIso });
+}
+
+/**
+ * Apply one retention policy (audit F-86: extracted so a failure is contained).
+ * @param {*} env
+ * @param {{ project_id: string, data_type: string, retention_days: number }} policy
+ * @param {Date} now
+ */
+async function purgePolicy(env, policy, now) {
+  const nowIso = new Date().toISOString();
+  const cutoff = new Date(now.getTime() - policy.retention_days * 86400000).toISOString();
+
+  if (policy.data_type === "messages") {
+    const result = await env.DB.prepare(
+      "DELETE FROM messages WHERE project_id = ? AND created_at < ? AND deleted_at IS NOT NULL",
+    )
+      .bind(policy.project_id, cutoff)
+      .run();
+    logInfo("retention.purge.messages", {
+      projectId: policy.project_id,
+      cutoff,
+      changes: result.meta?.changes || 0,
+    });
+  }
+
+  if (policy.data_type === "audit_events") {
+    const result = await env.DB.prepare(
+      "DELETE FROM operational_audit_events WHERE project_id = ? AND created_at < ?",
+    )
+      .bind(policy.project_id, cutoff)
+      .run();
+    logInfo("retention.purge.audit_events", {
+      projectId: policy.project_id,
+      cutoff,
+      changes: result.meta?.changes || 0,
+    });
+  }
+
+  if (policy.data_type === "agent_runs") {
+    const result = await env.DB.prepare(
+      "DELETE FROM agent_runs WHERE project_id = ? AND created_at < ?",
+    )
+      .bind(policy.project_id, cutoff)
+      .run();
+    logInfo("retention.purge.agent_runs", {
+      projectId: policy.project_id,
+      cutoff,
+      changes: result.meta?.changes || 0,
+    });
+  }
+
+  if (policy.data_type === "usage_monthly") {
+    const result = await env.DB.prepare(
+      "DELETE FROM project_usage_monthly WHERE project_id = ? AND month_key < ?",
+    )
+      .bind(policy.project_id, cutoff.slice(0, 7))
+      .run();
+    logInfo("retention.purge.usage_monthly", {
+      projectId: policy.project_id,
+      cutoff: cutoff.slice(0, 7),
+      changes: result.meta?.changes || 0,
+    });
+  }
+
+  if (policy.data_type === "webhook_deliveries") {
+    const result = await env.DB.prepare(
+      "DELETE FROM webhook_delivery_queue WHERE project_id = ? AND created_at < ?",
+    )
+      .bind(policy.project_id, cutoff)
+      .run();
+    logInfo("retention.purge.webhook_deliveries", {
+      projectId: policy.project_id,
+      cutoff,
+      changes: result.meta?.changes || 0,
+    });
+  }
+
+  await env.DB.prepare(
+    "UPDATE data_retention_policies SET last_purged_at = ? WHERE project_id = ? AND data_type = ?",
+  )
+    .bind(nowIso, policy.project_id, policy.data_type)
+    .run();
 }
 
 /**
@@ -150,6 +170,8 @@ export async function runScheduledCronJob(env, cron) {
       return { job: "retention_purge" };
     case SCHEDULED_CRON_WEBHOOK_FLUSH:
       await processPendingWebhookDeliveries(env);
+      const { processPendingBridgeDeliveries } = await import("./bridge-delivery.js");
+      await processPendingBridgeDeliveries(env).catch(() => ({ processed: 0 }));
       const { tickPresenceEscalations } = await import("./presence-escalation.js");
       await tickPresenceEscalations(env).catch(() => ({ processed: 0 }));
       const { tickHitlApprovalEscalations } = await import("./hitl-approval-tick.js");
@@ -163,10 +185,15 @@ export async function runScheduledCronJob(env, cron) {
       await syncModelsCatalog(env);
       return { job: "models_sync" };
     default:
+      // Audit F-15: an empty or unknown cron used to fall through to the
+      // destructive retention purge — any scheduled event without a recognized
+      // cron (local `/__scheduled`, renamed deploy schedule) wiped expired data
+      // off-schedule. Purge only on the explicit retention cron.
       if (!normalized) {
-        await purgeExpiredData(env);
-        return { job: "retention_purge_legacy" };
+        logInfo("scheduled.cron_missing", {});
+        return { job: "cron_missing" };
       }
+      logError("scheduled.unknown_cron", new Error("unknown_cron"), { cron: normalized });
       return { job: "unknown", cron: normalized };
   }
 }

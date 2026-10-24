@@ -97,20 +97,23 @@ export async function redactUserPayloadsInTable(db, { projectId, userId, table, 
   }
 
   const idColumn = table === "automation_events" ? "id" : "id";
-  let offset = 0;
+  let lastId = "";
   let scanned = 0;
   let redacted = 0;
 
   while (true) {
+    // Audit fix A2-13: keyset pagination — the match set shrinks as rows are
+    // redacted, so LIMIT/OFFSET would skip unprocessed rows.
     const page = await db
       .prepare(
-        `SELECT ${idColumn} AS row_id, payload FROM ${table} WHERE project_id = ? AND payload LIKE ? ESCAPE '\\' LIMIT ? OFFSET ?`
+        `SELECT ${idColumn} AS row_id, payload FROM ${table} WHERE project_id = ? AND payload LIKE ? ESCAPE '\\' AND ${idColumn} > ? ORDER BY ${idColumn} LIMIT ?`
       )
-      .bind(projectId, `%${escapeLike(userId)}%`, pageSize, offset)
+      .bind(projectId, `%${escapeLike(userId)}%`, lastId, pageSize)
       .all();
 
     const rows = page.results || [];
     if (!rows.length) break;
+    lastId = rows[rows.length - 1].row_id;
 
     const statements = [];
     const now = new Date().toISOString();
@@ -146,7 +149,6 @@ export async function redactUserPayloadsInTable(db, { projectId, userId, table, 
     }
 
     if (rows.length < pageSize) break;
-    offset += pageSize;
   }
 
   return { scanned, redacted };

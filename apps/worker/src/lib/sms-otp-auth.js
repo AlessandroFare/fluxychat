@@ -4,9 +4,12 @@
 
 import { sendSentDmTemplate } from "./offline-notify-sent.js";
 import { checkAndConsumeIpRateLimit } from "./ip-rate-limit.js";
+import { checkAndConsumeRateLimit } from "./rate-limit.js";
 
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 const OTP_TTL_MS = 10 * 60_000;
+/** Audit #20: wrong guesses allowed per issued code. */
+const MAX_OTP_ATTEMPTS = 5;
 
 function isSmsOtpEnabled(env) {
   return Boolean(
@@ -53,6 +56,22 @@ export async function requestSmsOtp(env, request, opts) {
 
   const limit = Number(env.RATE_LIMIT_SMS_OTP_PER_MINUTE || 5);
   if (limit > 0) {
+    // Audit F-38: `userId` comes from the client — budget per IP first so
+    // rotating the userId cannot multiply the number of SMS sent.
+    const ipOnly = await checkAndConsumeIpRateLimit(env, {
+      request,
+      scope: "sms-otp",
+      limit,
+      windowSeconds: 60,
+    });
+    if (!ipOnly.allowed) {
+      return {
+        ok: false,
+        status: 429,
+        error: "rate_limit_exceeded",
+        retryAfterSeconds: ipOnly.retryAfterSeconds,
+      };
+    }
     const ipRate = await checkAndConsumeIpRateLimit(env, {
       request,
       scope: `sms-otp:${opts.projectId}:${opts.userId}`,
@@ -121,27 +140,66 @@ export async function verifySmsOtp(env, opts) {
     return { ok: false, status: 400, error: "invalid_request" };
   }
 
+  // Audit #20: bound online guessing per identity before touching the DB.
+  const verifyLimit = Number(env.RATE_LIMIT_SMS_OTP_VERIFY_PER_MINUTE || 10);
+  if (verifyLimit > 0) {
+    const rate = await checkAndConsumeRateLimit(env, {
+      key: `sms-otp-verify:${opts.projectId}:${opts.userId}`,
+      limit: verifyLimit,
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) {
+      return {
+        ok: false,
+        status: 429,
+        error: "rate_limit_exceeded",
+        retryAfterSeconds: rate.retryAfterSeconds,
+      };
+    }
+  }
+
   const codeHash = await hashOtp(code, opts.projectId, opts.userId, e164);
+  const now = new Date().toISOString();
   const row = await env.DB.prepare(
-    `SELECT id, expires_at, consumed_at FROM sms_otp_codes
+    `SELECT id, expires_at, consumed_at, attempts FROM sms_otp_codes
      WHERE project_id = ? AND user_id = ? AND e164 = ? AND code_hash = ?
      ORDER BY created_at DESC LIMIT 1`,
   )
     .bind(opts.projectId, opts.userId, e164, codeHash)
     .first();
 
-  if (!row) return { ok: false, status: 401, error: "invalid_code" };
+  if (!row) {
+    // Audit #20: count the miss against the newest live code for this identity.
+    await env.DB.prepare(
+      `UPDATE sms_otp_codes SET attempts = attempts + 1
+       WHERE id = (
+         SELECT id FROM sms_otp_codes
+         WHERE project_id = ? AND user_id = ? AND e164 = ?
+           AND consumed_at IS NULL AND expires_at > ?
+         ORDER BY created_at DESC LIMIT 1
+       )`,
+    )
+      .bind(opts.projectId, opts.userId, e164, now)
+      .run()
+      .catch(() => null);
+    return { ok: false, status: 401, error: "invalid_code" };
+  }
   if (row.consumed_at) return { ok: false, status: 401, error: "code_already_used" };
-  if (row.expires_at < new Date().toISOString()) {
-    return { ok: false, status: 401, error: "code_expired" };
+  if (row.expires_at < now) return { ok: false, status: 401, error: "code_expired" };
+  if ((row.attempts ?? 0) >= MAX_OTP_ATTEMPTS) {
+    return { ok: false, status: 401, error: "too_many_attempts" };
   }
 
-  const now = new Date().toISOString();
-  await env.DB.prepare(
-    "UPDATE sms_otp_codes SET consumed_at = ? WHERE id = ?",
+  // Audit #20: atomic consumption — only one caller can flip consumed_at.
+  const consumed = await env.DB.prepare(
+    `UPDATE sms_otp_codes SET consumed_at = ?
+     WHERE id = ? AND consumed_at IS NULL AND expires_at > ?`,
   )
-    .bind(now, row.id)
+    .bind(now, row.id, now)
     .run();
+  if (consumed.meta?.changes !== 1) {
+    return { ok: false, status: 401, error: "code_already_used" };
+  }
 
   return { ok: true, verified: true, e164 };
 }

@@ -166,7 +166,7 @@ export async function dispatchWorkflowAutomationRoutes(request, url, h) {
   if (path.match(/^\/api\/workflows\/[^/]+\/run$/) && request.method === "POST") {
     const workflowId = path.split("/")[3];
     const body = withAuthProjectId(await request.json(), projectId);
-    const result = await WA.startExecution(env, { workflowId, projectId, ...body });
+    const result = await WA.startExecution(env, { ...body, workflowId, projectId });
     return json(result, result.error ? 400 : 200);
   }
 

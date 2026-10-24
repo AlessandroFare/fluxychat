@@ -13,6 +13,9 @@ import { callAgentDo } from "./agent-do-session.js";
 import { logInfo, logError } from "./worker-log.js";
 
 const MAX_BODY = 4000;
+// Audit F-84: cap the raw MIME payload before parsing — the old code parsed the
+// whole message and only truncated the extracted body.
+const MAX_RAW = 256 * 1024;
 const MODES = new Set(["room", "agent", "both"]);
 
 export function normalizeEmailAddress(value) {
@@ -34,7 +37,7 @@ export function emailLocalPart(address) {
  * @param {string} raw
  */
 export function parseRawEmail(raw) {
-  const text = String(raw || "").replace(/\r\n/g, "\n");
+  const text = String(raw || "").slice(0, MAX_RAW).replace(/\r\n/g, "\n");
   const split = text.indexOf("\n\n");
   const headerBlock = split >= 0 ? text.slice(0, split) : text;
   let body = split >= 0 ? text.slice(split + 2) : "";
@@ -78,7 +81,9 @@ export function composeInboundText({ subject, body, from }) {
   const subj = String(subject || "").trim();
   const text = String(body || "").trim();
   const lines = [];
-  if (from) lines.push(`From: ${from}`);
+  // Audit F-84: an inbound `From` is unauthenticated (spoofable) — say so in the
+  // transcript instead of presenting it as a verified identity.
+  if (from) lines.push(`From: ${from} (external email, unverified)`);
   if (subj) lines.push(`Subject: ${subj}`);
   if (text) lines.push(text);
   return lines.join("\n").slice(0, MAX_BODY);
@@ -179,7 +184,11 @@ export async function handleEmailInbound(env, input) {
 
   if (!parsed.to) return { ok: false, error: "to_required", reject: "no mailbox" };
   const projectId = await resolveProjectId(env, input.projectId);
-  const externalId = parsed.messageId || `hash:${parsed.from}:${parsed.to}:${parsed.subject}:${parsed.body.slice(0, 48)}`;
+  // Audit F-84: scope the dedupe key to the sender so two different senders
+  // cannot collide on the attacker-supplied Message-ID header.
+  const externalId = parsed.messageId
+    ? `${parsed.from}|${parsed.messageId}`
+    : `hash:${parsed.from}:${parsed.to}:${parsed.subject}:${parsed.body.slice(0, 48)}`;
 
   const existing = await env.DB.prepare(
     `SELECT fluxy_message_id FROM email_inbound_events WHERE project_id = ? AND message_id_hdr = ? LIMIT 1`,
@@ -204,6 +213,32 @@ export async function handleEmailInbound(env, input) {
   }
   if ((mode === "agent" || mode === "both") && !agentId) {
     return { ok: false, error: "no_agent_mapping", reject: "no mailbox" };
+  }
+
+  // Audit F-80: the local-part fallback (`room-…@`, `agent-…@`) and env defaults
+  // are attacker-influenced ids; verify the target actually belongs to this
+  // project before writing messages or nudging an agent.
+  if (roomId) {
+    const roomRow = await env.DB.prepare(
+      "SELECT id FROM rooms WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(roomId, projectId)
+      .first();
+    if (!roomRow?.id) {
+      logInfo("email.inbound.room_not_found", { projectId, roomId });
+      return { ok: false, error: "room_not_found", reject: "no mailbox" };
+    }
+  }
+  if (agentId) {
+    const agentRow = await env.DB.prepare(
+      "SELECT id FROM bots WHERE id = ? AND project_id = ? LIMIT 1",
+    )
+      .bind(agentId, projectId)
+      .first();
+    if (!agentRow?.id) {
+      logInfo("email.inbound.agent_not_found", { projectId, agentId });
+      return { ok: false, error: "agent_not_found", reject: "no mailbox" };
+    }
   }
 
   const userId = parsed.from ? `email:${parsed.from}` : "email:unknown";

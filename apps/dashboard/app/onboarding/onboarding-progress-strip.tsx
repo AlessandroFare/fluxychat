@@ -46,7 +46,7 @@ export function OnboardingProgressStrip({ stepContext, activeStep, onStepClick }
                     done
                       ? "border-emerald-500 bg-emerald-50 text-emerald-600"
                       : current
-                        ? "border-primary bg-primary/10 text-primary"
+                        ? "border-primary bg-primary/10 text-[var(--brand-hover)]"
                         : "border-muted-foreground/30 bg-transparent text-muted-foreground/40",
                   )}
                 >

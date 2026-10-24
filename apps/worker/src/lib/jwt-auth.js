@@ -95,6 +95,13 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
   // Constant-time crypto before DB lookup (P1-2): unknown vs known project both verify once.
   await verifyHs256Signature(headerB64, payloadB64, sigB64, JWT_DUMMY_KEY_BYTES);
 
+  // Audit F-04: a token without `jti` cannot be revoked. Minting always adds
+  // one (worker signJwtHs256); tokens in flight from older deploys are
+  // rejected rather than accepted unrevocable.
+  if (!payloadJson.jti) {
+    throw new Response("Token missing jti claim", { status: 401 });
+  }
+
   // R7 token revocation: after signature work, before trusting the token. Only
   // tokens minted with a `jti` are revocable; older ones skip the KV lookup.
   if (payloadJson.jti) {
@@ -137,8 +144,17 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
       const retireAt = row.jwt_secret_previous_expires_at;
       const ts = retireAt ? Date.parse(String(retireAt)) : NaN;
       const expired = Number.isFinite(ts) && Date.now() > ts;
+      // Audit F-03: without a stored retirement date, an old key must not stay
+      // usable forever — accept it only for a bounded grace window measured
+      // from the token's own `iat`.
+      const iatSeconds = Number(payloadJson.iat);
+      const withinGrace =
+        Number.isFinite(iatSeconds) && Date.now() / 1000 - iatSeconds <= 72 * 3600;
       if (retireAt && expired) {
         logInfo("jwt.previous_secret_expired", { userId, projectId, retireAt });
+        // fall through to generic rejection below
+      } else if (!retireAt && !withinGrace) {
+        logInfo("jwt.previous_secret_rejected_no_expire_at", { userId, projectId });
         // fall through to generic rejection below
       } else {
         const prevOk = await verifyHs256Signature(
@@ -151,8 +167,6 @@ export async function verifyJwtAndGetContext(request, env, opts = {}) {
           if (retireAt && !expired) {
             logInfo("jwt.previous_secret_used", { userId, projectId, retireAt });
           } else {
-            // No expiration set  accept but log a warning so operators
-            // see it in their logs.
             logInfo("jwt.previous_secret_used_no_expire_at", { userId, projectId });
           }
           return authContextFromPayload(payloadJson, userId, projectId, roles);

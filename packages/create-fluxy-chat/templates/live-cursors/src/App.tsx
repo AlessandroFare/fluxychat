@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FluxyChatClient } from "@fluxy-chat/sdk";
-import { FluxyRealtimeProvider, useChat } from "@fluxy-chat/react";
+import { FluxyRealtimeProvider, useLiveCursors } from "@fluxy-chat/react";
+import { Cursor } from "@fluxy-chat/ui";
 
 const workerUrl = import.meta.env.VITE_FLUXYCHAT_WORKER_URL?.trim();
 const publishableKey = import.meta.env.VITE_FLUXYCHAT_PUBLISHABLE_KEY?.trim();
@@ -86,10 +87,8 @@ function CursorCanvas({
   roomId: string;
   selfUserId: string;
 }) {
-  const { liveCursors, sendCursor, connected, connectionState } = useChat({
-    roomId,
-    replay: "request",
-  });
+  // useLiveCursors evicts peers silent for 8s, so closed tabs leave no ghosts.
+  const { cursors, publish, connected } = useLiveCursors({ roomId, selfUserId });
   const color = CURSOR_COLORS[Math.abs(hashCode(selfUserId)) % CURSOR_COLORS.length];
 
   return (
@@ -97,47 +96,24 @@ function CursorCanvas({
       <header className="chat-header">
         <strong>{roomId}</strong>
         <span className="status">
-          {connected ? "live" : connectionState.status} — open a second tab
+          {connected ? "live" : "connecting"} — open a second tab
         </span>
       </header>
       <div
         className="canvas"
         onPointerMove={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
-          sendCursor({
+          publish({
             x: event.clientX - rect.left,
             y: event.clientY - rect.top,
             color,
             label: selfUserId.slice(0, 12),
           });
         }}
-        onPointerLeave={() => {
-          /* last position stays until stale on peers */
-        }}
       >
-        {Object.values(liveCursors)
-          .filter((c) => c.userId !== selfUserId)
-          .map((cursor) => (
-            <div
-              key={cursor.userId}
-              className="peer-cursor"
-              style={{
-                left: cursor.x,
-                top: cursor.y,
-                color: cursor.color || "#2563eb",
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  d="M5.5 3.2 19 12.4l-6.2 1.4 2.6 6.6-2.8 1.1-2.6-6.6L5.5 3.2Z"
-                  fill="currentColor"
-                  stroke="#0f172a"
-                  strokeWidth="1"
-                />
-              </svg>
-              <span>{cursor.label || cursor.userId}</span>
-            </div>
-          ))}
+        {cursors.map((cursor) => (
+          <Cursor key={cursor.userId} cursor={cursor} />
+        ))}
       </div>
     </section>
   );

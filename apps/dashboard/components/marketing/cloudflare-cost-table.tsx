@@ -2,7 +2,8 @@
  * CloudflareCostTable  what running FluxyChat actually costs on CF.
  *
  * Server component. Accepts a `variant` prop: "dark" (default, for the
- * landing page dark section) or "light" (for the /compare page).
+ * landing page dark section) or "light" (for /compare and the C landing,
+ * which re-skins the card shell in its own CSS module).
  *
  * Numbers are honest estimates tied to Cloudflare's published free + paid
  * Workers / D1 / DO limits as of 2026-06. Always link to the live pricing
@@ -80,17 +81,17 @@ export function CloudflareCostTable({ variant = "dark" }: { variant?: "dark" | "
                     : ""
                 }
               >
-                <td className={`px-4 py-3 font-semibold ${isDark ? "text-white" : "text-foreground"}`}>{row.plan}</td>
-                <td className={`px-4 py-3 ${isDark ? "text-slate-200" : "text-muted-foreground"}`}>{row.messages}</td>
-                <td className={`px-4 py-3 ${isDark ? "text-slate-200" : "text-muted-foreground"}`}>{row.d1Reads}</td>
-                <td className={`px-4 py-3 ${isDark ? "text-slate-200" : "text-muted-foreground"}`}>{row.cost}</td>
-                <td className={`px-4 py-3 ${isDark ? "text-slate-300" : "text-muted-foreground"}`}>{row.bestFor}</td>
+                <td data-label="Plan" className={`px-4 py-3 font-semibold ${isDark ? "text-white" : "text-foreground"}`}>{row.plan}</td>
+                <td data-label="Messages / mo" className={`px-4 py-3 ${isDark ? "text-slate-200" : "text-muted-foreground"}`}>{row.messages}</td>
+                <td data-label="D1 reads / day" className={`px-4 py-3 ${isDark ? "text-slate-200" : "text-muted-foreground"}`}>{row.d1Reads}</td>
+                <td data-label="Cost (USD)" className={`px-4 py-3 ${isDark ? "text-slate-200" : "text-muted-foreground"}`}>{row.cost}</td>
+                <td data-label="Best for" className={`px-4 py-3 ${isDark ? "text-slate-300" : "text-muted-foreground"}`}>{row.bestFor}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className={`mt-5 text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-muted-foreground"}`}>
+      <p className={`mt-5 max-w-[70ch] text-xs leading-relaxed ${isDark ? "text-slate-400" : "text-muted-foreground"}`}>
         * Request and D1 rows are not Durable Object <strong>duration</strong>.
         Cloudflare&apos;s official chat sample billed almost entirely on duration.
         FluxyChat has not published idle-socket duration from an invoice. Treat this

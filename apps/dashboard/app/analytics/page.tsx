@@ -246,12 +246,15 @@ export default function AnalyticsPage() {
   // fast-stats state. (Audit P2 fix.)
   const fetchGenRef = useRef(0);
   const benchGenRef = useRef(0);
+  const benchmarkStartedRef = useRef(false);
 
   // The benchmark runs 200 server-side DB round-trips and is the slowest call
   // on this page. Run it on its own, non-blocking, so the main dashboard does
   // not wait for it.
-  const runBenchmark = useCallback(async () => {
+  const runBenchmark = useCallback(async (force = false) => {
     if (!adminJwt.trim()) return;
+    if (!force && benchmarkStartedRef.current) return;
+    benchmarkStartedRef.current = true;
     setBenchmarkLoading(true);
     const gen = ++benchGenRef.current;
     try {
@@ -264,7 +267,10 @@ export default function AnalyticsPage() {
       setBenchmark(benchmarkJson);
     } catch {
       // Benchmark is non-critical; do not surface as a page-level error.
-      if (gen === benchGenRef.current) setBenchmark(null);
+      if (gen === benchGenRef.current) {
+        setBenchmark(null);
+        benchmarkStartedRef.current = false;
+      }
     } finally {
       if (gen === benchGenRef.current) setBenchmarkLoading(false);
     }
@@ -275,10 +281,8 @@ export default function AnalyticsPage() {
       setError("Select a session first from Projects or Onboarding.");
       return;
     }
-    if (!roomId.trim()) {
-      setError("Select a room first.");
-      return;
-    }
+    // Launch KPIs, costs, SLO and alerts are project-scoped: fetch them even
+    // without a room so the weekly funnel read needs no room selection.
     setLoading(true);
     setError(null);
     setNotice(null);
@@ -290,10 +294,12 @@ export default function AnalyticsPage() {
     try {
       const [roomJson, costJson, kpiJson, sloJson, alertsJson, opsJson] =
         await Promise.all([
-          fetchWorkerJson<RoomStats>(
-            `${WORKER_URL}/stats/rooms/${encodeURIComponent(roomId)}`,
-            { headers: authHeader(readToken) }
-          ),
+          roomId.trim()
+            ? fetchWorkerJson<RoomStats>(
+                `${WORKER_URL}/stats/rooms/${encodeURIComponent(roomId)}`,
+                { headers: authHeader(readToken) }
+              )
+            : Promise.resolve(null),
           fetchWorkerJson<CostStats>(`${WORKER_URL}/stats/costs`, {
             headers: authHeader(adminJwt),
           }),
@@ -328,7 +334,7 @@ export default function AnalyticsPage() {
   }, [readToken, roomId, authHeader, adminJwt, runBenchmark]);
 
   useEffect(() => {
-    if (!readToken || !roomId.trim()) return;
+    if (!readToken) return;
     void fetchStats();
   }, [roomId, readToken, fetchStats]);
 
@@ -408,7 +414,7 @@ export default function AnalyticsPage() {
       <Section
         title="Room overview"
         actions={
-          <Button onClick={fetchStats} disabled={loading || !readToken || !roomId.trim()}>
+          <Button onClick={fetchStats} disabled={loading || !readToken}>
             {loading ? "Loading..." : "Refresh"}
           </Button>
         }
@@ -470,7 +476,13 @@ export default function AnalyticsPage() {
             />
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Enter a room id and refresh.</p>
+          <p className="text-sm text-muted-foreground">
+            {loading
+              ? "Loading room stats…"
+              : roomId.trim()
+                ? "No stats for this room yet. Refresh to load them."
+                : "Select a room to load room stats."}
+          </p>
         )}
       </Section>
 
@@ -495,7 +507,7 @@ export default function AnalyticsPage() {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="neutral"
-              onClick={runBenchmark}
+              onClick={() => void runBenchmark(true)}
               disabled={benchmarkLoading || !adminJwt.trim()}
             >
               {benchmarkLoading ? "Running benchmark..." : "Run benchmark"}

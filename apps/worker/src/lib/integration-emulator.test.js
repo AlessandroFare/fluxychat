@@ -1,7 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeAll, describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("../lib/bridge.js", () => ({
   getBridgeConfig: vi.fn(),
+  getBridgeSigningSecret: vi.fn(),
   syncInboundMessage: vi.fn(),
   recordBridgeEvent: vi.fn(async () => ({})),
 }));
@@ -13,7 +14,7 @@ vi.mock("../lib/matrix-bridge.js", () => ({
   verifyMatrixAppserviceWebhook: vi.fn(),
 }));
 
-import { getBridgeConfig, syncInboundMessage } from "../lib/bridge.js";
+import { getBridgeConfig, getBridgeSigningSecret, syncInboundMessage } from "../lib/bridge.js";
 import {
   getMatrixBridge,
   processMatrixAppserviceTransaction,
@@ -46,8 +47,58 @@ const routeDeps = {
   corsHeaders: {},
 };
 
+const SLACK_FIXTURE_SECRET = "fixture-signing-secret";
+let discordKeyPair = null;
+let discordPublicKeyHex = "";
+
+beforeAll(async () => {
+  discordKeyPair = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
+  discordPublicKeyHex = Buffer.from(
+    new Uint8Array(await crypto.subtle.exportKey("raw", discordKeyPair.publicKey)),
+  ).toString("hex");
+});
+
+async function signedHeadersFor(fixture) {
+  const body =
+    typeof fixture.payload === "string" ? fixture.payload : JSON.stringify(fixture.payload);
+  if (fixture.platform === "slack") {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(SLACK_FIXTURE_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const mac = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(`v0:${timestamp}:${body}`),
+    );
+    return {
+      "x-slack-request-timestamp": timestamp,
+      "x-slack-signature": `v0=${Buffer.from(new Uint8Array(mac)).toString("hex")}`,
+    };
+  }
+  if (fixture.platform === "discord") {
+    const timestamp = String(Date.now());
+    const signature = Buffer.from(
+      new Uint8Array(
+        await crypto.subtle.sign(
+          { name: "Ed25519" },
+          discordKeyPair.privateKey,
+          new TextEncoder().encode(timestamp + body),
+        ),
+      ),
+    ).toString("hex");
+    return { "x-signature-timestamp": timestamp, "x-signature-ed25519": signature };
+  }
+  return {};
+}
+
 beforeEach(() => {
   vi.mocked(getBridgeConfig).mockReset();
+  vi.mocked(getBridgeSigningSecret).mockReset();
   vi.mocked(syncInboundMessage).mockReset();
   vi.mocked(getMatrixBridge).mockReset();
   vi.mocked(processMatrixAppserviceTransaction).mockReset();
@@ -61,6 +112,11 @@ beforeEach(() => {
     if (bridgeId === "br_discord_fixture") {
       return { id: bridgeId, projectId: "p1", platform: "discord" };
     }
+    return null;
+  });
+  vi.mocked(getBridgeSigningSecret).mockImplementation(async (_env, { bridgeId }) => {
+    if (bridgeId === "br_slack_fixture") return SLACK_FIXTURE_SECRET;
+    if (bridgeId === "br_discord_fixture") return discordPublicKeyHex;
     return null;
   });
   vi.mocked(getMatrixBridge).mockResolvedValue({
@@ -118,6 +174,7 @@ describe("integration-emulator replay", () => {
         {},
         routeDeps,
         fixture,
+        { headers: await signedHeadersFor(fixture) },
       );
       expect(() => assertFixtureExpectations(fixture, result)).not.toThrow();
       expect(result.status).toBe(fixture.expect.status ?? 200);

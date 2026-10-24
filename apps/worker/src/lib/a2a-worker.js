@@ -328,7 +328,10 @@ export async function delegateA2ATaskToRemote(env, { projectId, taskId, targetAg
   const validated = validateExternalHttpsUrl(card.endpointUrl, env);
   if (!validated.ok) return { ok: false, error: validated.error };
 
-  const token = bearerToken || env.A2A_OUTBOUND_BEARER || "";
+  // Audit F-25: endpointUrl is project-controlled, so the platform-wide
+  // A2A_OUTBOUND_BEARER must never be attached to it. Only a token that the
+  // caller passes explicitly (their own peer credential) is sent.
+  const token = bearerToken || "";
   const headers = {
     "Content-Type": "application/json",
     Accept: "application/json",

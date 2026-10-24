@@ -1,4 +1,5 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
+import { internalDoHeaders } from "../lib/room-shard.js";
 import { FLUXY_MAX_WS_FRAME_CHARS, FLUXY_PROTOCOL_INTEGER } from "@fluxy-chat/protocol";
 import { WsSessionRegistry, installWsAutoResponse } from "../lib/do-ws-sessions.js";
 import {
@@ -36,6 +37,13 @@ import {
   runDoAlarmStep,
 } from "../lib/do-retry-taxonomy.js";
 import {
+  noteDoBootStart,
+  noteDoBootComplete,
+  readDoSeal,
+  sealAndPurgeDoObject,
+  unsealDoObject,
+} from "../lib/do-crash-guard.js";
+import {
   scheduleDoAlarmJob,
   cancelDoAlarmJob,
   takeDueDoAlarmJobs,
@@ -51,6 +59,8 @@ import {
   walHasClientMessageId,
 } from "../lib/message-d1-write-behind.js";
 import {
+  PITR_META_KEY,
+  PITR_SNAPSHOTS_KEY,
   captureRoomPitrSnapshot,
   listRoomPitr,
   restoreRoomPitr,
@@ -99,6 +109,7 @@ import {
 } from "../lib/message-enrichment.js";
 import { getLinkPreview } from "../lib/rich-previews.js";
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
+import { enqueueRoomBridgeOutbound } from "../lib/bridge-delivery.js";
 import { normalizeClientMessageId } from "../lib/client-message-id.js";
 import { safeSchedulePostMessageAutomations } from "../lib/post-message-automations-safe.js";
 import { invokeMentionedAgents } from "../lib/agent-runtime.js";
@@ -172,6 +183,12 @@ export const EPHEMERAL_MODERATION_CACHE_KEY = "_ephemeral_moderation_cache";
  * `lib/do-ws-sessions.js`.
  */
 export const EPHEMERAL_ROOM_STATE_KEY = "_ephemeral_room_state";
+
+/**
+ * Consecutive incomplete boots (see `lib/do-crash-guard.js`) before the room
+ * seals itself and purges storage.
+ */
+export const ROOM_BOOT_CRASH_LIMIT = 2;
 
 export const ROOM_DO_MIGRATIONS = [
   {
@@ -265,6 +282,24 @@ export function parseWsConnectOptions(request) {
   return { replay, limit, cache, readonly, protocol };
 }
 
+/**
+ * Audit #15: internal-only DO endpoints (/stream, /announce, /live-stats)
+ * require a service credential when INTERNAL_DO_TOKEN is configured (callers
+ * add it via internalDoHeaders). Audit F-48: without the token the endpoints
+ * stay closed in production — a deploy that sets NODE_ENV=production must also
+ * set INTERNAL_DO_TOKEN.
+ * @param {Request} request
+ * @param {*} env
+ */
+export function isInternalDoRequest(request, env) {
+  const expected = env?.INTERNAL_DO_TOKEN;
+  if (!expected) {
+    return String(env?.NODE_ENV || "").trim().toLowerCase() !== "production";
+  }
+  const got = request.headers.get("x-internal-do-token") || "";
+  return got === expected;
+}
+
 export class RoomDurableObject {
   constructor(state, env) {
     this.state = state;
@@ -351,9 +386,26 @@ export class RoomDurableObject {
     // survive eviction; merged additively on wake.
     this.costLedger = emptyLedger();
     this.costLedgerKey = "_cost_ledger";
+    /** Seal record (`lib/do-crash-guard.js`) or null when the room serves normally. */
+    this.sealed = null;
 
     if (typeof this.state.blockConcurrencyWhile === "function" && this.state.storage) {
       this._storageHydrated = this.state.blockConcurrencyWhile(async () => {
+        // Seal + purge (S3): a boot that died before `noteDoBootComplete`
+        // (typically OOM while hydrating) is a crash. After
+        // ROOM_BOOT_CRASH_LIMIT consecutive crashes the room seals itself and
+        // storage is purged so the next boot cannot die on the same state.
+        this.sealed = await readDoSeal(this.state.storage);
+        if (this.sealed) return;
+        const boot = await noteDoBootStart(this.state.storage);
+        if (boot.consecutiveCrashes >= ROOM_BOOT_CRASH_LIMIT) {
+          this.sealed = await sealAndPurgeDoObject(this.state.storage, {
+            reason: "boot_crash_loop",
+            crashes: boot.consecutiveCrashes,
+            keepKeys: ["projectId", "roomId", PITR_SNAPSHOTS_KEY, PITR_META_KEY],
+          });
+          return;
+        }
         // Run pending migrations BEFORE reading state so that any shape
         // changes from `up()` are visible to the hydration below.
         await runStorageMigrations(this.state, ROOM_DO_MIGRATIONS);
@@ -371,6 +423,7 @@ export class RoomDurableObject {
         // F1: restore cost counters from before the last eviction.
         const storedCost = await this.state.storage.get(this.costLedgerKey);
         if (storedCost) mergeLedger(this.costLedger, storedCost);
+        await noteDoBootComplete(this.state.storage);
       });
     } else {
       this._storageHydrated = Promise.resolve();
@@ -778,12 +831,16 @@ export class RoomDurableObject {
   }
 
   async persistRoomContext(projectId, roomId) {
+    // Audit F-40: a raw-roomId DO is bound to one project for life; refuse to
+    // silently rebind (callers fall through without the stale write).
+    if (this.projectId && this.projectId !== projectId) return false;
     this.projectId = projectId;
     this.roomId = roomId;
     if (this.state.storage) {
       await this.state.storage.put("projectId", projectId);
       await this.state.storage.put("roomId", roomId);
     }
+    return true;
   }
 
   getRoomIdFromRequest(request) {
@@ -1157,7 +1214,7 @@ export class RoomDurableObject {
       : "";
     const visibilityCols = extendedSchema ? ", visibility, visible_to_json" : "";
     const seqCols = extendedSchema
-      ? ", seq, version, participant_type, metadata_json"
+      ? ", seq, version, participant_type, metadata_json, also_to_channel"
       : "";
     try {
       const result = await this.env.DB.prepare(
@@ -1327,6 +1384,13 @@ export class RoomDurableObject {
       return { ok: false, error: "stream_requires_project_and_user" };
     }
 
+    // Audit F-40: DO ids are raw roomIds (global, not namespaced per project)
+    // and /stream takes projectId from the request body. Never let a request
+    // rebind an initialized DO to another project: first binding wins.
+    if (this.projectId && this.projectId !== projectId) {
+      return { ok: false, error: "project_mismatch" };
+    }
+
     this.projectId = projectId;
     this.roomId = roomId;
 
@@ -1350,11 +1414,19 @@ export class RoomDurableObject {
         };
       }
 
-      const quotaResult = await checkAndConsumeProjectQuota(this.env, {
-        projectId,
-        metricName: "messages_created",
-        amount: 1,
-      }).catch(() => ({ allowed: true }));
+      // Audit F-47: quota checks no longer fail open — a check that cannot run
+      // must not grant unlimited usage.
+      let quotaResult;
+      try {
+        quotaResult = await checkAndConsumeProjectQuota(this.env, {
+          projectId,
+          metricName: "messages_created",
+          amount: 1,
+        });
+      } catch (err) {
+        logError("room.quota_check_failed", err, { projectId });
+        return { ok: false, error: "quota_check_failed" };
+      }
       if (!quotaResult.allowed) {
         return { ok: false, error: "quota_exceeded", details: quotaResult };
       }
@@ -1604,7 +1676,16 @@ export class RoomDurableObject {
 
       if (msg.type === "message") {
         const roomId = this.roomId || this.state.id.toString();
-        const { id, userId, content, parentId, attachments } = msg;
+        const { content, parentId, attachments } = msg;
+        // Author is the authenticated socket (attachment field `u`, written only
+        // after JWT verification in handleWebSocket), never the client payload.
+        const userId = this.userIds.get(webSocket);
+        if (!userId) {
+          webSocket.send(
+            JSON.stringify({ type: "error", message: "message_requires_authenticated_socket" }),
+          );
+          return;
+        }
         const clientMessageId = normalizeClientMessageId(msg.clientMessageId);
         const { resolveMessageExpiryWithRoomPolicy } = await import(
           "../lib/message-retention-room.js"
@@ -1746,29 +1827,6 @@ export class RoomDurableObject {
           return;
         }
 
-        const quotaResult = await checkAndConsumeProjectQuota(this.env, {
-          projectId: this.projectId,
-          metricName: "messages_created",
-          amount: 1,
-        }).catch(() => ({ allowed: true }));
-        if (!quotaResult.allowed) {
-          const reset = quotaResetInfo();
-          webSocket.send(
-            JSON.stringify({
-              type: "error",
-              message: "quota_exceeded",
-              details: {
-                metric: quotaResult.metricName,
-                limit: quotaResult.limit,
-                used: quotaResult.used,
-                month: quotaResult.monthKey,
-                resetsAt: reset.resetsAt,
-                retryAfterSeconds: reset.retryAfterSeconds,
-              },
-            })
-          );
-          return;
-        }
         const wsMessageRate = this.consumeWsRateLimit(
           `ws-msg:${this.projectId}:${roomId}:${userId}`,
           Number(this.env.RATE_LIMIT_WS_MESSAGES_PER_MINUTE || 60),
@@ -1854,7 +1912,10 @@ export class RoomDurableObject {
           }
         }
 
-        let messageId = id;
+        // Audit fix P4: message ids are server-assigned. A client-supplied
+        // `msg.id` used to skip dedupe, the WAL and the INSERT entirely,
+        // broadcasting an id with no row behind it.
+        let messageId = null;
         let isDuplicateResend = false;
 
         if (!messageId && clientMessageId) {
@@ -1875,6 +1936,49 @@ export class RoomDurableObject {
             }
           }
         }
+
+        // Audit fix M2: consume quota only when this frame actually creates a
+        // message — after the cheap rejects and the clientMessageId dedupe, so
+        // rejected sends and duplicate resends no longer over-count.
+        // Audit F-47: quota checks no longer fail open — a check that cannot run
+        // must not grant unlimited usage.
+        if (!messageId) {
+          let quotaResult;
+          try {
+            quotaResult = await checkAndConsumeProjectQuota(this.env, {
+              projectId: this.projectId,
+              metricName: "messages_created",
+              amount: 1,
+            });
+          } catch (err) {
+            logError("room.quota_check_failed", err, { projectId: this.projectId });
+            webSocket.send(
+              JSON.stringify({ type: "error", message: "quota_check_failed" }),
+            );
+            return;
+          }
+          if (!quotaResult.allowed) {
+            const reset = quotaResetInfo();
+            webSocket.send(
+              JSON.stringify({
+                type: "error",
+                message: "quota_exceeded",
+                details: {
+                  metric: quotaResult.metricName,
+                  limit: quotaResult.limit,
+                  used: quotaResult.used,
+                  month: quotaResult.monthKey,
+                  resetsAt: reset.resetsAt,
+                  retryAfterSeconds: reset.retryAfterSeconds,
+                },
+              })
+            );
+            return;
+          }
+        }
+
+        const alsoToChannel =
+          parentId != null && (msg.alsoSendToChannel === true || msg.also_send_to_channel === true);
 
         if (
           !messageId &&
@@ -1900,6 +2004,7 @@ export class RoomDurableObject {
             visibleToJson,
             visibleTo,
             attachments: Array.isArray(attachments) ? attachments : [],
+            alsoToChannel,
             middlewareMeta: middlewareResult.meta,
           });
           if (wal.length < MESSAGE_D1_WAL_MAX_BATCH) {
@@ -1927,7 +2032,7 @@ export class RoomDurableObject {
 
         if (!messageId) {
           const result = await this.env.DB.prepare(
-            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json, client_message_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO messages (project_id, room_id, user_id, content, created_at, parent_id, mentions, og_title, og_description, og_image, og_url, expires_at, visibility, visible_to_json, client_message_id, metadata_json, also_to_channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
           )
             .bind(
               projectId,
@@ -1946,6 +2051,7 @@ export class RoomDurableObject {
               visibleToJson,
               clientMessageId,
               extras.error ? null : extras.json,
+              alsoToChannel ? 1 : 0,
             )
             .run();
           messageId = result.meta.last_row_id;
@@ -2080,6 +2186,14 @@ export class RoomDurableObject {
             roomType: roomRow?.type ?? null,
             attachments: Array.isArray(attachments) ? attachments : [],
           });
+
+          void enqueueRoomBridgeOutbound(this.env, {
+            projectId,
+            roomId,
+            messageId,
+            content: validatedContent,
+            clientMessageId,
+          }).catch((err) => logError("bridge.outbound_enqueue_failed", err, { projectId, roomId }));
         }
 
         let messageSeq = null;
@@ -2124,6 +2238,7 @@ export class RoomDurableObject {
           content: validatedContent,
           createdAt,
           parentId: parentId || null,
+          ...(alsoToChannel ? { alsoToChannel: true } : {}),
           ...(quotedMessageId != null ? { quotedMessageId } : {}),
           ...(extras.extras?.metadata ? { metadata: extras.extras.metadata } : {}),
           mentions,
@@ -2261,11 +2376,18 @@ export class RoomDurableObject {
           .first();
         const nextVersion = (existing?.version ?? 1) + 1;
 
-        await this.env.DB.prepare(
-          "UPDATE messages SET content = ?, edited_at = ?, version = ? WHERE id = ? AND room_id = ? AND user_id = ?",
+        // Audit fix P12-b (same class as A2-15): the UPDATE must match the
+        // version we read, or two concurrent edits silently overwrite each
+        // other and both get broadcast.
+        const edited = await this.env.DB.prepare(
+          "UPDATE messages SET content = ?, edited_at = ?, version = ? WHERE id = ? AND project_id = ? AND room_id = ? AND user_id = ? AND version = ? AND deleted_at IS NULL",
         )
-          .bind(content, now, nextVersion, messageId, roomId, userId)
+          .bind(content, now, nextVersion, messageId, projectId, roomId, userId, existing?.version ?? 1)
           .run();
+        if (!Number(edited?.meta?.changes)) {
+          webSocket.send(JSON.stringify({ type: "error", message: "edit_conflict" }));
+          return;
+        }
 
         let eventSeq = existing?.seq ?? null;
         try {
@@ -2731,6 +2853,10 @@ export class RoomDurableObject {
         for (const client of this.clients) {
           if (client !== webSocket) peerCount += 1;
         }
+        // Liveblocks-style presence layers: `presenceKey` names an extra cursor layer
+        // (e.g. "agent") so it never overwrites the default human cursor of the same user.
+        const presenceKey =
+          typeof msg.presenceKey === "string" ? msg.presenceKey.trim().slice(0, 64) : "";
         const positions = Array.isArray(msg.positions)
           ? msg.positions
               .slice(0, 24)
@@ -2757,9 +2883,10 @@ export class RoomDurableObject {
           color: typeof msg.color === "string" ? msg.color.slice(0, 32) : undefined,
           label: typeof msg.label === "string" ? msg.label.slice(0, 64) : undefined,
           ts: Date.now(),
+          ...(presenceKey ? { presenceKey } : {}),
           ...(positions.length > 1 ? { positions } : {}),
         };
-        this.lastCursors.set(userId, cursorPayload);
+        this.lastCursors.set(presenceKey ? `${userId}#${presenceKey}` : userId, cursorPayload);
         if (this.lastCursors.size > 250) {
           const oldest = this.lastCursors.keys().next().value;
           if (oldest) this.lastCursors.delete(oldest);
@@ -2984,6 +3111,40 @@ export class RoomDurableObject {
     }
   }
 
+  /**
+   * Audit #19: a stream whose owner disconnected mid-flight (no `end`/`abort`)
+   * used to block every later `start` with `stream_already_active` until a DO
+   * restart. Finalize it with the last checkpointed content instead.
+   * @param {string} userId
+   */
+  async finalizeStaleStream(userId) {
+    const state = this.activeStreams.get(userId);
+    if (!state?.messageId) return;
+    const mid = Number(state.messageId);
+    const now = new Date().toISOString();
+    const content = typeof state.content === "string" ? state.content : "";
+    const roomId = this.roomId || this.state.id.toString();
+    if (this.projectId && roomId) {
+      await this.env.DB.prepare(
+        "UPDATE messages SET content = ?, edited_at = ? WHERE id = ? AND project_id = ? AND room_id = ? AND user_id = ?",
+      )
+        .bind(content, now, mid, this.projectId, roomId, userId)
+        .run()
+        .catch(() => null);
+    }
+    this.activeStreams.delete(userId);
+    void this.persistRoomStateToStorage().catch(() => {});
+    this.broadcast({
+      type: "edit",
+      id: mid,
+      roomId,
+      userId,
+      content,
+      editedAt: now,
+      streaming: false,
+    });
+  }
+
   onClose(webSocket) {
     // Read the identity BEFORE forgetting the socket: after `forget` the
     // attachment view no longer resolves and presence bookkeeping would be lost.
@@ -3005,6 +3166,8 @@ export class RoomDurableObject {
       const remaining = this.decrementUserConnection(userId);
       if (remaining === 0) {
         memberLeft = true;
+        // Audit #19: don't leave the user's stream pinned as active forever.
+        void this.finalizeStaleStream(userId).catch(() => {});
         this.presenceLeft.delete(userId);
         this.removeUserFromStage(userId);
         this.releaseLocksForUser(userId);
@@ -3221,6 +3384,13 @@ export class RoomDurableObject {
     return closed;
   }
 
+  /** Monotonic id for synthetic broadcasts with no DB id (audit fix P13). */
+  nextSyntheticMessageId() {
+    const now = Date.now();
+    this.lastSyntheticMessageId = Math.max(now, (this.lastSyntheticMessageId || 0) + 1);
+    return this.lastSyntheticMessageId;
+  }
+
   consumeWsRateLimit(key, limit, windowMs) {
     if (!key || !Number.isFinite(limit) || limit <= 0) {
       return { allowed: true, retryAfterSeconds: 0 };
@@ -3351,6 +3521,7 @@ export class RoomDurableObject {
     const visibility = entry.visibility || "room";
     const visibleTo = Array.isArray(entry.visibleTo) ? entry.visibleTo : [];
     const mentionsRaw = Array.isArray(entry.mentionsRaw) ? entry.mentionsRaw : [];
+    const alsoToChannel = entry.alsoToChannel === true;
 
     if (entry.messageExpiresAt) {
       void this.scheduleMessageExpiryAlarm();
@@ -3434,6 +3605,14 @@ export class RoomDurableObject {
       attachments,
     });
 
+    void enqueueRoomBridgeOutbound(this.env, {
+      projectId,
+      roomId,
+      messageId,
+      content: validatedContent,
+      clientMessageId,
+    }).catch((err) => logError("bridge.outbound_enqueue_failed", err, { projectId, roomId }));
+
     let messageSeq = null;
     let messageVersion = 1;
     try {
@@ -3466,6 +3645,7 @@ export class RoomDurableObject {
       content: validatedContent,
       createdAt,
       parentId,
+      ...(alsoToChannel ? { alsoToChannel: true } : {}),
       ...(quotedMessageId != null ? { quotedMessageId } : {}),
       ...(entry.extrasMetadata ? { metadata: entry.extrasMetadata } : {}),
       mentions,
@@ -3517,6 +3697,8 @@ export class RoomDurableObject {
   }
 
   async alarm() {
+    await this.ensureStorageHydrated();
+    if (this.sealed) return;
     recordAlarmCost(this.costLedger);
     const step = await runDoAlarmStep(this.state, async () => {
       await takeDueDoAlarmJobs(this.state.storage);
@@ -3754,6 +3936,16 @@ export class RoomDurableObject {
     // F1: live marginal cost for this room. Auth is enforced by the caller
     // (admin route); the DO itself sits on the private binding.
     const requestUrl = new URL(request.url);
+    if (requestUrl.pathname === "/sealed") {
+      if (request.method === "POST") {
+        if (this.sealed) {
+          await unsealDoObject(this.state.storage);
+          this.sealed = null;
+        }
+        return Response.json({ ok: true, sealed: null });
+      }
+      return Response.json({ ok: true, sealed: this.sealed || null });
+    }
     if (requestUrl.pathname === "/flush-message-wal" && request.method === "POST") {
       const flushed = await this.flushMessageWalAndFanout();
       return Response.json({ ok: true, flushed: flushed.length });
@@ -3848,6 +4040,14 @@ export class RoomDurableObject {
 
     if (request.headers.get("Upgrade") === "websocket") {
       const [client, server] = Object.values(new WebSocketPair());
+      if (this.sealed) {
+        try {
+          server.close(1011, "room_sealed");
+        } catch {
+          /* ignore */
+        }
+        return new Response(null, { status: 101, webSocket: client });
+      }
       try {
         await this.handleWebSocket(server, request);
       } catch (err) {
@@ -3897,7 +4097,7 @@ export class RoomDurableObject {
 
       const projectId = this.projectId;
       this.env.DB.prepare(
-        "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT 50"
+        "SELECT id, room_id, user_id, content, created_at, parent_id, edited_at, deleted_at, mentions, og_title, og_description, og_image, og_url, client_message_id, also_to_channel, kind, audio_url, duration_ms, transcription, transcription_status FROM messages WHERE project_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT 50"
       ).bind(projectId, roomId).all().then(async (result) => {
         const rows = result.results || [];
         const mappedRaw = await attachAttachmentsToMessages(this.env, projectId, roomId, rows);
@@ -3919,6 +4119,12 @@ export class RoomDurableObject {
     }
 
     if (new URL(request.url).pathname === "/stream" && request.method === "POST") {
+      if (!isInternalDoRequest(request, this.env)) {
+        return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+      }
+      if (this.sealed) {
+        return Response.json({ ok: false, error: "room_sealed" }, { status: 503 });
+      }
       const body = await request.json();
       const roomId = this.roomId || this.state.id.toString();
       const result = await this.processStreamOp({
@@ -4110,6 +4316,11 @@ export class RoomDurableObject {
       new URL(request.url).pathname === "/live-stats" &&
       request.method === "GET"
     ) {
+      // Audit F-48: presence/user snapshots are internal-only — same service
+      // credential as /announce and /stream.
+      if (!isInternalDoRequest(request, this.env)) {
+        return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+      }
       const snapshot = this.getPresenceSnapshot();
       const presenceMembers = this.occupancyPresenceUserIds().length;
       return new Response(
@@ -4283,7 +4494,7 @@ export class RoomDurableObject {
         return this.fetch(
           new Request("https://internal/announce", {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: internalDoHeaders(this.env, { "content-type": "application/json" }),
             body: JSON.stringify(parsed.params),
           }),
         );
@@ -4318,6 +4529,12 @@ export class RoomDurableObject {
     }
 
     if (new URL(request.url).pathname === "/announce" && request.method === "POST") {
+      if (!isInternalDoRequest(request, this.env)) {
+        return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+      }
+      if (this.sealed) {
+        return Response.json({ ok: true, skipped: "room_sealed" });
+      }
       const body = await request.json();
       const roomIdStr = this.state.id.toString();
       const broadcastOpts = {};
@@ -4363,6 +4580,33 @@ export class RoomDurableObject {
             type: "agentTyping",
             agentId: body.agentId || body.userId,
             isTyping: !!body.isTyping,
+          },
+          broadcastOpts,
+        );
+      } else if (body.type === "cursor") {
+        // Server-originated cursor (agent runtime / integrator backend). Defaults to the
+        // "agent" layer; ephemeral by design — never stored in lastCursors.
+        const cursorX = Number(body.x);
+        const cursorY = Number(body.y);
+        if (!Number.isFinite(cursorX) || !Number.isFinite(cursorY)) {
+          return Response.json({ ok: false, error: "cursor_invalid_position" }, { status: 400 });
+        }
+        const presenceKey =
+          typeof body.presenceKey === "string" && body.presenceKey.trim()
+            ? body.presenceKey.trim().slice(0, 64)
+            : "agent";
+        this.broadcast(
+          {
+            type: "cursor",
+            roomId: body.roomId || roomIdStr,
+            userId: body.agentId || body.userId || "agent",
+            presenceKey,
+            x: cursorX,
+            y: cursorY,
+            pointer: body.pointer === "touch" ? "touch" : "mouse",
+            ...(typeof body.color === "string" ? { color: body.color.slice(0, 32) } : {}),
+            ...(typeof body.label === "string" ? { label: body.label.slice(0, 64) } : {}),
+            ts: Date.now(),
           },
           broadcastOpts,
         );
@@ -4567,7 +4811,7 @@ export class RoomDurableObject {
         const rid = typeof body.roomId === "string" ? body.roomId : roomIdStr;
         const payload = {
           type: "message",
-          id: Number.isFinite(messageId) && messageId > 0 ? messageId : Date.now(),
+          id: Number.isFinite(messageId) && messageId > 0 ? messageId : this.nextSyntheticMessageId(),
           roomId: rid,
           userId: body.senderId || body.userId || "system",
           senderId: body.senderId || body.userId || "system",
@@ -4582,6 +4826,8 @@ export class RoomDurableObject {
           mentions: Array.isArray(body.mentions) ? body.mentions : [],
           preview: body.preview ?? null,
           attachments: Array.isArray(body.attachments) ? body.attachments : [],
+          ...(body.alsoToChannel ? { alsoToChannel: true } : {}),
+          ...(body.forwardedFrom ? { forwardedFrom: body.forwardedFrom } : {}),
           ...(body.clientMessageId ? { clientMessageId: body.clientMessageId } : {}),
           ...(body.participantType ? { participantType: body.participantType } : {}),
           ...(body.metadata ? { metadata: body.metadata } : {}),

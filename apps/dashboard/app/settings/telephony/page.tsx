@@ -132,6 +132,7 @@ TELCO_INBOUND_DEFAULT_ROOM_ID=<room-uuid>`}
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
+                  className="h-6 w-6 shrink-0"
                   checked={requestVoiceSession}
                   onChange={(e) => setRequestVoiceSession(e.target.checked)}
                 />

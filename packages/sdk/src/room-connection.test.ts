@@ -606,4 +606,127 @@ describe("FluxyChatRoomConnection", () => {
     expect(conn.lastSeq).toBe(4);
     vi.useRealTimers();
   });
+
+  it("FX-DISC-1 emits typed disconnect reasons for transport closes", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const cases = [
+      { room: "room-disc-net", code: 1006, reason: "gone", expected: "network" },
+      {
+        room: "room-disc-hb",
+        code: FLUXY_WS_CLOSE_HEARTBEAT,
+        reason: "heartbeat_timeout",
+        expected: "heartbeat_timeout",
+      },
+    ] as const;
+    for (let i = 0; i < cases.length; i += 1) {
+      const c = cases[i]!;
+      const expectedCount = i + 1;
+      const onDisconnect = vi.fn();
+      const conn = client.connectRoom(c.room, {
+        onDisconnect,
+        heartbeatIntervalMs: 0,
+        baseBackoffMs: 60000,
+        maxBackoffMs: 60000,
+        replayHistoryOnReconnect: false,
+      });
+      conn.connect();
+      await vi.waitFor(() => expect(instances.length).toBe(expectedCount));
+      instances[expectedCount - 1]!.emit("close", { code: c.code, reason: c.reason });
+      expect(onDisconnect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: c.expected,
+          code: c.code,
+          reasonText: c.reason,
+          willReconnect: true,
+        }),
+      );
+      expect(conn.disconnectReason).toBe(c.expected);
+      conn.close();
+    }
+  });
+
+  it("FX-DISC-2 client close reports client_initiated", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onDisconnect = vi.fn();
+    const conn = client.connectRoom("room-disc-close", {
+      onDisconnect,
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+    });
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    conn.close();
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("disconnected"));
+    expect(onDisconnect).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "client_initiated", willReconnect: false }),
+    );
+  });
+
+  it("FX-DISC-3 moderator removal keeps the raw reason and reconnects", async () => {
+    vi.useFakeTimers();
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onDisconnect = vi.fn();
+    const conn = client.connectRoom("room-disc-removed", {
+      onDisconnect,
+      baseBackoffMs: 25,
+      maxBackoffMs: 25,
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+    });
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("close", { code: 4001, reason: "terminated_by_moderator" });
+    expect(onDisconnect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: "removed",
+        code: 4001,
+        reasonText: "terminated_by_moderator",
+        willReconnect: true,
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(25);
+    await vi.waitFor(() => expect(instances.length).toBe(2));
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("connected"));
+    expect(conn.disconnectReason).toBe("removed");
+    vi.useRealTimers();
+  });
+
+  it("FX-DISC-4 reports reconnect_failed when attempts are exhausted", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onDisconnect = vi.fn();
+    const conn = client.connectRoom("room-disc-giveup", {
+      onDisconnect,
+      maxReconnectAttempts: 0,
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+    });
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    instances[0]!.emit("close", { code: 1006, reason: "gone" });
+    expect(onDisconnect).toHaveBeenLastCalledWith(
+      expect.objectContaining({ reason: "reconnect_failed", willReconnect: false }),
+    );
+    expect(conn.disconnectReason).toBe("reconnect_failed");
+    expect(conn.connectionStatus).toBe("failed");
+  });
+
+  it("FX-DISC-5 in-place credentials restart emits no disconnect", async () => {
+    const client = new FluxyChatClient({ baseUrl, userId: "u", token: "jwt" });
+    const onDisconnect = vi.fn();
+    const conn = client.connectRoom("room-disc-refresh", {
+      onDisconnect,
+      heartbeatIntervalMs: 0,
+      replayHistoryOnReconnect: false,
+    });
+    conn.connect();
+    await vi.waitFor(() => expect(instances.length).toBe(1));
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("connected"));
+
+    conn.reconnectWithFreshCredentials();
+    await vi.waitFor(() => expect(instances.length).toBe(2));
+    await vi.waitFor(() => expect(conn.connectionStatus).toBe("connected"));
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(conn.disconnectReason).toBeNull();
+    conn.close();
+  });
 });

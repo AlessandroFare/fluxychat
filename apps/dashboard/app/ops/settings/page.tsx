@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ClipboardCheck, Loader2 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
-import { Banner, Button, Section, Textarea } from "../../components/ui";
+import { OpsMcpServersCard } from "../../components/ops-mcp-servers-card";
+import { OpsMcpConnectionsCard } from "../../components/ops-mcp-connections-card";
+import { Banner, Button, Input, Section, Textarea } from "../../components/ui";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
 import { opsGetPolicy, opsGetSources, opsListTools, opsPatchTool, opsPutPolicy } from "@/lib/ops-client";
@@ -27,31 +29,42 @@ export default function OpsSettingsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [incidentCreated, setIncidentCreated] = useState("");
+  const [incidentAcknowledged, setIncidentAcknowledged] = useState("");
+  const [incidentResolved, setIncidentResolved] = useState("");
 
-  const load = useCallback(async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    setError(null);
-    try {
-      const [t, p, s] = await Promise.all([opsListTools(token), opsGetPolicy(token), opsGetSources(token)]);
-      setTools(t.tools || []);
-      setDomains((p.policy.guestDomains || []).join(", "));
-      setQuorum(String(p.policy.highRiskQuorum ?? 2));
-      setViews(p.policy.allowedViews || []);
-      setNamedViews(p.namedViews || []);
-      setSources(s);
-    } catch (err) {
-      setError(messageFromUnknown(err, "Could not load tools"));
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
+  // Reloads run through the effect (cancellation-safe); handlers just bump the key.
   useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const [t, p, s] = await Promise.all([opsListTools(token), opsGetPolicy(token), opsGetSources(token)]);
+        if (cancelled) return;
+        setTools(t.tools || []);
+        setDomains((p.policy.guestDomains || []).join(", "));
+        setQuorum(String(p.policy.highRiskQuorum ?? 2));
+        setViews(p.policy.allowedViews || []);
+        setNamedViews(p.namedViews || []);
+        setIncidentCreated(p.policy.incidentWorkflowSlugs?.created || p.policy.incidentWorkflowSlug || "");
+        setIncidentAcknowledged(p.policy.incidentWorkflowSlugs?.acknowledged || "");
+        setIncidentResolved(p.policy.incidentWorkflowSlugs?.resolved || "");
+        setSources(s);
+        setError(null);
+      } catch (err) {
+        if (!cancelled) setError(messageFromUnknown(err, "Could not load tools"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
     void load();
-  }, [load]);
+    return () => {
+      cancelled = true;
+    };
+  }, [token, reloadKey]);
+
+  const reload = () => setReloadKey((key) => key + 1);
 
   return (
     <ConsoleShell>
@@ -71,7 +84,7 @@ export default function OpsSettingsPage() {
       {!token ? <Banner variant="warn">Sign in with a project token to change policy.</Banner> : null}
       {error ? <Banner variant="error">{error}</Banner> : null}
       {notice ? <Banner variant="info">{notice}</Banner> : null}
-      {loading ? (
+      {loading && token ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading
         </p>
@@ -103,7 +116,7 @@ export default function OpsSettingsPage() {
                   setBusy(tool.name);
                   try {
                     await opsPatchTool(token, tool.name, !tool.enabled);
-                    await load();
+                    reload();
                   } catch (err) {
                     setError(messageFromUnknown(err, "Could not update tool"));
                   } finally {
@@ -117,6 +130,10 @@ export default function OpsSettingsPage() {
           ))}
         </ul>
       </Section>
+
+      <OpsMcpServersCard token={token} />
+
+      <OpsMcpConnectionsCard token={token} />
 
       <Section title="Guest domains and quorum">
         <label className="mb-3 block text-sm">
@@ -170,6 +187,72 @@ export default function OpsSettingsPage() {
         >
           Save policy
         </Button>
+      </Section>
+
+      <Section
+        title="Incident workflows"
+        description="Published workflow slug the engine starts for each incident phase, in the room linked to the incident. Empty = incidents are tracked without a run."
+      >
+        <div className="mb-3 grid gap-2 sm:grid-cols-3">
+          <label className="text-sm">
+            On create
+            <Input
+              className="mt-1"
+              placeholder="incident-response"
+              value={incidentCreated}
+              onChange={(e) => setIncidentCreated(e.target.value)}
+            />
+          </label>
+          <label className="text-sm">
+            On acknowledge
+            <Input
+              className="mt-1"
+              placeholder="none"
+              value={incidentAcknowledged}
+              onChange={(e) => setIncidentAcknowledged(e.target.value)}
+            />
+          </label>
+          <label className="text-sm">
+            On resolve
+            <Input
+              className="mt-1"
+              placeholder="postmortem"
+              value={incidentResolved}
+              onChange={(e) => setIncidentResolved(e.target.value)}
+            />
+          </label>
+        </div>
+        <Button
+          type="button"
+          disabled={!token || busy === "incident-workflows"}
+          onClick={async () => {
+            setBusy("incident-workflows");
+            setNotice(null);
+            try {
+              // Saving moves the legacy single slug into the phase map.
+              await opsPutPolicy(token, {
+                incidentWorkflowSlug: null,
+                incidentWorkflowSlugs: {
+                  created: incidentCreated.trim() || null,
+                  acknowledged: incidentAcknowledged.trim() || null,
+                  resolved: incidentResolved.trim() || null,
+                },
+              });
+              reload();
+              setNotice("Incident workflows saved.");
+            } catch (err) {
+              setError(messageFromUnknown(err, "Could not save incident workflows"));
+            } finally {
+              setBusy(null);
+            }
+          }}
+        >
+          Save incident workflows
+        </Button>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Events come from PagerDuty, incident.io and Sentry webhooks. Runs are approval-gated like any other process and
+          show up in the incident room timeline.
+        </p>
       </Section>
     </ConsoleShell>
   );

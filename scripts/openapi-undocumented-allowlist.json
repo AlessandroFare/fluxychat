@@ -370,6 +370,10 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/admin/dsa-notices",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/admin/ediscovery/cases",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -452,6 +456,14 @@
     {
       "path": "/admin/matrix/bridges",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/admin/transcripts",
+      "reason": "Transcripts API admin route; SDK worker transport"
+    },
+    {
+      "path": "/admin/transcripts/count",
+      "reason": "Transcripts API admin route; SDK worker transport"
     },
     {
       "path": "/admin/matrix/bridges/health-check-all",
@@ -718,7 +730,15 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/agents/platform/ab-tests",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/agents/platform/agents",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/agents/platform/costs",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -743,6 +763,10 @@
     },
     {
       "path": "/ai-images/stats",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ai/streams/abort",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -862,18 +886,6 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
-      "path": "/api/live/events",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/api/live/stats",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/api/live/turn-credentials",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
       "path": "/api/replay/events/range",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -916,6 +928,10 @@
     {
       "path": "/api/soc2/reports",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/soc2/reports/evidence",
+      "reason": "admin evidence-pack generation from live ops data (2026-10 ops layer), allow-listed with the rest of /api/soc2"
     },
     {
       "path": "/api/soc2/risks",
@@ -1006,11 +1022,23 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/api/workflows/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/api/workflows/executions",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
       "path": "/api/workflows/schedules",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows/schedules/due",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/api/workflows/state",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -1079,15 +1107,15 @@
     },
     {
       "path": "/collab/events",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+      "reason": "Collab workspace internals used by the dashboard (room-scoped calendar); not part of the public SDK contract yet"
     },
     {
       "path": "/collab/files",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+      "reason": "Collab workspace internals used by the dashboard (room file list); not part of the public SDK contract yet"
     },
     {
       "path": "/collab/files/upload",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+      "reason": "Collab workspace internals used by the dashboard (room file upload); not part of the public SDK contract yet"
     },
     {
       "path": "/commands",
@@ -1370,92 +1398,12 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
-      "path": "/fleet/delivery/match",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/delivery/nearest",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/delivery/predict",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/geofence-events",
-      "reason": "HTTP route shipped; OpenAPI spec pending"
-    },
-    {
-      "path": "/fleet/geofences",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/gps",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/gps/current",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/gps/history",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/pricing",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/route/copilot",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/trips",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/fleet/vehicles",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
       "path": "/forms",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
-      "path": "/games/checkpoints",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/games/checkpoints/crdt-snapshot",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
       "path": "/games/federation/ingest",
-      "reason": "HTTP route shipped; OpenAPI spec pending"
-    },
-    {
-      "path": "/games/leaderboard",
-      "reason": "HTTP route shipped; OpenAPI spec pending"
-    },
-    {
-      "path": "/games/lobbies/matchmake",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/games/npcs",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/games/players",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/games/quests",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/games/tournaments",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+      "reason": "Server-to-server checkpoint ingest authenticated by X-Fluxy-Federation-Secret, not by project JWT — outside the public SDK contract"
     },
     {
       "path": "/gamification/award",
@@ -1475,6 +1423,10 @@
     },
     {
       "path": "/hybrid/events",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/inbox/agent",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -1571,18 +1523,6 @@
     },
     {
       "path": "/internal/marketplace/template-commit",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/iot/alarms",
-      "reason": "HTTP route shipped; OpenAPI spec pending"
-    },
-    {
-      "path": "/iot/devices",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/iot/rules",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -1694,20 +1634,104 @@
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
+      "path": "/ops/approvals",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/audit/export",
+      "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/ops/builder/publish",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/builder/publish-request",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/builder/sessions",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/builder/simulate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/builder/tools",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/builder/validate",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/files",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/files/search",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/guests/action",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/guests/invite",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/inbox",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/inputs",
+      "reason": "MRTR elicitation: pending input requests on waiting runs (2026-10 ops layer), allow-listed with the rest of /ops"
+    },
+    {
+      "path": "/ops/kill",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/mcp-servers",
+      "reason": "ops MCP gateway registry (2026-10 ops layer): admin-registered external MCP servers, allow-listed with the rest of /ops"
+    },
+    {
+      "path": "/ops/mcp-connections",
+      "reason": "per-user OAuth accounts for the ops MCP gateway; member-scoped list, allow-listed with the rest of /ops"
+    },
+    {
+      "path": "/ops/oversight",
+      "reason": "oversight metrics over a window (median decision time, fast-approval share, quorum participation, tool denials); read-only, also embedded in the project evidence pack"
+    },
+    {
+      "path": "/ops/policy",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/runs",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/sources",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
+      "path": "/ops/templates",
+      "reason": "installable ops workflow templates (2026-10 ops layer), allow-listed with the rest of /ops"
+    },
+    {
+      "path": "/ops/tool-calls",
+      "reason": "gateway invocation log for the console Tool activity section; OpenAPI spec pending"
+    },
+    {
+      "path": "/ops/tools",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/otel/configs",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/otel/configs/langfuse",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/otel/configs/datadog",
-      "reason": "OTLP preset for Datadog GenAI traces; OpenAPI spec pending"
-    },
-    {
-      "path": "/otel/configs/grafana",
-      "reason": "OTLP preset for Grafana Tempo; OpenAPI spec pending"
     },
     {
       "path": "/otel/configs/datadog",
@@ -1716,6 +1740,10 @@
     {
       "path": "/otel/configs/grafana",
       "reason": "OTLP preset for Grafana Tempo / Cloud traces"
+    },
+    {
+      "path": "/otel/configs/langfuse",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
       "path": "/otel/export/metrics",
@@ -1731,10 +1759,6 @@
     },
     {
       "path": "/otel/queue/stats",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/overlays",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
     {
@@ -1759,11 +1783,7 @@
     },
     {
       "path": "/presence-escalation/tick",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
-    },
-    {
-      "path": "/presence/user",
-      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+      "reason": "Internal on-call escalation scheduler tick driven by cron, not a public API"
     },
     {
       "path": "/previews/analyze",
@@ -1794,6 +1814,10 @@
       "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
+      "path": "/public/dsa-report",
+      "reason": "pre-existing HTTP route not yet in openapi.yaml"
+    },
+    {
       "path": "/public/guest-hardening",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -1804,6 +1828,14 @@
     {
       "path": "/public/hitl/tap",
       "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/public/ops/approvals/tap",
+      "reason": "signed one-tap approval page (email link); no JSON contract to publish"
+    },
+    {
+      "path": "/public/ops/mcp/oauth/callback",
+      "reason": "per-user MCP OAuth redirect target: browser page for one single-use state, not a JSON API"
     },
     {
       "path": "/push/config",
@@ -1998,10 +2030,6 @@
       "reason": "HTTP route shipped; OpenAPI spec pending"
     },
     {
-      "path": "/rooms/:id/voice-bridge",
-      "reason": "Voice→room transcript/HITL ingest; OpenAPI spec pending"
-    },
-    {
       "path": "/webauthn/credentials",
       "reason": "pre-existing HTTP route not yet in openapi.yaml"
     },
@@ -2048,6 +2076,30 @@
     {
       "path": "/ws/inbox",
       "reason": "HTTP route shipped; OpenAPI spec pending"
+    },
+    {
+      "path": "/custom-emojis",
+      "reason": "new dashboard route (2026-10); OpenAPI spec pending"
+    },
+    {
+      "path": "/admin/kb/feedback",
+      "reason": "new admin dashboard route (2026-10); OpenAPI spec pending"
+    },
+    {
+      "path": "/notification-keywords",
+      "reason": "new dashboard route (2026-10); OpenAPI spec pending"
+    },
+    {
+      "path": "/room-folders",
+      "reason": "new dashboard route (2026-10); OpenAPI spec pending"
+    },
+    {
+      "path": "/saved-messages",
+      "reason": "new dashboard route (2026-10); OpenAPI spec pending"
+    },
+    {
+      "path": "/user-groups",
+      "reason": "new dashboard route (2026-10); OpenAPI spec pending"
     }
   ]
 }

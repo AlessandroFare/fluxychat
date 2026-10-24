@@ -129,7 +129,7 @@ export function LandingProcessesSection() {
               ))}
             </ol>
           </div>
-          <p className="mt-6 text-center text-xs text-slate-500">
+          <p className="mt-6 text-center text-xs text-slate-400">
             Bot faces come from DiceBear Bottts (same source as the stream demo avatars).
           </p>
         </div>

@@ -1,18 +1,13 @@
 {
   "title": "Ecosystem & CLI",
   "pages": [
-    "index",
-    "cli-tools",
-    "bots",
-    "tutorials",
-    "migrating-from-pusher",
-    "third-party-integrations",
-    "mcp-verified-servers",
-    "mcp-audit-runbook",
+    "kotlin-swift-quickstart",
     "react-native-quickstart",
     "../vue-quickstart",
     "../svelte-quickstart",
+    "contributing",
     "optional-integrations",
-    "sms-whatsapp-production"
+    "sms-whatsapp-production",
+    "..."
   ]
 }

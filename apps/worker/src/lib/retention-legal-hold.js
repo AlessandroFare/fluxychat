@@ -169,8 +169,10 @@ export async function releaseLegalHold(env, { projectId, holdId }) {
  * Get all active (unreleased) legal holds for a room.
  */
 export async function getActiveHoldsForRoom(env, { projectId, roomId }) {
+  // Audit fix A2-12: project-wide holds store room_id NULL and must cover
+  // every room, otherwise the deletion guard silently never fires.
   const rows = await env.DB.prepare(
-    `SELECT * FROM legal_holds WHERE project_id = ? AND room_id = ? AND released_at IS NULL
+    `SELECT * FROM legal_holds WHERE project_id = ? AND (room_id = ? OR room_id IS NULL) AND released_at IS NULL
      ORDER BY created_at DESC`
   )
     .bind(projectId, roomId)

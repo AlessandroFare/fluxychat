@@ -1,6 +1,7 @@
 import type { FluxyChatEvent } from "./fluxy-chat-client";
 import type { FluxyChatRoomConnection } from "./room-connection";
 import {
+  cursorLayerKey,
   parseLiveCursorEvent,
   type LiveCursor,
   type LiveCursorPublishInput,
@@ -23,6 +24,7 @@ export interface FluxyCursorHistoryParams {
 /** Spaces CursorHistory-lite: last live position plus paged in-session points. */
 export interface FluxyRoomCursors {
   set(input: LiveCursorPublishInput): void;
+  /** Default-layer cursor for a user (pass `userId`), or every layer keyed by `userId#presenceKey`. */
   get(userId?: string): LiveCursor | Record<string, LiveCursor> | undefined;
   getAll(): Record<string, LiveCursor>;
   /** Spaces `cursors.getSelf` — last live point for this connection's user. */
@@ -80,7 +82,7 @@ export function bindRoomCursors(connection: FluxyChatRoomConnection): FluxyRoomC
   connection.onAnyEvent((event: FluxyChatEvent) => {
     const cursor = parseLiveCursorEvent(event);
     if (!cursor) return;
-    last.set(cursor.userId, cursor);
+    last.set(cursorLayerKey(cursor), cursor);
     points.push(cursor);
     if (points.length > MAX_CURSOR_HISTORY) points.splice(0, points.length - MAX_CURSOR_HISTORY);
   });
@@ -102,7 +104,9 @@ export function bindRoomCursors(connection: FluxyChatRoomConnection): FluxyRoomC
     },
     async getOthers() {
       const selfId = String(connection.userId || "").trim();
-      return Object.fromEntries([...last].filter(([userId]) => userId !== selfId));
+      return Object.fromEntries(
+        [...last].filter(([key]) => key !== selfId && !key.startsWith(`${selfId}#`)),
+      );
     },
     async history(params) {
       let rest: LiveCursor[] = [];
@@ -113,10 +117,10 @@ export function bindRoomCursors(connection: FluxyChatRoomConnection): FluxyRoomC
           rest = [];
         }
       }
-      const seen = new Set(points.map((row) => `${row.userId}:${row.ts}`));
+      const seen = new Set(points.map((row) => `${cursorLayerKey(row)}:${row.ts}`));
       const merged = [...points];
       for (const row of rest) {
-        const key = `${row.userId}:${row.ts}`;
+        const key = `${cursorLayerKey(row)}:${row.ts}`;
         if (seen.has(key)) continue;
         seen.add(key);
         merged.push(row);

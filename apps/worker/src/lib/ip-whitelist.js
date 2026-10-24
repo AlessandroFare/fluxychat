@@ -18,13 +18,24 @@ function ipInCidr(ip, network, prefix) {
   return (ipNum & mask) === (netNum & mask);
 }
 
+function normalizeClientIp(raw) {
+  const ip = String(raw || "").trim();
+  if (!ip) return "";
+  // IPv4-mapped IPv6 (::ffff:1.2.3.4) evaluates as its IPv4 form; other IPv6
+  // addresses have no IPv4 representation.
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  return mapped ? mapped[1] : ip;
+}
+
 export function isIpAllowed(clientIp, rules) {
   if (!rules || rules.length === 0) return true;
   if (!clientIp) return false;
 
-  const cleanIp = clientIp.includes(":")
-    ? clientIp.split(":").pop()
-    : clientIp;
+  // Audit F-38: the old `split(":").pop()` produced garbage for IPv6 (e.g.
+  // "2001:db8::1" → "1") and could even match an IPv4 rule from a crafted
+  // address. Only IPv4 addresses are evaluated against IPv4 rules.
+  const cleanIp = normalizeClientIp(clientIp);
+  if (!cleanIp || cleanIp.includes(":")) return false;
 
   for (const rule of rules) {
     if (!rule.enabled) continue;
@@ -63,11 +74,12 @@ export async function addWhitelistRule(env, { projectId, ipAddress, cidrPrefix, 
   }
 }
 
-export async function removeWhitelistRule(env, { id }) {
+export async function removeWhitelistRule(env, { id, projectId }) {
+  // Audit F-35: scoped to the caller's project — a foreign rule id is a no-op.
   const result = await env.DB.prepare(
-    "DELETE FROM project_ip_whitelist WHERE id = ?"
+    "DELETE FROM project_ip_whitelist WHERE id = ? AND project_id = ?"
   )
-    .bind(id)
+    .bind(id, projectId)
     .run();
   return { deleted: result.meta?.changes || 0 };
 }
@@ -81,11 +93,12 @@ export async function listWhitelistRules(env, { projectId }) {
   return (rows.results || []).map(mapRuleRow);
 }
 
-export async function toggleWhitelistRule(env, { id, enabled }) {
+export async function toggleWhitelistRule(env, { id, projectId, enabled }) {
+  // Audit F-35: scoped to the caller's project.
   const result = await env.DB.prepare(
-    "UPDATE project_ip_whitelist SET enabled = ? WHERE id = ?"
+    "UPDATE project_ip_whitelist SET enabled = ? WHERE id = ? AND project_id = ?"
   )
-    .bind(enabled ? 1 : 0, id)
+    .bind(enabled ? 1 : 0, id, projectId)
     .run();
   return { updated: result.meta?.changes || 0 };
 }
@@ -102,6 +115,20 @@ export async function checkIpAccess(env, { projectId, clientIp }) {
 
   const allowed = isIpAllowed(clientIp, activeRules);
   return { allowed, reason: allowed ? "matched" : "not_whitelisted" };
+}
+
+/**
+ * Audit F-35: apply the project whitelist to authenticated admin traffic.
+ * Opt-in via `ENFORCE_IP_WHITELIST=true` — turning a hard lockout on by default
+ * would strand admins whose address is not in an existing rule set.
+ * @returns {Promise<{ blocked: boolean, reason?: string }>}
+ */
+export async function enforceProjectIpWhitelist(env, { projectId, clientIp }) {
+  if (env?.ENFORCE_IP_WHITELIST !== "true") return { blocked: false };
+  if (!projectId) return { blocked: false };
+  const access = await checkIpAccess(env, { projectId, clientIp }).catch(() => null);
+  if (!access) return { blocked: false };
+  return access.allowed ? { blocked: false } : { blocked: true, reason: access.reason };
 }
 
 export async function getWhitelistStats(env, { projectId }) {

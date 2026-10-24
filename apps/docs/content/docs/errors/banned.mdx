@@ -5,4 +5,17 @@ description: "You are banned from this room"
 
 # 40301 — banned
 
-This user is banned. Do not retry the same identity. HTTP 403. Close 1008, reason `banned`.
+This user is banned from the room. Terminal; do not retry the same identity.
+
+**At a glance** — HTTP 403 · close 1008 `banned` · terminal · SDK `FluxyAuthError` with `refusalCode: "banned"`.
+
+## What to do
+
+- Stop reconnect attempts for this identity and surface a clear message instead.
+- Reconnect only after an unban (`/admin/unban`) or with a different user.
+- `describeConnectionError()` marks it terminal (`isTerminal: true`), so generic retry logic skips it automatically.
+
+## Related
+
+- [40300 not_member](/docs/errors/not_member)
+- [40302 forbidden](/docs/errors/forbidden)

@@ -53,6 +53,7 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     devWorkerConnect,
     clerkHosts,
     "https://clerk-telemetry.com",
+    "https://cdn.jsdelivr.net",
     "https://*.algolia.net",
     "https://*.algolianet.com",
     "https://*.algolia.io",
@@ -71,10 +72,10 @@ export function buildContentSecurityPolicy(nonce?: string): string {
   // when the application propagates the nonce to all inline styles.
   // In dev, keep 'unsafe-eval' for Next.js dev boot / HMR.
   const scriptSrc = useNonce
-    ? ["'self'", clerkHosts, isDev ? "'unsafe-eval'" : "", `'nonce-${nonce}'`].filter(Boolean).join(" ")
+    ? ["'self'", clerkHosts, isDev ? "'unsafe-eval'" : "", "https://cdn.jsdelivr.net", `'nonce-${nonce}'`].filter(Boolean).join(" ")
     : isDev
-      ? ["'self'", clerkHosts, "'unsafe-eval'", "'unsafe-inline'"].join(" ")
-      : ["'self'", clerkHosts, "'unsafe-inline'"].join(" ");
+      ? ["'self'", clerkHosts, "'unsafe-eval'", "'unsafe-inline'", "https://cdn.jsdelivr.net"].join(" ")
+      : ["'self'", clerkHosts, "'unsafe-inline'", "https://cdn.jsdelivr.net"].join(" ");
 
   const styleSrc = useNonce
     ? ["'self'", `'nonce-${nonce}'`, clerkHosts, "https://cdn.jsdelivr.net"].join(" ")

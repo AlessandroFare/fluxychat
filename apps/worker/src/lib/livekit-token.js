@@ -26,6 +26,19 @@ async function signJwtHs256(secret, payload) {
 }
 
 /**
+ * Audit F-26: TTL from the client is capped; a video token must not outlive
+ * the call it belongs to by more than a few hours.
+ */
+export const LIVEKIT_TTL_MIN_SECONDS = 60;
+export const LIVEKIT_TTL_MAX_SECONDS = 6 * 3600;
+
+export function clampLiveKitTtl(seconds) {
+  const value = Number(seconds);
+  const base = Number.isFinite(value) && value > 0 ? Math.floor(value) : 3600;
+  return Math.min(LIVEKIT_TTL_MAX_SECONDS, Math.max(LIVEKIT_TTL_MIN_SECONDS, base));
+}
+
+/**
  * @param {object} env
  * @param {{
  *   roomName: string,
@@ -49,7 +62,7 @@ export async function mintLiveKitAccessToken(env, options) {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const ttl = Number(options.ttlSeconds ?? 3600);
+  const ttl = clampLiveKitTtl(options.ttlSeconds);
   const roomName = options.roomName;
   const identity = options.identity;
 

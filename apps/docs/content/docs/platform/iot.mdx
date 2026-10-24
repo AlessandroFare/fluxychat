@@ -1,11 +1,13 @@
 ---
 title: IoT
-description: HTTP ingest and device shadow — not MQTT.
+description: HTTP device ingest, shadow, rules, alarms and RPC on D1 — not MQTT.
 ---
 
-Devices POST JSON to the Worker. Readings fan out as room `server_event` name `iot.reading`. There is **no native MQTT** transport.
+# IoT module
 
-## Gallery
+Devices, readings, shadow, rules, alarms and RPC live in **D1** behind the Worker `/iot/*` surface. Devices POST JSON over HTTP — there is **no native MQTT** transport (see [What you bring](#what-you-bring)). Readings fan out as `iot.reading` on the device room, and room-scoped events (`/rooms/:id/iot/events`) become chat messages that ambient agents can react to.
+
+## Scaffold
 
 ```bash
 npx @fluxy-chat/create-fluxy-chat@latest my-iot --example iot-panel
@@ -20,7 +22,9 @@ curl -X POST "$WORKER/rooms/$ROOM/iot/events" \
   -d '{"deviceId":"sim-1","eventType":"telemetry","payload":{"temp":21}}'
 ```
 
-Register a device (JWT). The Worker returns `apiKey` once (`iot_…`). Devices ingest with that key, not a member JWT. Shadow and rules still use the project JWT.
+## Register and ingest
+
+Register a device with a member JWT. The Worker returns `apiKey` once (`iot_…`) — store it on the device.
 
 ```bash
 curl -X POST "$WORKER/iot/devices" \
@@ -34,19 +38,73 @@ curl -X POST "$WORKER/iot/devices/DEVICE_ID/readings" \
   -d '{"sensor":"temp","value":21,"unit":"C"}'
 ```
 
-Quota: 5,000 readings per project per UTC day. Over that: HTTP 429 `quota_exceeded`. MQTT does not run in the Worker.
+Bind a room to get `iot.reading` on the chat timeline; without `roomId` the device uses a per-project room. Ingest also updates status, the reported shadow and evaluates threshold rules.
 
-## React
+## SDK
+
+```ts
+import { FluxyChatClient, createWorkerFluxyIoTClient } from "@fluxy-chat/sdk";
+
+const client = new FluxyChatClient({ baseUrl, userId, token }); // member JWT
+const iot = createWorkerFluxyIoTClient(client);
+
+const { device, apiKey } = await iot.registerDevice({ name: "probe", roomId, type: "sensor" });
+await iot.ingestReading(device.id, { sensor: "temp", value: 21, unit: "C" }, apiKey);
+
+const shadow = await iot.setDesired(device.id, { setpoint: 21 }); // member sets desired
+await iot.getShadow(device.id); // reported + desired
+await iot.getHealth(device.id, "temp"); // rolling score: health, alerts (spike, trend)
+
+await iot.createRule({
+  name: "hot",
+  deviceId: device.id,
+  condition: { sensor: "temp", operator: ">", value: 30 },
+  action: { type: "chat_message" }, // stored declarative metadata — see Rules & alarms
+});
+await iot.listAlarms(device.id); // then ackAlarm / clearAlarm / assignAlarm / unassignAlarm
+
+await iot.sendRpc(device.id, "reboot", { delay: 5 }); // member queues
+// device side (key auth): pullRpc(device.id, apiKey) → replyRpc(device.id, rpc.id, result, apiKey)
+```
+
+## Device auth
+
+- **Members** (dashboard, SDK): project JWT.
+- **Devices**: the `iot_*` key, via `Authorization: Bearer iot_…` or `X-Device-Key`. A device key only works for **its own device**, and only on readings ingest, shadow read, `reported` shadow patch, RPC pull and RPC reply. Queuing RPC and rules/admin calls are member-only (403 for device keys).
+
+## Realtime & agents
 
 ```tsx
 useChat({
   roomId,
   onServerEvent: (ev) => {
-    if (ev.name === "iot.reading") { /* ev.data.sensor, ev.data.value */ }
+    if (ev.name === "iot.reading") { /* ev.data: deviceId, sensor, value, unit, recordedAt */ }
   },
 });
 ```
 
-SDK: `createWorkerFluxyIoTClient(client)` — register, ingest, `listReadings` / `listReadingKeys` / `getHealth`, shadow (device token can GET and PATCH reported), `listRules`, alarms (`listAlarms` / `ackAlarm`), RPC (`sendRpc` / `pullRpc` / `replyRpc`).
+Two agent hooks: `POST /rooms/:id/iot/events` stores a room message (`kind: "iot"`) that can trigger **ambient agents**, and when the project publish config sets `iot_auto_agent_id` every reading also invokes that agent with `@<agentId> iot.reading sensor=value` on the device room.
 
-Rules stored on the Worker fire on ingest and open `iot_alarms`. Last-seen older than 10 minutes lists as offline. Not MQTT. Not ThingsBoard Cloud.
+## Rules & alarms
+
+A rule is `condition { sensor, operator, value }` evaluated on every ingest for the whole project or one device: on a match the Worker opens an alarm (`active`). Lifecycle: `ack` (active → acked), `clear` (active/acked → cleared), `assign`/`unassign`. The `action` field is stored **declarative metadata** — it is not executed by the Worker today; bring your own dispatcher if you want webhooks or scene changes.
+
+## Limits
+
+5,000 readings per project per UTC day; over that HTTP **429** `quota_exceeded` with `retryAfterSeconds`. A device lists as `offline` after 10 minutes without readings. List caps: readings 500, devices 100, rules/alarms/RPC 100.
+
+## Readiness
+
+| Piece | Status |
+| --- | --- |
+| Devices, readings, shadow, health, rules → alarms, alarms lifecycle, RPC queue | **Beta** — Worker + D1, route and SDK tests |
+| `iot-panel` scaffold | Working example |
+| MQTT / broker | **Not included** — bring your own |
+| Rule action execution | **Not included** — `action` is declarative metadata |
+
+## What you bring
+
+- An **MQTT broker or gateway** if your fleet speaks MQTT: devices (or your bridge) POST JSON to `/iot/devices/{deviceId}/readings`. The Worker owns auth, quota, shadow, rules and history — not the device session.
+- A dispatcher for rule `action`s if you want them to execute (the Worker raises the alarm and stores the intent).
+
+Related: [API reference](/docs/api-reference) — `/iot/*` is in the OpenAPI spec; dashboard `/iot`; [JWT auth](/docs/guides/auth-jwt).

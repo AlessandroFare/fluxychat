@@ -8,6 +8,7 @@ import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
 import { Banner, Button, EmptyState, Panel, Section } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -48,7 +49,15 @@ export default function SemanticSearchSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function save(patch: Partial<Pick<SemanticSearchSettings, "enabled" | "autoEmbed" | "defaultMode">>) {
@@ -102,11 +111,12 @@ export default function SemanticSearchSettingsPage() {
           icon={Search}
           title="Admin JWT required"
           description="Mint an admin token in Quickstart to configure semantic search."
-          action={{ label: "Open quickstart", onClick: () => { window.location.href = "/onboarding"; } }}
+          action={{ label: "Open quickstart", href: "/onboarding" }}
         />
       ) : loading ? (
-        <Panel className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading…
+        <Panel className="space-y-3 p-6">
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-3 w-1/2" />
         </Panel>
       ) : settings ? (
         <>

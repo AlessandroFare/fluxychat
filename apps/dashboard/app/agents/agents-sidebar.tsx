@@ -53,13 +53,13 @@ export function AgentsSidebar() {
         <div className="relative rounded-lg border border-amber-200/70 bg-amber-50 p-3 text-xs text-amber-900">
           <Sparkles className="absolute right-2 top-2 h-3.5 w-3.5 text-amber-500" aria-hidden />
           <p className="pr-4 font-medium">Your agent is ready.</p>
-          <p className="mt-0.5 pr-4 text-amber-800/80">
+          <p className="mt-0.5 pr-4 text-amber-800">
             Mention <code className="rounded bg-white/60 px-1">@{visibleAgents[0]?.handle || "agent"}</code> in any room to activate it.
           </p>
           <button
             type="button"
             onClick={dismissFirstRun}
-            className="mt-2 text-[11px] font-medium text-amber-900/70 underline-offset-2 hover:underline"
+            className="mt-2 text-[11px] font-medium text-amber-900 underline-offset-2 hover:underline"
           >
             Got it
           </button>

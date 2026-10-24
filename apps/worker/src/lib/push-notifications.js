@@ -243,7 +243,7 @@ export async function maybePushNotifyOnMessage(env, detail) {
             priority: priority.level,
           },
         });
-        logInfo("push.batched_low_priority", { projectId, roomId, userId, messageId, score: priority.score });
+        logInfo("push.batched_low_priority", { projectId, roomId, userId, messageId, score: priority.score, reason: "low_priority" });
         continue;
       }
 
@@ -268,7 +268,7 @@ export async function maybePushNotifyOnMessage(env, detail) {
           messageId,
           payload: { type: "message.created", priority: priority.level },
         });
-        logInfo("push.batched", { projectId, roomId, userId, messageId });
+        logInfo("push.batched", { projectId, roomId, userId, messageId, reason: "quiet_hours" });
         continue;
       }
 
@@ -487,13 +487,23 @@ function safeHost(endpoint) {
   }
 }
 
+const WEB_PUSH_URGENCIES = new Set(["very-low", "low", "normal", "high"]);
+
+/** Web Push `Urgency` from a caller hint; unknown values fall back to normal. */
+export function webPushUrgency(value) {
+  return WEB_PUSH_URGENCIES.has(value) ? value : "normal";
+}
+
 /**
  * Send a Web Push payload to all subscriptions for a single user.
  * Tolerant of failures — bad subscriptions are removed or marked.
  */
-export async function sendWebPushToUser(env, { projectId, userId, title, body, roomId, messageId, url }) {
+export async function sendWebPushToUser(env, { projectId, userId, title, body, roomId, messageId, url, urgency }) {
   try {
-    const { privateKey, subject } = await getOrCreateVapidKeyPair(env, projectId);
+    const { privateKey, subject, publicKey } = await getOrCreateVapidKeyPair(env, projectId);
+    // Audit F-91: the public key (and the key row) was re-read for every
+    // subscription inside the loop — hoist it once per send.
+    const publicKeyRaw = await getVapidPublicKeyRaw(publicKey);
     const subs = await env.DB.prepare(
       `SELECT id, endpoint, p256dh, auth, failure_count FROM web_push_subscriptions
        WHERE project_id = ? AND user_id = ? AND failure_count < 10`
@@ -530,11 +540,11 @@ export async function sendWebPushToUser(env, { projectId, userId, title, body, r
         const res = await safeOutboundFetch(sub.endpoint, {
           method: "POST",
           headers: {
-            "Authorization": `vapid t=${jwt}, k=${await getVapidPublicKeyRaw((await getOrCreateVapidKeyPair(env, projectId)).publicKey)}`,
+            "Authorization": `vapid t=${jwt}, k=${publicKeyRaw}`,
             "Content-Encoding": "aes128gcm",
             "Content-Type": "application/octet-stream",
             "TTL": "60",
-            "Urgency": "normal",
+            "Urgency": webPushUrgency(urgency),
           },
           body: ciphertext,
         });

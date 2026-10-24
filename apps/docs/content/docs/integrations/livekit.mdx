@@ -19,6 +19,8 @@ FluxyChat Worker  (POST /voice/token or dashboard voice-ai routes)
 - **Dashboard**: `/voice-ai` for agent voice configuration.
 - **Client**: add `livekit-client` in React apps; connect with token from Worker.
 
+If no `LIVEKIT_*` secrets are set on the Worker, both token routes answer `503 { "error": "livekit_not_configured" }`. There is no stub token to connect with — configure the keys, or treat voice as unavailable in your UI.
+
 ## Self-hosted LiveKit
 
 1. Deploy [LiveKit server](https://docs.livekit.io/home/self-hosting/deployment/) (Docker/K8s).

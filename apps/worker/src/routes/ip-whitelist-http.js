@@ -35,14 +35,14 @@ export async function dispatchIpWhitelistRoutes(request, url, h) {
 
   if (request.method === "DELETE" && path.match(/^\/admin\/ip-whitelist\/[^/]+$/)) {
     const id = path.split("/").pop();
-    const result = await removeWhitelistRule(env, { id });
+    const result = await removeWhitelistRule(env, { id, projectId });
     return respond(result, h);
   }
 
   if (request.method === "PATCH" && path.match(/^\/admin\/ip-whitelist\/[^/]+$/)) {
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await toggleWhitelistRule(env, { id, enabled: body.enabled });
+    const result = await toggleWhitelistRule(env, { id, projectId, enabled: body.enabled });
     return respond(result, h);
   }
 

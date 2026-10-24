@@ -41,6 +41,28 @@ describe("verifyTurnstileToken", () => {
     expect(result.success).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+
+  it("enforces the expected hostname when configured (audit F-38)", async () => {
+    fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, hostname: "evil.example" }), { status: 200 }),
+    );
+    const rejected = await verifyTurnstileToken(
+      { TURNSTILE_SECRET_KEY: "secret", TURNSTILE_EXPECTED_HOSTNAME: "app.acme.com" },
+      "token-abc",
+      new Request("https://x"),
+    );
+    expect(rejected).toMatchObject({ success: false, errorCodes: ["hostname-mismatch"] });
+
+    fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, hostname: "chat.acme.com" }), { status: 200 }),
+    );
+    const wildcard = await verifyTurnstileToken(
+      { TURNSTILE_SECRET_KEY: "secret", TURNSTILE_EXPECTED_HOSTNAME: "app.acme.com, *.acme.com" },
+      "token-abc",
+      new Request("https://x"),
+    );
+    expect(wildcard.success).toBe(true);
+  });
 });
 
 describe("isTurnstileConfigured", () => {

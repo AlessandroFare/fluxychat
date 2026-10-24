@@ -3,7 +3,7 @@ title: Run a process
 description: D1 tables, optional AI Search, console JWT, guest invites, SDK helpers.
 ---
 
-Self-host needs the `ops_*` D1 migrations (`0242` through `0244` under `apps/worker/db`). Hosted already applies Worker migrations on deploy.
+Self-host needs the ops D1 migrations under `apps/worker/db` (`0242`–`0244`, then `0252` guest redemption, `0256` MCP registry and `0257` per-user OAuth connections). Hosted already applies Worker migrations on deploy.
 
 ## Console
 
@@ -16,6 +16,34 @@ Sign in so the dashboard has a project JWT (`NEXT_PUBLIC_FLUXYCHAT_WORKER_URL` i
 
 Tools and policy: enable connectors there. Guests need an allowed email domain. Named views list columns you may filter. Free SQL is not a feature.
 
+## Approvals reach people outside the room
+
+A write step stops the run and freezes the exact payload (hash-bound). The people who can act are told three ways, so an approval is never stuck because nobody re-opened the room:
+
+- **Inbox**: `GET /ops/inbox` returns tasks addressed to you (`assignee`) and tasks addressed to a role you hold.
+- **Off-room**: the run room's admins (or every member when the room has none) get an in-app notification, a web push, and an email with the run link. The operator Slack webhook `HITL_SLACK_WEBHOOK_URL`, when set, gets one summary line. Fan-out is capped at 20 recipients per approval.
+- **One-tap email**: room admins also get **Approve** and **Deny** links, single use and bound to the frozen payload hash. The link opens a confirmation page first (GET never decides; email scanners and Slack unfurls stop there); the button posts the token. Tokens expire with the approval (24h max) and need `ART50_MARK_SECRET` in production; links point at the Worker origin (`WORKER_PUBLIC_URL`, else `PUBLIC_APP_URL`). Members without the room admin role only get the console link.
+- **Runs page**: **Approvals waiting** on `/ops/runs` lists pending run approvals with Approve/Deny. Deciding needs an admin token; a decision on a changed payload is void.
+
+```bash
+curl -X POST "$WORKER_URL/ops/approvals/$APPROVAL_ID/decide" \
+  -H "Authorization: Bearer $ADMIN_JWT" -H "Content-Type: application/json" \
+  -d '{"decision":"approve","payloadHash":"'"$PAYLOAD_HASH"'"}'
+```
+
+Publisher approvals (`stepId: "publish"`) stay on the builder page: approving the hash there still requires the matching publish call.
+
+## Audit trail
+
+`GET /ops/runs/:id/audit` returns the evidence pack for one run: the step flow, every event, and the human decisions — who approved or denied, when, against which frozen payload hash. The payload itself is not copied; the hash is the proof of what was approved.
+
+- `?format=pdf` renders a one-page summary for a meeting.
+- `?format=jsonl` returns one JSON object per line (`record: run | step | event | approval`) for a SIEM or an auditor's system of record.
+
+`GET /ops/tool-calls` is the invocation log: one row per gateway call, whether it ran (`ops.tool.called`), is waiting on a frozen payload (`ops.tool.approval_required`), was denied before execution (`ops.tool.denied` with the reason: `tool_not_enabled`, `budget_exceeded`, `kill_switch`, …), or failed in the tool itself (`ops.tool.failed`). Filter with `?runId=`. The console shows the same list under **Tool activity** on `/ops/runs`, and each run row shows `tool calls used / budget`.
+
+`GET /ops/audit/export` (admin) is the project-wide version for a period — `?from=&to=&format=jsonl` returns run envelopes, every event, and the approvals with their decisions: the rows behind the SOC 2 evidence pack counts. Keep at least six months if you are a deployer of a high-risk AI system under the EU AI Act (Art. 26(6)).
+
 ## Search and files
 
 `files.search` talks to Cloudflare AI Search when you bind it. Response shape is `chunks` plus `citations` (`sourceId`, `title`, `score`). Legacy AutoRAG `{ data }` still maps.
@@ -23,6 +51,40 @@ Tools and policy: enable connectors there. Guests need an allowed email domain. 
 If AI Search is missing, search falls back to Vectorize room memory, then a D1 text scan.
 
 File bytes go to `OPS_R2` if you add that bucket, otherwise the existing `ATTACHMENTS` binding. OCR uses stored text first. Empty files can go through Workers AI `toMarkdown` when `env.AI.toMarkdown` exists.
+
+## Incident workflows
+
+A signature-verified incident event (PagerDuty, incident.io, Sentry) can start a published workflow in the room linked to the incident. Which workflow runs is per phase: `policy.incidentWorkflowSlugs` = `{ created, acknowledged, resolved }`; the legacy `policy.incidentWorkflowSlug` still covers `created`. Set it on the **Incident workflows** section of the policy page (`/ops/settings`) or with `PUT /ops/policy`. The run context carries `incident` (`id`, `title`, `severity`, `phase`) and the provider body stays untrusted text. Resolving an incident also writes an incident report into `files.search`. Phase slugs are provider-agnostic: do not also declare `trigger.match` on those workflows.
+
+The read tool `incidents.read` returns the tracked incident plus its recent timeline; with no `incidentId` it follows the incident carried by the run, so the built-in **Incident response** template and builder drafts for incident requests can read their own context. Enable it under **Process tools** like any other built-in.
+
+## MCP servers
+
+`mcp.call` calls a real MCP server registered for the project (Streamable HTTP). Admins manage the registry on **Process tools** (`/ops/settings`, section "MCP servers") or with `POST /ops/mcp-servers`; `GET /ops/mcp-servers` lists it redacted. A registration is a name, a URL, an optional bearer secret and the tool names the project may call. When the builder drafts an `mcp.call` step it pre-fills `server` and `tool` from the registry (keyword match, single-candidate fallback); if nothing fits it asks instead and the draft carries a `tool_input_missing` warning. Tool arguments come from the run context, not from the registry.
+
+Secrets are AES-GCM encrypted with `WEBHOOK_SECRET_ENCRYPTION_KEY` and never come back over HTTP. Tool names are opt-in: registration runs discovery and returns the names the server exposes; calls stay denied (`tool_not_allowed`) until you allow them. The server host must be in `ALLOWED_SSRF_HOSTS`, same as tenant webhooks. `mcp.call` is high risk and keeps its approval step. `POST /ops/mcp-servers/:id/refresh` re-discovers tools after the server changes.
+
+### Per-user OAuth
+
+A server can authenticate **as each user** instead of with a shared secret: register it with `auth: "oauth"` (select "Per-user OAuth" on **Process tools**) and every `mcp.call` presents the access token of the user who triggered the run, so the provider enforces that user's permissions.
+
+- **Connect:** each member opens **Connected accounts** (`/ops/settings`) and clicks Connect (`POST /ops/mcp-servers/:id/connect`). The Worker discovers the authorization server from the MCP URL (RFC 9728 protected-resource metadata, then RFC 8414 / OIDC metadata) or from the registry overrides `oauthAuthorizeUrl` + `oauthTokenUrl`, and sends the browser to the provider with PKCE S256, a `resource` indicator and a single-use state. The state is stored only as a SHA-256 hash, expires in 10 minutes and is bound to one user and server.
+- **Callback:** `GET /public/ops/mcp/oauth/callback` exchanges the code (the verifier is encrypted at rest), stores the encrypted access and refresh tokens per user, and renders a plain HTML page. Tokens are never returned over HTTP, logged or shown in the console.
+- **Client:** set `oauthClientId` / `oauthClientSecret`, or leave them empty when the authorization server supports dynamic client registration (RFC 7591); the registration is stored on the server row and reused.
+- **Calls:** tokens refresh automatically shortly before expiry with the refresh token (rotated tokens are kept). With no connection the call fails as `mcp_connection_required`; when the refresh is refused the connection turns `expired` and calls fail as `mcp_connection_expired` until the user reconnects. `GET /ops/mcp-connections` lists your connections redacted; `DELETE /ops/mcp-connections/:id` disconnects (admins can disconnect any connection in the project). Deleting the server deletes its connections.
+- **Catalog:** `tools/list` needs a token, so the discoverable tools are filled when the first user connects; pick the allowed names afterwards as usual.
+- **Runs without a user actor** (incident-triggered or system runs) cannot use per-user servers: give those servers a bearer secret, or keep them out of system workflows.
+
+The authorization server host (often different from the MCP host) must also be in `ALLOWED_SSRF_HOSTS`. No new environment variables are needed: tokens and the PKCE verifier use the existing `WEBHOOK_SECRET_ENCRYPTION_KEY`, and the callback origin comes from `WORKER_PUBLIC_URL`; without it the Worker uses the origin of the connect request itself.
+
+### Enterprise SSO (ID-JAG)
+
+For servers in an enterprise deployment the provider may not want to trust an OAuth app at all: it trusts its own identity provider for SSO. Register those servers with `auth: "enterprise"` (cross-app access, the EMA/ID-JAG profile) and the same **Connect** button signs the user in **at the IdP**, not at the resource server:
+
+- **Config on the server:** `oauthAuthorizeUrl` = IdP authorize endpoint, `oauthClientId` / `oauthClientSecret` = the client registered at the IdP, `enterpriseIdpTokenUrl` = IdP token endpoint, `enterpriseIssuer` = the IdP `iss` value, `enterpriseAudience` = the **issuer identifier of the Resource Authorization Server**, `enterpriseJwksUrl` = IdP JWKS, `oauthTokenUrl` = the Resource AS token endpoint, `enterpriseResourceClientId` (+ optional `enterpriseResourceClientSecret`) = the client registered at the AS, `oauthScopes` = scopes for the resource. Registration is refused (`enterprise_config_incomplete`, with the missing field names) until the config is complete; there is no dynamic registration for enterprise servers.
+- **Flow:** the browser signs in at the IdP (authorization code + PKCE, scope `openid offline_access`). The Worker exchanges the OIDC ID token — or the IdP refresh token, on renewal — for an **ID-JAG** (RFC 8693 token exchange, `requested_token_type=urn:ietf:params:oauth:token-type:id-jag`), validates it (`typ`, signature against the IdP JWKS, `iss`, `aud`, `client_id`, `jti`, `exp`/`iat`, `resource` = this server), then redeems it at the AS with the RFC 7523 `jwt-bearer` grant. The AS access token is stored like a per-user OAuth token; the IdP refresh token is what renews it (rotation is kept).
+- **Fail closed:** an ID-JAG that does not validate is never presented to the AS, and no connection is stored. If the server switches auth mode between Connect and the callback, the attempt is refused before any network call.
+- **Hosts:** the IdP authorize/token/JWKS hosts **and** the AS token host must be in `ALLOWED_SSRF_HOSTS`. Like per-user OAuth, enterprise servers need a user actor, and an admin must allow the tools after the first connection.
 
 ## Optional Wrangler
 

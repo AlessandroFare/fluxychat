@@ -31,8 +31,6 @@ export function LocalGuideSearch({ variant = "dark", className }: LocalGuideSear
         value={query}
         placeholder="Search guides…"
         aria-label="Search guides"
-        aria-expanded={open && results.length > 0}
-        aria-controls="local-guide-search-results"
         className={cn(
           "w-full rounded-xl border px-10 py-2.5 text-sm outline-none transition",
           isDark

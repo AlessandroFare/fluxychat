@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Cpu, Loader2 } from "lucide-react";
+import { Cpu } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
 import { RoomPicker } from "../../components/room-picker";
-import { Button, Input, Panel, Section, Textarea } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section, Textarea } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -78,7 +79,15 @@ export default function RoomFirmwareSettingsPage() {
   }, [token, roomId]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const versionLabel = useMemo(
@@ -135,10 +144,7 @@ export default function RoomFirmwareSettingsPage() {
 
       {roomId.trim() ? (
         loading ? (
-          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Loading firmware…
-          </div>
+          <Skeleton className="mt-4 h-24 w-full" />
         ) : (
           <div className="mt-6 space-y-6">
             <Panel>
@@ -237,7 +243,12 @@ export default function RoomFirmwareSettingsPage() {
             <Panel>
               <Section title="Recent audit" description="Veto / modify / fail-open decisions from room_firmware_audit.">
                 {audit.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No audit entries yet.</p>
+                  <EmptyState
+                    compact
+                    className="border-0 bg-transparent"
+                    title="No audit entries"
+                    description="Veto and modify decisions appear here as messages flow."
+                  />
                 ) : (
                   <ul className="space-y-2 text-sm">
                     {audit.map((row) => (

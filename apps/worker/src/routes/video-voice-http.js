@@ -11,7 +11,7 @@ export async function dispatchVideoVoiceRoutes(request, url, h) {
   const path = url.pathname;
   if (!path.startsWith("/admin/calls")) return null;
 
-  const { hasAnyRole } = pickRouteDeps(h, ["hasAnyRole"]);
+  const { hasAnyRole, canAccessRoom } = pickRouteDeps(h, ["hasAnyRole", "canAccessRoom"]);
   const ctx = await resolveMemberContext(request, h);
   if (ctx.response) return ctx.response;
   const { env, json: respond, projectId, userId } = ctx;
@@ -19,7 +19,7 @@ export async function dispatchVideoVoiceRoutes(request, url, h) {
 
   async function requireCall(callId) {
     const call = await getCallSession(env, { callId });
-    if (!call || call.project_id !== projectId) {
+    if (!call || call.projectId !== projectId) {
       return { error: respond({ error: "not_found" }, h, 404) };
     }
     return { call };
@@ -113,13 +113,39 @@ export async function dispatchVideoVoiceRoutes(request, url, h) {
 
   if (request.method === "POST" && path === "/admin/calls/token") {
     const body = await request.json();
+    // Audit F-26: the token binds to a real call of this project and to the
+    // authenticated user — identity, room name and TTL are server-decided.
+    let call;
+    if (body.callId) {
+      const gate = await requireCall(body.callId);
+      if (gate.error) return gate.error;
+      call = gate.call;
+    } else if (body.roomId || body.providerRoomId) {
+      const active = await listActiveCalls(env, { projectId });
+      call = active.find(
+        (c) =>
+          (body.roomId && c.roomId === body.roomId) ||
+          (body.providerRoomId && c.providerRoomId === body.providerRoomId),
+      );
+    }
+    if (!call) {
+      return respond({ error: "call_not_found" }, h, 404);
+    }
+    const allowed = await canAccessRoom(env, ctx.auth, call.roomId);
+    if (!allowed) return respond({ error: "forbidden" }, h, 403);
     const token = await generateToken(env, body.provider, {
-      roomId: body.roomId,
-      roomName: body.roomName || body.providerRoomId,
-      userId: body.userId || userId,
+      roomId: call.roomId,
+      roomName: call.providerRoomId || call.roomId,
+      userId,
       displayName: body.displayName,
       ttl: body.ttl,
+      canPublish: body.canPublish,
+      canSubscribe: body.canSubscribe,
     });
+    if (token.stub) {
+      // No LIVEKIT_* keys: never present a fake payload as a connectable token.
+      return respond({ error: "livekit_not_configured", message: token.note }, h, 503);
+    }
     return respond({ token }, h);
   }
 

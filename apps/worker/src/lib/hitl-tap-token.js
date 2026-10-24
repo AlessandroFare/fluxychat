@@ -32,7 +32,7 @@ async function hmacHex(secret, payload) {
   return hexFromBuffer(mac);
 }
 
-export async function signHitlTapToken(secret, { approvalId, action, userId, exp, jti, payloadHash }) {
+export async function signHitlTapToken(secret, { approvalId, action, userId, exp, jti, payloadHash, kind, projectId }) {
   if (!secret) return null;
   const payload = JSON.stringify({
     approvalId,
@@ -41,6 +41,10 @@ export async function signHitlTapToken(secret, { approvalId, action, userId, exp
     exp,
     jti: jti || crypto.randomUUID(),
     payloadHash: payloadHash || "",
+    // Ops run approvals reuse this signer: kind "ops" + projectId let the ops
+    // tap route find its own approval table. HITL tokens leave both empty.
+    kind: kind || "",
+    projectId: projectId || "",
   });
   const sig = await hmacHex(secret, payload);
   return `${b64url(payload)}.${sig}`;
@@ -65,7 +69,10 @@ export async function verifyHitlTapToken(secret, token) {
   } catch {
     return null;
   }
-  if (Number(payload.exp) < Date.now()) return null;
+  // Audit fix A2f: a missing/unparseable exp made `NaN < Date.now()` false and
+  // skipped the expiry check entirely. Fail closed instead.
+  const exp = Number(payload.exp);
+  if (!Number.isFinite(exp) || exp < Date.now()) return null;
   if (payload.action !== "approve" && payload.action !== "deny") return null;
   if (!payload.approvalId || !payload.userId || !payload.jti) return null;
   if (typeof payload.payloadHash !== "string") return null;

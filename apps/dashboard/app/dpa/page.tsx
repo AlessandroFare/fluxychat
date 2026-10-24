@@ -36,7 +36,7 @@ export default function DpaPage() {
         </li>
         <li>
           <strong>Subprocessors.</strong> Listed at{" "}
-          <Link className="underline underline-offset-2" href={HOSTED_PATHS.subprocessors}>
+          <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.subprocessors}>
             /subprocessors
           </Link>
           . LLM providers only run if you configure in-room agents.
@@ -44,14 +44,14 @@ export default function DpaPage() {
         <li>
           <strong>Security.</strong> TLS in transit. Access to hosted production is limited to operators who
           need it. Report issues via{" "}
-          <a className="underline underline-offset-2" href="/.well-known/security.txt">
+          <a className="text-brand underline underline-offset-2" href="/.well-known/security.txt">
             security.txt
           </a>
           . This is not a SOC 2 report.
         </li>
         <li>
           <strong>Assistance.</strong> GDPR export and erasure: console Privacy tools, or Worker{" "}
-          <code>GET /gdpr/export</code> and related delete routes, with a member or admin JWT.
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">GET /gdpr/export</code> and related delete routes, with a member or admin JWT.
         </li>
         <li>
           <strong>Retention.</strong> Defaults are on the privacy policy. You can shorten retention in
@@ -68,7 +68,7 @@ export default function DpaPage() {
         </li>
         <li>
           <strong>Liability.</strong> Hosted is open beta. Liability is as in the{" "}
-          <Link className="underline underline-offset-2" href={HOSTED_PATHS.terms}>
+          <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.terms}>
             terms
           </Link>
           . Written SLA only in a signed MSA.
@@ -77,11 +77,11 @@ export default function DpaPage() {
 
       <p className="mt-8 text-sm text-muted-foreground">
         Questions:{" "}
-        <a className="underline underline-offset-2" href="mailto:support@fluxychat.com">
+        <a className="text-brand underline underline-offset-2" href="mailto:support@fluxychat.com">
           support@fluxychat.com
         </a>
         . Privacy policy:{" "}
-        <Link className="underline underline-offset-2" href={HOSTED_PATHS.privacyPolicy}>
+        <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.privacyPolicy}>
           /privacy-policy
         </Link>
         .

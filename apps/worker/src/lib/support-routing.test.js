@@ -6,6 +6,7 @@ vi.mock("./room-shard.js", () => ({
     fetch: async () =>
       new Response(JSON.stringify({ users: ["agent-1"] }), { status: 200 }),
   })),
+  internalDoHeaders: () => ({}),
 }));
 
 describe("support-routing", () => {

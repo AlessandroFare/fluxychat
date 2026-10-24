@@ -60,23 +60,23 @@ function createGdprErasureTestDb() {
           return this;
         },
         async all() {
-          const [projectId, likeOrUser, limit, offset] = this._args;
+          // A2-13 keyset pagination: [projectId, likePattern, lastId, pageSize].
+          const [projectId, likeOrUser, lastId, pageSize] = this._args;
           const userId =
             typeof likeOrUser === "string" && likeOrUser.includes("%")
               ? likeOrUser.replace(/%/g, "")
               : likeOrUser;
+          const page = (rows) =>
+            rows
+              .filter((r) => String(r.id) > String(lastId ?? ""))
+              .slice(0, Number(pageSize) || rows.length)
+              .map((r) => ({ row_id: r.id, payload: r.payload }));
 
           if (this._sql.includes("from automation_events") && this._sql.includes("payload like")) {
-            const rows = filterPayloadRows("automation_events", projectId, userId);
-            const off = Number(offset) || 0;
-            const lim = Number(limit) || rows.length;
-            return { results: rows.slice(off, off + lim).map((r) => ({ row_id: r.id, payload: r.payload })) };
+            return { results: page(filterPayloadRows("automation_events", projectId, userId)) };
           }
           if (this._sql.includes("from webhook_deliveries") && this._sql.includes("payload like")) {
-            const rows = filterPayloadRows("webhook_deliveries", projectId, userId);
-            const off = Number(offset) || 0;
-            const lim = Number(limit) || rows.length;
-            return { results: rows.slice(off, off + lim).map((r) => ({ row_id: r.id, payload: r.payload })) };
+            return { results: page(filterPayloadRows("webhook_deliveries", projectId, userId)) };
           }
           if (this._sql.includes("from attachments") && this._sql.includes("select")) {
             const [projectId, userId] = this._args;

@@ -42,7 +42,7 @@ export async function dispatchWorkflowBuilderRoutes(request, url, h) {
   if (request.method === "PATCH" && path.match(/^\/admin\/workflows\/[^/]+$/)) {
     const id = path.split("/").pop();
     const body = await request.json();
-    const result = await updateWorkflow(env, { id, projectId, ...body });
+    const result = await updateWorkflow(env, { ...body, id, projectId });
     return respond(result, h);
   }
 

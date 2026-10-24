@@ -6,8 +6,10 @@ import { signHitlTapToken, hitlTapSecret } from "./hitl-tap-token.js";
 import { hitlSlackActionElements, hitlSlackSigningSecret } from "./hitl-slack-sign.js";
 import { getSlackUserIdForFluxyUser } from "./hitl-slack-user-map.js";
 
-function appOrigin(env) {
-  return trimTrailingSlashes(env.PUBLIC_APP_URL || env.WORKER_PUBLIC_URL || "");
+function tapOrigin(env) {
+  // Tap pages are served by the Worker; PUBLIC_APP_URL is the app origin used
+  // for console links, so prefer the Worker origin and fall back to the app.
+  return trimTrailingSlashes(env.WORKER_PUBLIC_URL || env.PUBLIC_APP_URL || "");
 }
 
 export function isOperatorSlackWebhookUrl(urlString) {
@@ -28,7 +30,7 @@ export async function notifyHitlOffRoom(env, {
   toolInput,
   expiresAt,
 }) {
-  const origin = appOrigin(env);
+  const origin = tapOrigin(env);
   const secret = hitlTapSecret(env);
   const expCap = Date.now() + 15 * 60_000;
   const exp = Math.min(expiresAt ? Date.parse(expiresAt) || expCap : expCap, expCap);

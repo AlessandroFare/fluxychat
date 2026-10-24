@@ -16,15 +16,17 @@ export async function createControl(env, { projectId, controlId, name, descripti
   return { id };
 }
 
-export async function updateControl(env, { controlDbId, status, owner, verifiedBy }) {
+export async function updateControl(env, { controlDbId, projectId, status, owner, verifiedBy }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
   if (status) { sets.push("status = ?"); params.push(status); }
   if (owner) { sets.push("owner = ?"); params.push(owner); }
   if (status === "verified") { sets.push("verified_at = ?"); params.push(now); if (verifiedBy) { sets.push("verified_by = ?"); params.push(verifiedBy); } }
+  let sql = `UPDATE soc2_controls SET ${sets.join(", ")} WHERE id = ?`;
   params.push(controlDbId);
-  await env.DB.prepare(`UPDATE soc2_controls SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
@@ -76,7 +78,7 @@ export async function createRiskAssessment(env, { projectId, title, description,
   return { id };
 }
 
-export async function updateRiskAssessment(env, { riskId, status, mitigation, residualRisk }) {
+export async function updateRiskAssessment(env, { riskId, projectId, status, mitigation, residualRisk }) {
   const now = new Date().toISOString();
   const sets = [];
   const params = [];
@@ -85,7 +87,9 @@ export async function updateRiskAssessment(env, { riskId, status, mitigation, re
   if (residualRisk) { sets.push("residual_risk = ?"); params.push(residualRisk); }
   sets.push("reviewed_at = ?");
   params.push(now, riskId);
-  await env.DB.prepare(`UPDATE soc2_risk_assessments SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  let sql = `UPDATE soc2_risk_assessments SET ${sets.join(", ")} WHERE id = ?`;
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
@@ -111,15 +115,17 @@ export async function createPolicy(env, { projectId, name, description, policyTy
   return { id };
 }
 
-export async function updatePolicy(env, { policyId, status, content, version }) {
+export async function updatePolicy(env, { policyId, projectId, status, content, version }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
   if (status) { sets.push("status = ?"); params.push(status); }
   if (content) { sets.push("content = ?"); params.push(content); }
   if (version) { sets.push("version = ?"); params.push(version); }
+  let sql = `UPDATE soc2_policies SET ${sets.join(", ")} WHERE id = ?`;
   params.push(policyId);
-  await env.DB.prepare(`UPDATE soc2_policies SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
@@ -164,7 +170,7 @@ export async function createIncident(env, { projectId, title, description, sever
   return { id };
 }
 
-export async function updateIncident(env, { incidentId, status, assignedTo, rootCause, remediation }) {
+export async function updateIncident(env, { incidentId, projectId, status, assignedTo, rootCause, remediation }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -172,8 +178,10 @@ export async function updateIncident(env, { incidentId, status, assignedTo, root
   if (assignedTo) { sets.push("assigned_to = ?"); params.push(assignedTo); }
   if (rootCause) { sets.push("root_cause = ?"); params.push(rootCause); }
   if (remediation) { sets.push("remediation = ?"); params.push(remediation); }
+  let sql = `UPDATE soc2_incidents SET ${sets.join(", ")} WHERE id = ?`;
   params.push(incidentId);
-  await env.DB.prepare(`UPDATE soc2_incidents SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
@@ -199,14 +207,16 @@ export async function createReport(env, { projectId, reportType, title, content,
   return { id };
 }
 
-export async function updateReport(env, { reportId, status, content }) {
+export async function updateReport(env, { reportId, projectId, status, content }) {
   const sets = [];
   const params = [];
   if (status) { sets.push("status = ?"); params.push(status); }
   if (content) { sets.push("content = ?"); params.push(content); }
   if (sets.length === 0) return { updated: 0 };
+  let sql = `UPDATE soc2_reports SET ${sets.join(", ")} WHERE id = ?`;
   params.push(reportId);
-  await env.DB.prepare(`UPDATE soc2_reports SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 

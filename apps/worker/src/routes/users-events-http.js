@@ -1,6 +1,7 @@
 import { verifyJwtAndGetContext } from "../lib/jwt-request.js";
 import { logError } from "../lib/worker-log.js";
 import { deliverWebhooks } from "../lib/webhook-delivery.js";
+import { internalDoHeaders } from "../lib/room-shard.js";
 import { pickRouteDeps } from "./route-http-deps.js";
 
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,128}$/;
@@ -163,6 +164,7 @@ export async function dispatchUsersEventsRoutes(request, url, h) {
     const stub = env.USER.get(userDoId(env, auth.projectId, targetUserId));
     const res = await stub.fetch("https://internal/deliver", {
       method: "POST",
+      headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
       body: JSON.stringify({
         name,
         data: body.data ?? {},
@@ -198,6 +200,7 @@ export async function dispatchUsersEventsRoutes(request, url, h) {
             const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
             const res = await stub.fetch("https://internal/announce", {
               method: "POST",
+              headers: internalDoHeaders(env),
               body: JSON.stringify({
                 type: "user_event",
                 roomId,

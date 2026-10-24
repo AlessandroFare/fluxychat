@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MarketingShell } from "../components/marketing-shell";
+import { HOSTED_PATHS } from "@/lib/hosted-product";
 import { SUB_PROCESSORS } from "@/lib/privacy-legal-copy";
 import { buildPageMetadata } from "@/lib/site-metadata";
 
@@ -16,9 +18,9 @@ export default function SubprocessorsPage() {
       <p className="mt-3 text-sm text-muted-foreground">
         Hosted FluxyChat may use the processors below. Self-host in your Cloudflare account if you
         do not want Clerk, Stripe, or our LLM path. Standard DPA:{" "}
-        <a className="underline underline-offset-2" href="/dpa">
+        <Link className="text-brand underline underline-offset-2" href={HOSTED_PATHS.dpa}>
           /dpa
-        </a>
+        </Link>
         . A signed PDF with custom clauses is only with a written MSA.
       </p>
       <ul className="mt-8 space-y-4">
@@ -37,7 +39,7 @@ export default function SubprocessorsPage() {
       </ul>
       <p className="mt-8 text-xs text-muted-foreground">
         Security contact: see{" "}
-        <a className="underline underline-offset-2" href="/.well-known/security.txt">
+        <a className="text-brand underline underline-offset-2" href="/.well-known/security.txt">
           security.txt
         </a>
         .

@@ -5,4 +5,29 @@ description: "Too many requests"
 
 # 42900 — rate_limited
 
-Back off. Not terminal: wait `retryAfter` / `Retry-After` and retry. HTTP 429. SDK: `FluxyRateLimitError`.
+Back off, then retry. Not terminal.
+
+**At a glance** — HTTP 429 · terminal: no · SDK `FluxyRateLimitError`.
+
+## What to do
+
+- Wait the server's hint — REST responses carry `retryAfter`, or the `Retry-After` header — then retry.
+- In the SDK, catch `FluxyRateLimitError` and wait `retryAfterMs` before the next call.
+- Batch or throttle bulk sends instead of retrying in a tight loop.
+
+```ts
+import { FluxyRateLimitError } from "@fluxy-chat/sdk";
+
+try {
+  await sendBatch();
+} catch (err) {
+  if (err instanceof FluxyRateLimitError) {
+    await new Promise((resolve) => setTimeout(resolve, err.retryAfterMs));
+    // retry once, or hand the delay back to your queue
+  }
+}
+```
+
+## Related
+
+- [44000 channel_at_capacity](/docs/errors/channel_at_capacity)

@@ -7,8 +7,14 @@ import type { TranscriptEntry } from "@fluxy-chat/sdk";
 import { ConsoleShell } from "../components/console-shell";
 import { ConsolePageHeader } from "../components/console-page-header";
 import { Button, Input, Panel } from "../components/ui";
+import { useDashboardSession } from "../components/dashboard-session";
+import { getPublicWorkerUrl } from "@/lib/worker-url-client";
+import { messageFromUnknown } from "@/lib/error-message";
 
 export default function TranscriptsPage() {
+  const { adminJwt } = useDashboardSession();
+  const token = adminJwt.trim();
+
   const [userKey, setUserKey] = useState("");
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [count, setCount] = useState<number | null>(null);
@@ -16,10 +22,19 @@ export default function TranscriptsPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleted, setDeleted] = useState<number | null>(null);
 
-  const api = React.useMemo(() => createTranscriptsApi({ maxPerUser: 200 }), []);
+  const api = React.useMemo(
+    () =>
+      token
+        ? createTranscriptsApi({
+            maxPerUser: 200,
+            worker: { baseUrl: getPublicWorkerUrl(), token },
+          })
+        : null,
+    [token],
+  );
 
   async function handleSearch() {
-    if (!userKey.trim()) return;
+    if (!api || !userKey.trim()) return;
     setLoading(true);
     setError(null);
     setDeleted(null);
@@ -31,14 +46,14 @@ export default function TranscriptsPage() {
       setEntries(items);
       setCount(total);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load transcripts");
+      setError(messageFromUnknown(e, "Failed to load transcripts"));
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDelete() {
-    if (!userKey.trim()) return;
+    if (!api || !userKey.trim()) return;
     if (!confirm(`Delete all transcripts for "${userKey.trim()}"?`)) return;
     setLoading(true);
     try {
@@ -47,7 +62,7 @@ export default function TranscriptsPage() {
       setEntries([]);
       setCount(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete");
+      setError(messageFromUnknown(e, "Failed to delete"));
     } finally {
       setLoading(false);
     }
@@ -57,8 +72,14 @@ export default function TranscriptsPage() {
     <ConsoleShell>
       <ConsolePageHeader
         title="Conversation Transcripts"
-        description="Per-user message persistence keyed by cross-platform identity. Append, list, filter, and delete with configurable retention."
+        description="Per-user transcripts stored by the worker (D1), keyed by your cross-platform user key. Your app appends through the SDK — this console lists, filters, and deletes."
       />
+
+      {!api && (
+        <Panel className="mt-6 border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
+          Sign in or paste an admin JWT in Settings to read transcripts from the worker.
+        </Panel>
+      )}
 
       <Panel className="mt-6 p-4">
         <div className="flex items-end gap-3">
@@ -71,11 +92,11 @@ export default function TranscriptsPage() {
               placeholder="user@example.com"
             />
           </div>
-          <Button onClick={handleSearch} disabled={loading || !userKey.trim()}>
+          <Button onClick={handleSearch} disabled={loading || !api || !userKey.trim()}>
             <Search className="mr-1.5 h-4 w-4" />
             Search
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading || !userKey.trim()}>
+          <Button variant="destructive" onClick={handleDelete} disabled={loading || !api || !userKey.trim()}>
             <Trash2 className="mr-1.5 h-4 w-4" />
             Delete
           </Button>

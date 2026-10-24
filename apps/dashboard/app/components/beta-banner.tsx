@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { fetchWorkerJson } from "@/lib/worker-fetch";
 import { PRODUCT_BETA_BANNER, PRODUCT_GITHUB_ISSUES } from "@/lib/product-facts";
+import { cMono, cSans } from "../landing/c-fonts";
+import styles from "../landing/landing-c.module.css";
 
 const forceBetaNotice =
   process.env.NEXT_PUBLIC_BETA_BANNER === "1" ||
@@ -16,6 +19,8 @@ interface HealthPayload {
 }
 
 export function BetaBanner() {
+  const pathname = usePathname();
+  const landing = pathname === "/";
   const [workerPaymentsDisabled, setWorkerPaymentsDisabled] = useState(false);
   const [workerUnreachable, setWorkerUnreachable] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -59,19 +64,16 @@ export function BetaBanner() {
       // become a landmark inside the root layout's <main> (axe
       // `region` rule would flag it as content not in a landmark).
       role="status"
-      className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
+      className={`${styles.chrome} ${landing ? "" : styles.themeable} ${styles.betaBanner} ${cSans.variable} ${cMono.variable}`}
     >
       <span>{message}</span>{" "}
       {message === PRODUCT_BETA_BANNER ? (
         <>
-          <a className="underline underline-offset-2 hover:text-amber-900" href={PRODUCT_GITHUB_ISSUES}>
-            GitHub
-          </a>{" "}
+          <a href={PRODUCT_GITHUB_ISSUES}>GitHub</a>{" "}
         </>
       ) : null}
       <button
         type="button"
-        className="underline underline-offset-2 hover:text-amber-900"
         onClick={() => setDismissed(true)}
       >
         Dismiss

@@ -75,7 +75,9 @@ export async function dispatchBreakoutRoomsRoutes(request, url, h) {
           time: setRoomTimerTime,
           mode: setRoomTimerMode,
         };
-        const result = await handlers[action](env, { ...base, ...body });
+        // Audit fix A2-4: identity fields win over the body — the body must
+        // not retarget project/room/user away from the checked path.
+        const result = await handlers[action](env, { ...body, ...base });
         return json(result, { status: result.ok ? 200 : 400, headers: corsHeaders });
       }
       return json({ error: "method_not_allowed" }, { status: 405, headers: corsHeaders });

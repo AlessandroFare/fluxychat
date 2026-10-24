@@ -119,6 +119,11 @@ export async function dispatchA2ARoutes(request, url, h) {
     }
 
     if (taskMatch && request.method === "PATCH") {
+      // Audit F-68: task state belongs to the agent pipeline — a plain member
+      // must not be able to mutate (or complete) any task in the project.
+      if (!hasAnyRole(auth.roles, ["owner", "admin", "moderator", "agent"])) {
+        return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+      }
       const body = await request.json().catch(() => ({}));
       const result = await updateA2ATaskStatus(env, {
         projectId: auth.projectId,
@@ -151,18 +156,34 @@ export async function dispatchA2ARoutes(request, url, h) {
       const body = await request.json().catch(() => ({}));
       const validated = validateExternalHttpsUrl(body.cardUrl);
       if (!validated.ok) return json(validated, { status: 400, headers: corsHeaders });
+      // Audit F-25: only a caller-supplied token goes to a caller-supplied URL.
       const result = await fetchExternalAgentCard(validated.url, {
-        bearerToken: body.bearerToken || env.A2A_OUTBOUND_BEARER,
+        bearerToken: body.bearerToken,
       });
       if (!result.ok) return json(result, { status: 502, headers: corsHeaders });
       return json(result, { headers: corsHeaders });
     }
 
     if (request.method === "POST" && path === "/a2a/envelopes") {
+      // Audit F-68: envelopes must not be forgeable — the source is either the
+      // caller's own identity or one of the project's registered agent cards.
+      if (!hasAnyRole(auth.roles, ["owner", "admin", "moderator", "agent"])) {
+        return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+      }
       const body = await request.json().catch(() => ({}));
+      const sourceAgentId = body.sourceAgentId ?? auth.userId;
+      if (sourceAgentId !== auth.userId) {
+        const sourceCard = await getA2AAgentCard(env, {
+          projectId: auth.projectId,
+          agentId: sourceAgentId,
+        });
+        if (!sourceCard) {
+          return json({ error: "source_agent_not_found" }, { status: 404, headers: corsHeaders });
+        }
+      }
       const result = await sendA2AEnvelope(env, {
         projectId: auth.projectId,
-        sourceAgentId: body.sourceAgentId ?? auth.userId,
+        sourceAgentId,
         targetAgentId: body.targetAgentId,
         taskId: body.taskId,
         status: body.status,
@@ -198,6 +219,13 @@ export async function dispatchA2ARoutes(request, url, h) {
     if (request.method === "GET" && path === "/a2a/envelopes/receive") {
       const agentId = url.searchParams.get("agentId")?.trim();
       if (!agentId) return json({ error: "agentId_required" }, { status: 400, headers: corsHeaders });
+      // Audit F-68: reading with the default markDelivered=true drains the
+      // inbox — only the agent itself (or an admin/moderator) may do that.
+      if (!hasAnyRole(auth.roles, ["owner", "admin", "moderator"])) {
+        if (!hasAnyRole(auth.roles, ["agent"]) || agentId !== auth.userId) {
+          return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
+        }
+      }
       const result = await receiveA2AEnvelopes(env, {
         projectId: auth.projectId,
         agentId,

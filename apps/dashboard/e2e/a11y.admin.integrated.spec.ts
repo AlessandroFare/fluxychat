@@ -9,6 +9,12 @@ import AxeBuilder from "@axe-core/playwright";
 const adminJwt = process.env.E2E_ADMIN_JWT?.trim() ?? "";
 
 const ADMIN_PAGES = [
+  // Core console flows (craft W5 extension)
+  { name: "console-overview", path: "/dashboard", heading: "Console" },
+  { name: "console-rooms", path: "/rooms", heading: "Rooms" },
+  { name: "console-inbox", path: "/inbox", heading: "Inbox" },
+  { name: "console-settings", path: "/settings", heading: "Settings" },
+  { name: "console-billing", path: "/billing", heading: "Billing & usage" },
   { name: "settings-residency", path: "/settings/residency", heading: "Data residency" },
   { name: "settings-ephemeral", path: "/settings/ephemeral", heading: "Ephemeral & room TTL" },
   { name: "settings-search", path: "/settings/search", heading: "Semantic search" },
@@ -60,7 +66,7 @@ test.describe("axe a11y — admin pages (integrated)", () => {
         test.skip(true, `page returned ${response?.status() ?? "no response"}`);
       }
 
-      await expect(page.getByRole("heading", { name: p.heading })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("heading", { name: p.heading, exact: true, level: 1 })).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(1200);
 
       const results = await new AxeBuilder({ page })

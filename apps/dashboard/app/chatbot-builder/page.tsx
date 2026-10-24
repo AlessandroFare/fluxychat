@@ -271,7 +271,7 @@ export default function ChatbotBuilderPage() {
                 return (
                   <button key={e.value} type="button"
                     onClick={() => setSelectedEvent(e.value)}
-                    className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${selectedEvent === e.value ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground hover:bg-muted/30"}`}>
+                    className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${selectedEvent === e.value ? "bg-primary/10 text-[var(--brand-hover)]" : "bg-muted/20 text-muted-foreground hover:bg-muted/30"}`}>
                     {e.label.split(" ")[0]} ({count})
                   </button>
                 );

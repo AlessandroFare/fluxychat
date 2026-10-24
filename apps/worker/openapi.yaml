@@ -154,6 +154,37 @@ paths:
         "200":
           description: JWT plus user channel metadata
 
+  /tokens/link-guest:
+    post:
+      summary: Claim a guest identity into a signed-in account (guest → account linking)
+      description: |
+        The caller (Bearer JWT, non-guest) proves ownership of a guest identity by
+        presenting its guest JWT. Room memberships move to the caller and the guest
+        role upgrades to `member`; the same guest cannot be claimed twice.
+        Message authorship and read markers stay under the guest user id.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guestToken]
+              properties:
+                guestToken:
+                  type: string
+                  description: JWT of the guest identity (guest-only roles, same project).
+      responses:
+        "200":
+          description: "Guest rooms moved: `{ ok: true, guestUserId, targetUserId, roomsTransferred, roomsAlreadyMember }`"
+        "400":
+          description: Missing/invalid guest token, same user, or guest-only target
+        "401":
+          description: Missing or invalid caller token
+        "409":
+          description: Guest already linked to another account
+
   /auth/sms-otp/send:
     post:
       summary: Send SMS OTP via Sent.dm AUTHENTICATION template
@@ -1705,6 +1736,411 @@ paths:
       responses:
         "200":
           description: Handoff resolved
+
+  /rooms/{roomId}/presence:
+    get:
+      summary: List live presence rows for a room
+      description: Stale entries (expired TTL) are excluded.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [cursor, focus, scroll, selection, viewing]
+      responses:
+        "200":
+          description: Presence rows for the room
+    post:
+      summary: Upsert the caller's presence for a room
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [cursor, focus, scroll, selection, viewing]
+                payload:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Presence row id with `created` or `updated`
+        "400":
+          description: Missing type or unknown presence type
+    delete:
+      summary: Clear the caller's presence rows for a room
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [cursor, focus, scroll, selection, viewing]
+      responses:
+        "200":
+          description: Deleted row count
+
+  /rooms/{roomId}/presence/snapshot:
+    get:
+      summary: Presence grouped by user and type
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Map of userId → type → { payload, updatedAt }
+
+  /rooms/{roomId}/presence/cursors:
+    get:
+      summary: Cursor presence rows only
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cursor rows
+
+  /rooms/{roomId}/presence/focus:
+    get:
+      summary: Focus presence rows only
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Focus rows
+
+  /rooms/{roomId}/presence/stats:
+    get:
+      summary: Distinct user counts per presence type
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Map of presence type → distinct user count
+
+  /presence/user:
+    get:
+      summary: Presence rows for the authenticated user across rooms
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Presence rows scoped to the caller project
+
+  /rooms/{roomId}/comment-threads:
+    get:
+      summary: List comment threads with their comments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Threads for the room
+    post:
+      summary: Create a comment thread
+      description: Thread starts with the body as its first comment. `metadata` accepts `x`/`y`, `sceneId`, `quote`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "201":
+          description: Created thread with first comment
+        "400":
+          description: Missing thread body
+
+  /rooms/{roomId}/comment-threads/{threadId}:
+    patch:
+      summary: Update thread resolution or metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolved:
+                  type: boolean
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Thread updated
+        "404":
+          description: Unknown thread
+    delete:
+      summary: Delete a thread and its comments (creator only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Thread deleted
+        "403":
+          description: Caller did not create the thread
+        "404":
+          description: Unknown thread
+
+  /rooms/{roomId}/comment-threads/{threadId}/comments:
+    post:
+      summary: Add a comment to a thread
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+      responses:
+        "201":
+          description: Created comment
+        "404":
+          description: Unknown thread
+
+  /rooms/{roomId}/comment-threads/{threadId}/comments/{commentId}:
+    patch:
+      summary: Edit a comment (author only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+      responses:
+        "200":
+          description: Edited comment
+        "403":
+          description: Caller is not the author
+        "404":
+          description: Unknown comment
+    delete:
+      summary: Delete a comment (author only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comment deleted
+        "403":
+          description: Caller is not the author
+        "404":
+          description: Unknown comment
+
+  /rooms/{roomId}/comment-threads/{threadId}/comments/{commentId}/reactions:
+    post:
+      summary: Add an emoji reaction to a comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+      responses:
+        "200":
+          description: Comment with updated reactions
+        "404":
+          description: Unknown comment
+    delete:
+      summary: Remove the caller's emoji reaction from a comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+      responses:
+        "200":
+          description: Comment with updated reactions
+        "404":
+          description: Unknown comment
 
   /messages/{id}:
     patch:
@@ -4345,6 +4781,38 @@ paths:
         "403":
           description: Owner/admin required
 
+  /rooms/{id}/sealed:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Read the room seal record
+      description: Room member. A sealed room stopped realtime, streams, and schedules after a boot crash loop; its storage was purged. `sealed` is null when the room is healthy.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Seal status (`{ ok: true, sealed: { reason, crashes, sealedAt } | null }`)
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      summary: Unseal the room
+      description: Owner/admin only. Clears the seal and boot markers; the Durable Object boots light on the next wake (purged storage was not restored — use PITR snapshots for that).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Unsealed (`{ ok: true, sealed: null }`)
+        "401":
+          description: Unauthorized
+        "403":
+          description: Owner/admin required
+
   /rooms/{id}/agent-schedules/{scheduleId}:
     parameters:
       - name: id
@@ -4370,3 +4838,2987 @@ paths:
           description: Forbidden
         "404":
           description: Not found
+
+  /games/players:
+    put:
+      summary: Upsert a game player profile
+      description: Persists the player row (rating, region, cloud save pointer) that the D1 leaderboard reads.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+                username:
+                  type: string
+                skillRating:
+                  type: number
+                region:
+                  type: string
+                cloudSave:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Upserted player
+        "400":
+          description: Missing player id
+
+  /games/leaderboard:
+    get:
+      summary: Project game leaderboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: around
+          in: query
+          description: Center the page on this player id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ranked leaderboard rows
+
+  /games/lobbies:
+    get:
+      summary: List game lobbies
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: gameMode
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [waiting, ready, starting, in_game, post_game]
+      responses:
+        "200":
+          description: Lobbies for the caller project
+
+  /games/lobbies/matchmake:
+    post:
+      summary: Find or create a lobby for the caller
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+                gameMode:
+                  type: string
+                maxPlayers:
+                  type: integer
+                roomId:
+                  type: string
+                skillRating:
+                  type: number
+      responses:
+        "200":
+          description: Lobby the caller joined (existing or new)
+        "400":
+          description: Matchmaking rejected
+
+  /games/lobbies/{lobbyId}/join:
+    post:
+      summary: Join a waiting lobby by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lobbyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: Updated lobby
+        "400":
+          description: Lobby full or not joinable
+        "404":
+          description: Unknown lobby
+
+  /games/lobbies/{lobbyId}/leave:
+    post:
+      summary: Leave a waiting lobby
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lobbyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: Updated lobby
+        "400":
+          description: Not in the lobby
+        "404":
+          description: Unknown lobby
+
+  /games/lobbies/{lobbyId}/start:
+    post:
+      summary: Start a match from a lobby
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lobbyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Created match (authoritative tick state in D1)
+        "400":
+          description: Not enough players or lobby already started
+
+  /games/parties:
+    get:
+      summary: List game parties
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Parties for the caller project
+    post:
+      summary: Create a game party
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                leaderId:
+                  type: string
+                roomId:
+                  type: string
+                maxMembers:
+                  type: integer
+      responses:
+        "200":
+          description: Created party
+        "400":
+          description: Leader required
+
+  /games/parties/{partyId}:
+    get:
+      summary: Get a party by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Party with members
+        "404":
+          description: Unknown party
+
+  /games/parties/{partyId}/join:
+    post:
+      summary: Join a party
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: Updated party
+        "400":
+          description: Party full
+        "404":
+          description: Unknown party
+
+  /games/parties/{partyId}/leave:
+    post:
+      summary: Leave a party
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: Updated party
+        "400":
+          description: Not in the party
+        "404":
+          description: Unknown party
+
+  /games/matches:
+    get:
+      summary: List game matches
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [playing, ended]
+      responses:
+        "200":
+          description: Matches for the caller project
+
+  /games/matches/{matchId}:
+    get:
+      summary: Get the match snapshot (reconnect view)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Match status and tick state from D1
+        "404":
+          description: Unknown match
+
+  /games/matches/{matchId}/input:
+    post:
+      summary: Submit player input for the next authoritative tick
+      description: The worker applies input and persists state; the browser never owns the score.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+                sequence:
+                  type: integer
+                actions:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+      responses:
+        "200":
+          description: Match state after applying the input
+        "400":
+          description: Match not playing or input rejected
+        "404":
+          description: Unknown match
+
+  /games/matches/{matchId}/end:
+    post:
+      summary: End a match with a result
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                result:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Ended match
+        "404":
+          description: Unknown match
+
+  /games/npcs:
+    get:
+      summary: List game NPCs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: NPCs for the caller project
+    put:
+      summary: Upsert a game NPC
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                personality:
+                  type: string
+                difficulty:
+                  type: number
+      responses:
+        "200":
+          description: Upserted NPC
+        "400":
+          description: Name required
+
+  /games/npcs/{npcId}/interact:
+    post:
+      summary: Talk to an NPC
+      description: Template replies with D1-persisted memory. Rate limited per project (`GAME_NPC_RATE_LIMIT_RPM`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: npcId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: NPC reply
+        "400":
+          description: Message required
+        "404":
+          description: Unknown NPC
+        "429":
+          description: Rate limit exceeded (see retryAfterSeconds)
+
+  /games/checkpoints:
+    get:
+      summary: List cloud checkpoints for a player
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: playerId
+          in: query
+          description: Defaults to the authenticated user
+          schema:
+            type: string
+        - name: roomId
+          in: query
+          schema:
+            type: string
+        - name: crdt
+          in: query
+          description: Merge the room Yjs snapshot when `1`
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Checkpoints (optionally merged with the room CRDT state)
+    put:
+      summary: Upsert a checkpoint with optimistic concurrency
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checkpointKey:
+                  type: string
+                state:
+                  type: object
+                  additionalProperties: true
+                expectedVersion:
+                  type: integer
+                playerId:
+                  type: string
+                roomId:
+                  type: string
+      responses:
+        "200":
+          description: Saved checkpoint
+        "400":
+          description: Key or state invalid
+        "409":
+          description: Version conflict (checkpoint returned for reload)
+
+  /games/checkpoints/crdt-snapshot:
+    get:
+      summary: Fetch the room CRDT snapshot for checkpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Encoded Yjs update plus checkpoint count
+        "400":
+          description: roomId required
+        "500":
+          description: Snapshot computation failed
+        "502":
+          description: Room DO unavailable
+
+  /games/checkpoints/{checkpointKey}:
+    get:
+      summary: Get one checkpoint
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: checkpointKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: playerId
+          in: query
+          schema:
+            type: string
+        - name: roomId
+          in: query
+          schema:
+            type: string
+        - name: crdt
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Checkpoint row
+        "400":
+          description: Checkpoint key or player id invalid
+    delete:
+      summary: Delete one checkpoint
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: checkpointKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: playerId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "400":
+          description: Checkpoint key or player id invalid
+
+  /games/checkpoints/{checkpointKey}/federate:
+    post:
+      summary: Federate a checkpoint to another room
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: checkpointKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+                sourceRoomId:
+                  type: string
+                targetRoomId:
+                  type: string
+      responses:
+        "200":
+          description: Federated checkpoint
+        "400":
+          description: Source and target room required
+        "404":
+          description: Checkpoint not found
+
+  /games/quests:
+    get:
+      summary: List game quests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [approved, pending, rejected]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quests for the caller project
+    post:
+      summary: Create a quest (keyword moderation before fan-out)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                roomId:
+                  type: string
+                objectives:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+      responses:
+        "200":
+          description: Quest created (approved, or held for moderation)
+        "400":
+          description: Title required
+
+  /games/quests/{questId}/moderate:
+    post:
+      summary: Approve or reject a held quest
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        "200":
+          description: Moderated quest (approved quests fan out to their room)
+        "400":
+          description: Invalid decision
+        "404":
+          description: Unknown quest
+
+  /games/quests/{questId}/progress:
+    post:
+      summary: Upsert player progress on an approved quest
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                progress:
+                  type: object
+                  additionalProperties: true
+                completed:
+                  type: boolean
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: Progress saved and fanned out to the quest room
+        "404":
+          description: Quest not found or not approved
+
+  /games/tournaments:
+    get:
+      summary: List game tournaments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [registration, active, completed]
+      responses:
+        "200":
+          description: Tournaments for the caller project
+    post:
+      summary: Create a tournament
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                maxPlayers:
+                  type: integer
+                prize:
+                  type: string
+                roomId:
+                  type: string
+                players:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Created tournament in registration
+        "400":
+          description: Name required
+
+  /games/tournaments/{tournamentId}:
+    get:
+      summary: Get a tournament with its bracket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tournament with rounds
+        "404":
+          description: Unknown tournament
+
+  /games/tournaments/{tournamentId}/join:
+    post:
+      summary: Register players in a tournament
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerId:
+                  type: string
+      responses:
+        "200":
+          description: Updated tournament
+        "400":
+          description: Player required or no room left
+        "404":
+          description: Unknown tournament
+
+  /games/tournaments/{tournamentId}/start:
+    post:
+      summary: Start a tournament and generate the first round
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                players:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Active tournament with the first bracket round
+        "400":
+          description: Not in registration or not enough players
+
+  /games/tournaments/{tournamentId}/matches/{matchId}/report:
+    post:
+      summary: Report a tournament match winner and advance the bracket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                winner:
+                  type: string
+      responses:
+        "200":
+          description: Updated tournament (next round generated when the round completes)
+        "404":
+          description: Unknown tournament or match
+  /iot/devices:
+    post:
+      summary: Register a device (returns a one-time apiKey)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  description: sensor, actuator, gateway, camera, display, speaker or custom
+                fleetId:
+                  type: string
+                roomId:
+                  type: string
+                  description: Room that receives the iot.reading fan-out (default iot:projectId)
+                firmwareVersion:
+                  type: string
+                metadata:
+                  type: object
+                location:
+                  type: object
+      responses:
+        "200":
+          description: Device row plus apiKey (shown once - store it on the device as Authorization Bearer iot_* or X-Device-Key)
+        "400":
+          description: name_required
+        "401":
+          description: Missing member JWT
+    get:
+      summary: List devices (fleet filter; status refreshed from last_seen)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fleetId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Devices for the project (offline after 10 minutes without readings)
+  /iot/devices/{deviceId}:
+    get:
+      summary: Get one device
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device row
+        "404":
+          description: Unknown device
+    delete:
+      summary: Delete a device with its readings, alarms, shadow and RPC queue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Unknown device
+  /iot/devices/{deviceId}/readings:
+    post:
+      summary: Ingest a reading (member JWT or the device key)
+      description: "Accepts a member JWT, or the device key for this device (Authorization: Bearer iot_* or X-Device-Key). Updates status, the reported shadow, fans out iot.reading on the device room and evaluates threshold rules."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sensor:
+                  type: string
+                  description: Defaults to value
+                value:
+                  type: number
+                unit:
+                  type: string
+      responses:
+        "200":
+          description: Reading plus alarms raised by matching rules
+        "400":
+          description: invalid_value
+        "404":
+          description: Unknown device
+        "429":
+          description: quota_exceeded (5000 readings per project per day) with retryAfterSeconds
+    get:
+      summary: List readings (sensor, time range, limit <= 500)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sensor
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Readings, newest first
+        "404":
+          description: Unknown device
+    delete:
+      summary: Delete readings, optionally filtered by sensor and time range
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sensor
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Unknown device
+  /iot/devices/{deviceId}/readings/keys:
+    get:
+      summary: List the distinct sensor keys seen for a device
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Distinct sensors
+        "404":
+          description: Unknown device
+  /iot/devices/{deviceId}/shadow:
+    get:
+      summary: Get the device shadow (reported + desired)
+      description: Accepts a member JWT or the device key for this device.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Shadow: deviceId, reported, desired, updatedAt"
+        "404":
+          description: Unknown device
+    patch:
+      summary: Patch the shadow (desired as member, reported as device)
+      description: "A member sends { desired } to set the target state; the device (or a member) sends { reported } to merge runtime state."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                desired:
+                  type: object
+                reported:
+                  type: object
+      responses:
+        "200":
+          description: Updated shadow
+        "404":
+          description: Unknown device
+  /iot/devices/{deviceId}/health:
+    get:
+      summary: Rolling health score for a device (or one sensor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sensor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "sampleSize, mean, slope, stdev, last, health (0-100) and alerts (spike, trend)"
+        "404":
+          description: Unknown device
+  /iot/devices/{deviceId}/rpc:
+    get:
+      summary: Pull the oldest pending RPC (device key or member JWT)
+      description: Accepts a member JWT or the device key for this device. Returns rpc null when the queue is empty.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pending RPC or null
+    post:
+      summary: Queue an RPC for a device (member only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - method
+              properties:
+                method:
+                  type: string
+                params:
+                  type: object
+      responses:
+        "201":
+          description: Queued RPC (status pending, persisted in D1)
+        "400":
+          description: method_required
+        "403":
+          description: Device keys cannot queue RPC
+        "404":
+          description: Unknown device
+  /iot/devices/{deviceId}/rpc/persistent:
+    get:
+      summary: List the device RPC queue with status and results
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Persistent RPCs (pending or replied)
+  /iot/devices/{deviceId}/rpc/{rpcId}:
+    post:
+      summary: Reply to an RPC (device key or member JWT)
+      description: Marks the RPC replied and stores the result. Accepts a member JWT or the device key for this device.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rpcId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                result: {}
+      responses:
+        "200":
+          description: RPC replied
+        "400":
+          description: Invalid request
+        "404":
+          description: Unknown or already-replied RPC
+    delete:
+      summary: Delete a queued or replied RPC
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rpcId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Unknown RPC
+  /iot/rules:
+    get:
+      summary: List threshold rules
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Rules with condition and action, newest first
+    post:
+      summary: Create a threshold rule
+      description: When a reading matches the condition, the rule raises an alarm on /iot/alarms. The action field is stored as declarative metadata and is not executed by the Worker.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - condition
+                - action
+              properties:
+                name:
+                  type: string
+                deviceId:
+                  type: string
+                fleetId:
+                  type: string
+                condition:
+                  type: object
+                  properties:
+                    sensor:
+                      type: string
+                    operator:
+                      type: string
+                      enum:
+                        - ">"
+                        - "<"
+                        - ">="
+                        - "<="
+                        - "=="
+                        - "!="
+                    value:
+                      type: number
+                action:
+                  type: object
+                  description: Declarative metadata (for example a chat_message intent); not executed today
+      responses:
+        "200":
+          description: Created rule
+        "400":
+          description: invalid_rule
+  /iot/alarms:
+    get:
+      summary: List alarms (optionally by device)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Alarms with severity, status, message and assignment
+  /iot/alarms/{alarmId}/ack:
+    post:
+      summary: Acknowledge an active alarm
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alarmId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Alarm acked
+        "404":
+          description: Unknown alarm or not active
+  /iot/alarms/{alarmId}/clear:
+    post:
+      summary: Clear an active or acked alarm
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alarmId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Alarm cleared
+        "404":
+          description: Unknown alarm or already cleared
+  /iot/alarms/{alarmId}/assign:
+    post:
+      summary: Assign an alarm to a member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alarmId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - assigneeId
+              properties:
+                assigneeId:
+                  type: string
+      responses:
+        "200":
+          description: Assigned
+        "400":
+          description: assigneeId_required
+        "404":
+          description: Unknown alarm
+    delete:
+      summary: Unassign an alarm
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alarmId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unassigned
+        "404":
+          description: Unknown alarm
+  /rooms/{roomId}/iot/events:
+    post:
+      summary: Ingest a device event as a room message (kind iot)
+      description: Requires room access. The event is persisted as a message, fanned out, and can trigger ambient agents on the room.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deviceId
+              properties:
+                deviceId:
+                  type: string
+                eventType:
+                  type: string
+                  description: Defaults to telemetry (alias type)
+                payload:
+                  type: object
+                  description: Event body (alias data)
+                actorUserId:
+                  type: string
+                  description: Author of the message, defaults to iot:deviceId
+      responses:
+        "201":
+          description: Message id, content and ambient agent summary
+        "400":
+          description: deviceId required or missing_fields
+        "403":
+          description: No access to the room
+  /fleet/gps:
+    post:
+      summary: Ingest one GPS location or a batch (vehicle key or member JWT)
+      description: "Accepts a member JWT, or a vehicle key (`fleet_…`) for this vehicle only (Authorization: Bearer or X-Device-Key) — a vehicle key works on this route exclusively and the Worker forces the key's own vehicleId. OwnTracks location JSON (`_type: location`) is accepted, arrays too; other `_type` values are skipped. Fans out `fleet.gps_update` on the room (default `fleet:{projectId}`)."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Limit-User
+          in: header
+          schema:
+            type: string
+          description: OwnTracks limit user (becomes vehicleId as user:device when the body has none)
+        - name: X-Limit-Device
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lat
+              properties:
+                vehicleId:
+                  type: string
+                lat:
+                  type: number
+                lng:
+                  type: number
+                  description: lon alias accepted
+                _type:
+                  type: string
+                  description: OwnTracks type; only location is ingested
+                tst:
+                  type: number
+                  description: unix seconds or ms
+                tid:
+                  type: string
+                speed:
+                  type: number
+                  description: vel alias accepted
+                heading:
+                  type: number
+                  description: cog alias accepted
+                accuracy:
+                  type: number
+                  description: acc alias accepted
+                batt:
+                  type: number
+                roomId:
+                  type: string
+                  description: Fan-out room (default fleet:projectId)
+      responses:
+        "200":
+          description: Ingest result (batch returns ok, count, results); geofenceEvents carries enter/exit transitions
+        "400":
+          description: Parse error or no_location when every item was skipped
+        "429":
+          description: quota_exceeded (60 points per vehicle per minute) with retryAfterSeconds
+  /fleet/gps/current:
+    get:
+      summary: Current positions of online vehicles (offline after 10 minutes)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+          description: device alias accepted
+      responses:
+        "200":
+          description: Online vehicles with lat/lng/heading/speed/lastSeenAt
+  /fleet/gps/last:
+    get:
+      summary: Alias of /fleet/gps/current (recorder "last")
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+        - name: device
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Online vehicles with lat/lng/heading/speed/lastSeenAt
+  /fleet/gps/history:
+    get:
+      summary: GPS history for a vehicle (newest first, reversed to chronological)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+          description: unix ms, unix seconds or ISO date (default now - 1h)
+        - name: to
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Cap 10000
+        - name: X-Limit-From
+          in: header
+          schema:
+            type: string
+          description: Recorder header fallback for from
+        - name: X-Limit-To
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Points with ts/lat/lng/speed/heading
+        "400":
+          description: vehicleId query param required
+  /fleet/gps/locations:
+    get:
+      summary: Alias of /fleet/gps/history (recorder "locations")
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Points with ts/lat/lng/speed/heading
+        "400":
+          description: vehicleId query param required
+  /fleet/vehicles:
+    get:
+      summary: List vehicles with last position and status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Vehicles for the project, sorted by name
+    post:
+      summary: Create a vehicle (returns a one-time apiKey)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                plate:
+                  type: string
+                driverId:
+                  type: string
+      responses:
+        "201":
+          description: Vehicle plus apiKey (fleet_..., shown once - the device then ingests with it)
+        "400":
+          description: name required (max 100 chars)
+  /fleet/vehicles/{vehicleId}:
+    patch:
+      summary: Update vehicle fields (name, plate, driverId, status)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                plate:
+                  type: string
+                driverId:
+                  type: string
+                status:
+                  type: string
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: body required or no fields to update
+  /fleet/trips:
+    get:
+      summary: List trips (optionally by status), newest first, cap 100
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - pending
+              - active
+              - completed
+              - cancelled
+      responses:
+        "200":
+          description: Trips with pickup/dropoff and distance
+    post:
+      summary: Create a trip (pending; distance computed with haversine)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - vehicleId
+                - pickupLat
+                - pickupLng
+                - dropoffLat
+                - dropoffLng
+              properties:
+                vehicleId:
+                  type: string
+                pickupLat:
+                  type: number
+                pickupLng:
+                  type: number
+                dropoffLat:
+                  type: number
+                dropoffLng:
+                  type: number
+                pickupAddress:
+                  type: string
+                dropoffAddress:
+                  type: string
+      responses:
+        "201":
+          description: Created trip (status pending, distanceMeters)
+        "400":
+          description: Parse error (vehicleId or coordinates)
+  /fleet/trips/{tripId}:
+    patch:
+      summary: Advance a trip (pending to active/cancelled, active to completed/cancelled)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - completed
+                    - cancelled
+      responses:
+        "200":
+          description: Updated (starting completes timestamps and sets the vehicle idle)
+        "400":
+          description: Valid status required or invalid transition
+        "404":
+          description: trip_not_found
+  /fleet/geofences:
+    get:
+      summary: List geofences (circle fences, meters radius)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Geofences sorted by name
+    post:
+      summary: Create a geofence (default radius 100 m)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - lat
+                - lng
+              properties:
+                name:
+                  type: string
+                lat:
+                  type: number
+                lng:
+                  type: number
+                radiusMeters:
+                  type: number
+      responses:
+        "201":
+          description: Created geofence
+        "400":
+          description: Parse error (name or lat/lng)
+  /fleet/geofences/{geofenceId}:
+    patch:
+      summary: Patch a geofence (name, lat, lng, radiusMeters)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: geofenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                lat:
+                  type: number
+                lng:
+                  type: number
+                radiusMeters:
+                  type: number
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid field or no fields to update
+        "404":
+          description: geofence_not_found
+    delete:
+      summary: Delete a geofence
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: geofenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: geofence_not_found
+  /fleet/geofence-events:
+    get:
+      summary: Stored enter/exit transitions, newest first, cap 500
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+        - name: geofenceId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: geofenceId, vehicleId, eventType (enter/exit), occurredAt
+  /fleet/delivery/nearest:
+    post:
+      summary: Nearest available drivers to a point (online or idle)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lat
+                - lng
+              properties:
+                lat:
+                  type: number
+                lng:
+                  type: number
+                limit:
+                  type: integer
+                  description: Default 5
+      responses:
+        "200":
+          description: Drivers with haversine distanceMeters, nearest first
+        "400":
+          description: lat/lng required
+  /fleet/delivery/match:
+    post:
+      summary: Match a delivery to the nearest driver and create the trip
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pickupLat
+                - pickupLng
+                - dropoffLat
+                - dropoffLng
+              properties:
+                pickupLat:
+                  type: number
+                pickupLng:
+                  type: number
+                dropoffLat:
+                  type: number
+                dropoffLng:
+                  type: number
+                pickupAddress:
+                  type: string
+                dropoffAddress:
+                  type: string
+      responses:
+        "201":
+          description: Trip plus driver with a heuristic etaMinutes (distance over ~30 km/h)
+        "400":
+          description: Coordinate parse error
+        "404":
+          description: no_available_drivers
+  /fleet/route/copilot:
+    post:
+      summary: Route options with an hour-of-day heuristic (not live traffic)
+      description: Deterministic heuristic - distance (haversine), an hourly traffic table and randomised weather, not a live traffic or maps provider.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pickupLat
+                - pickupLng
+                - dropoffLat
+                - dropoffLng
+              properties:
+                pickupLat:
+                  type: number
+                pickupLng:
+                  type: number
+                dropoffLat:
+                  type: number
+                dropoffLng:
+                  type: number
+      responses:
+        "200":
+          description: Copilot plan - estimatedDurationMin, three alternatives and advice
+        "400":
+          description: pickup/dropoff lat/lng required
+  /fleet/delivery/predict:
+    post:
+      summary: Predicted delivery window from past trips (heuristic)
+      description: Heuristic window - distance over an average speed, peak-hour factor and confidence derived from the project's completed trips, not an ML model.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pickupLat
+                - pickupLng
+                - dropoffLat
+                - dropoffLng
+              properties:
+                pickupLat:
+                  type: number
+                pickupLng:
+                  type: number
+                dropoffLat:
+                  type: number
+                dropoffLng:
+                  type: number
+      responses:
+        "200":
+          description: "Window - windowLow/Minutes, windowHigh/Minutes, confidencePercent, sampleSize"
+        "400":
+          description: pickup/dropoff lat/lng required
+  /fleet/pricing:
+    post:
+      summary: Dynamic pricing suggestion from the live demand ratio (heuristic)
+      description: Heuristic - active trips over available drivers drives the surge multiplier; the base price is demo-grade.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: "Pricing - basePrice, surgeMultiplier, surgePrice, surgeLabel, activeTrips, availableDrivers, demandRatio"
+  /api/live/events:
+    post:
+      summary: Create a live event
+      description: "`title` required; optional roomId, description, streamUrl, thumbnailUrl, category, tags. Returns { event }."
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                roomId:
+                  type: string
+                description:
+                  type: string
+                streamUrl:
+                  type: string
+                thumbnailUrl:
+                  type: string
+                category:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Created event
+        "400":
+          description: title required
+        "500":
+          description: storage failure, message in body
+    get:
+      summary: List live events (newest first)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter scheduled | live | ended
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Default 25
+      responses:
+        "200":
+          description: "List - { events }"
+  /api/live/events/{eventId}:
+    get:
+      summary: One live event (with stream keys once provisioned)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The event
+        "404":
+          description: not_found
+    patch:
+      summary: Partial update (title, description, status, streamUrl, thumbnailUrl, category, tags)
+      description: Returns an update ack; send status live to go live.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Update result - { updated }"
+  /api/live/events/{eventId}/provision:
+    post:
+      summary: Provision a Cloudflare Stream live input (WHIP/RTMPS ingest, HLS/DASH playback)
+      description: "Stores uid/rtmps_url/stream_key/whip_url/playback on the event and returns it. Idempotent once liveInputUid is set. 503 cloudflare_stream_not_configured when the Worker has no Cloudflare Stream secrets. Provider is the integrator's; bring your own Cloudflare account."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The provisioned event
+        "404":
+          description: not_found
+        "502":
+          description: Upstream provider failure
+        "503":
+          description: cloudflare_stream_not_configured
+  /api/live/events/{eventId}/input:
+    delete:
+      summary: Delete the Cloudflare Stream live input and clear stored stream keys
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Deletion ack - { deleted }"
+        "404":
+          description: not_found
+  /api/live/events/{eventId}/rules:
+    post:
+      summary: Upsert chat rules (slow mode, emote-only, follower/subscriber gates, link protection)
+      description: Creates on first call, updates afterwards; returns the id plus created or updated.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                slowModeSeconds:
+                  type: integer
+                emoteOnly:
+                  type: boolean
+                subscriberOnly:
+                  type: boolean
+                followerOnly:
+                  type: boolean
+                followerMinutes:
+                  type: integer
+                linkProtection:
+                  type: boolean
+                maxMessageLength:
+                  type: integer
+                cooldownSeconds:
+                  type: integer
+      responses:
+        "200":
+          description: Rules id and created/updated flag
+    get:
+      summary: Read chat rules for the event (null when never configured)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rules object or null
+  /api/live/events/{eventId}/moderate-frame:
+    post:
+      summary: Visual moderation of one base64 frame through the project's model
+      description: "503 visual_moderation_disabled when the feature is not configured; 400 imageBase64 required. Model calls are the project's own provider budget."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageBase64
+              properties:
+                imageBase64:
+                  type: string
+                roomId:
+                  type: string
+                frameIndex:
+                  type: integer
+                messageId:
+                  type: integer
+      responses:
+        "200":
+          description: "Analysis - ok, severity, safe, analysis"
+        "400":
+          description: imageBase64 required or moderation rejected the frame
+        "404":
+          description: not_found
+        "503":
+          description: visual_moderation_disabled
+  /api/live/events/{eventId}/join:
+    post:
+      summary: Join as viewer (userId from the JWT)
+      description: "Idempotent; returns the viewer id and alreadyJoined on repeat calls."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Viewer row - { id, alreadyJoined? }"
+  /api/live/events/{eventId}/leave:
+    post:
+      summary: Mark the caller's viewer row as left
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Leave ack - { left }"
+  /api/live/events/{eventId}/viewers:
+    get:
+      summary: List viewers (role filter, default limit 100)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Viewer rows (userId, username, role, joinedAt, leftAt, isBanned, isMuted)
+  /api/live/events/{eventId}/viewer-count:
+    get:
+      summary: Current viewer count
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Count - { count }"
+  /api/live/events/{eventId}/peak:
+    get:
+      summary: Peak and total viewers recorded for the event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Peak - { peakViewers, totalViewers }"
+    post:
+      summary: Recompute the peak from the current viewer count
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Updated peak - { peakViewers }"
+  /api/live/events/{eventId}/ban:
+    post:
+      summary: Ban a viewer from the event chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: "Ban ack - { banned }"
+  /api/live/events/{eventId}/mute:
+    post:
+      summary: Mute or unmute a viewer in the event chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                muted:
+                  type: boolean
+      responses:
+        "200":
+          description: "Mute ack - { muted }"
+  /api/live/events/{eventId}/pin:
+    post:
+      summary: Pin a chat message (OBS overlay friendly)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+              properties:
+                messageId:
+                  type: string
+      responses:
+        "200":
+          description: "Pin id - { id }"
+  /api/live/events/{eventId}/unpin:
+    post:
+      summary: Unpin by pin id (pinId in the body, the path segment is decorative)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pinId
+              properties:
+                pinId:
+                  type: string
+      responses:
+        "200":
+          description: "Unpin ack - { unpinned }"
+  /api/live/events/{eventId}/pinned:
+    get:
+      summary: List active pinned messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pin rows (messageId, pinnedBy, pinnedAt, sortOrder)
+  /api/live/events/{eventId}/messages:
+    post:
+      summary: Post a chat message as the caller
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                username:
+                  type: string
+                contentType:
+                  type: string
+                badge:
+                  type: string
+                color:
+                  type: string
+                replyToId:
+                  type: string
+      responses:
+        "200":
+          description: "Message id - { id }"
+    get:
+      summary: List chat messages (ascending, default limit 100, before cursor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: before
+          in: query
+          schema:
+            type: string
+          description: ISO timestamp cursor
+      responses:
+        "200":
+          description: Message rows oldest first (deleted messages excluded)
+  /api/live/events/{eventId}/analytics:
+    post:
+      summary: Upsert one per-minute analytics bucket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - timestampBucket
+              properties:
+                timestampBucket:
+                  type: string
+                messagesCount:
+                  type: integer
+                viewersCount:
+                  type: integer
+                peakViewers:
+                  type: integer
+                newViewers:
+                  type: integer
+                uniqueChatters:
+                  type: integer
+                avgMessageLength:
+                  type: number
+                engagementRate:
+                  type: number
+      responses:
+        "200":
+          description: "Bucket id - { id }"
+    get:
+      summary: Buckets in [fromBucket, toBucket], ascending
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fromBucket
+          in: query
+          schema:
+            type: string
+        - name: toBucket
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Analytics bucket rows
+  /api/live/stats:
+    get:
+      summary: Project stream totals
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: "Stats - events by status, totalMessages, totalViewers"
+  /api/live/events/{eventId}/angles:
+    get:
+      summary: List multi-camera angles (by sort order)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Angle rows (label, streamUrl, sortOrder, enabled, playbackHls)
+    post:
+      summary: Create an angle; provisionCloudflare gives it its own Cloudflare Stream input
+      description: 503 cloudflare_angle_provision_failed when the provider call fails.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                streamUrl:
+                  type: string
+                sortOrder:
+                  type: integer
+                provisionCloudflare:
+                  type: boolean
+      responses:
+        "200":
+          description: "Angle - { id, liveInputUid, playbackHls }"
+        "503":
+          description: cloudflare_angle_provision_failed
+  /api/live/events/{eventId}/highlights:
+    get:
+      summary: List timeline highlights (newest first)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Highlight rows (title, startSeconds, endSeconds, reason, clipUrl, status)
+    post:
+      summary: Suggest a highlight (status starts at suggested)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                startSeconds:
+                  type: number
+                endSeconds:
+                  type: number
+                reason:
+                  type: string
+                clipUrl:
+                  type: string
+      responses:
+        "200":
+          description: "Highlight id - { id }"
+  /api/live/events/{eventId}/products:
+    get:
+      summary: List live-shopping products for the event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product rows (name, checkoutUrl, priceAmount, inventoryQty, moq, unitsSold)
+    post:
+      summary: Create or update a product by id (external https checkout, optional Stripe price)
+      description: "checkout_url is validated https. With stripePriceId the project's Stripe secret is required (stripe_not_configured otherwise). 404 event_not_found."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                imageUrl:
+                  type: string
+                checkoutUrl:
+                  type: string
+                stripePriceId:
+                  type: string
+                checkoutProvider:
+                  type: string
+                priceAmount:
+                  type: integer
+                currency:
+                  type: string
+                inventoryQty:
+                  type: integer
+                moq:
+                  type: integer
+      responses:
+        "200":
+          description: "Product - { product }"
+        "400":
+          description: Validation error (bad URL, missing fields)
+        "404":
+          description: event_not_found
+  /api/live/events/{eventId}/products/{productId}/show:
+    post:
+      summary: Show the product to the audience
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Product - { product }"
+        "404":
+          description: product_not_found
+  /api/live/events/{eventId}/products/{productId}/checkout-click:
+    post:
+      summary: Record a checkout click; decrements inventory and enforces MOQ
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                successUrl:
+                  type: string
+                cancelUrl:
+                  type: string
+      responses:
+        "200":
+          description: Checkout result (checkoutUrl, paymentStatus, quantity, product)
+        "400":
+          description: Validation error
+        "404":
+          description: product_not_found
+        "409":
+          description: insufficient_inventory or below_moq
+  /api/live/events/{eventId}/replays:
+    get:
+      summary: List replays for the event (Cloudflare-synced and manual)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "List - { replays }"
+    post:
+      summary: Register a manual replay (validated https playback URLs)
+      description: 404 event_not_found; other validation errors are 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - playbackHls
+              properties:
+                playbackHls:
+                  type: string
+                playbackDash:
+                  type: string
+                label:
+                  type: string
+                thumbnailUrl:
+                  type: string
+                durationSeconds:
+                  type: number
+                angleId:
+                  type: string
+                offsetMs:
+                  type: integer
+                syncGroupId:
+                  type: string
+      responses:
+        "200":
+          description: "Replay - { replay }"
+        "400":
+          description: Validation error
+        "404":
+          description: event_not_found
+  /api/live/events/{eventId}/replays/reconcile:
+    post:
+      summary: Pull finished Cloudflare Stream videos into replays
+      description: Needs the Cloudflare Stream secrets (503 cloudflare_stream_not_configured) and a provisioned live input.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Reconcile result - { replays, synced, syncGroupId? }"
+        "404":
+          description: event_not_found
+        "503":
+          description: cloudflare_stream_not_configured
+        "502":
+          description: Upstream provider failure
+  /api/live/events/{eventId}/replays/reconcile-angles:
+    post:
+      summary: Reconcile per-angle replays into a sync group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Reconcile result - { replays, synced, syncGroupId? }"
+        "400":
+          description: no_live_input or other reconciliation error
+        "503":
+          description: cloudflare_stream_not_configured
+        "502":
+          description: Upstream provider failure
+  /api/live/events/{eventId}/replay:
+    get:
+      summary: Replay bundle - primary replay, per-angle replays and the chat timeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Bundle - replay, angleReplays, syncGroupId, chatTimeline"
+  /api/live/events/{eventId}/replay/primary:
+    get:
+      summary: Primary replay for the event (or null)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Primary replay - { replay }"
+  /api/live/events/{eventId}/gifts:
+    get:
+      summary: List gifts/tips for the event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Gift rows (giftType, amount, currency, paymentStatus)
+    post:
+      summary: Record a gift/tip (payment_status starts pending)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                giftType:
+                  type: string
+                amount:
+                  type: number
+                currency:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        "200":
+          description: "Gift id - { id }"
+  /api/live/events/{eventId}/sentiment:
+    get:
+      summary: Sentiment buckets by minute (read-only contract)
+      description: The Worker currently has no producer for this table - populate live_stream_sentiment from your own analytics pipeline.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sentiment rows (timestampBucket, positive, neutral, negative, score)
+  /api/live/turn-credentials:
+    get:
+      summary: Ephemeral TURN credentials for WebRTC relay
+      description: "HMAC credentials when TURN_SECRET is set (Coturn REST pattern), Metered.ca proxy when TURN_API_URL and TURN_API_KEY are set; otherwise a public STUN fallback with an explicit note. Relay infrastructure is the integrator's."
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: "iceServers and ttl (3600)"
+  /overlays:
+    post:
+      summary: Create an OBS-ready overlay card for a room (admin or owner JWT)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - roomId
+              properties:
+                name:
+                  type: string
+                roomId:
+                  type: string
+                overlayType:
+                  type: string
+                config:
+                  type: object
+                style:
+                  type: object
+                refreshSeconds:
+                  type: integer
+      responses:
+        "201":
+          description: The overlay
+        "400":
+          description: name and roomId required
+    get:
+      summary: List overlays (optional roomId filter)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "List - { overlays, count }"
+  /overlays/{overlayId}:
+    get:
+      summary: One overlay
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: overlayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The overlay
+        "404":
+          description: not_found
+    patch:
+      summary: Partial overlay update (admin or owner JWT)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: overlayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The updated overlay
+        "400":
+          description: Invalid patch
+    delete:
+      summary: Delete the overlay (admin or owner JWT)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: overlayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Deletion ack - { ok }"
+  /overlays/{overlayId}/widget:
+    get:
+      summary: Widget payload for OBS browser sources (no auth)
+      description: Meant to be embedded in a browser source; no JWT is required on this path.
+      parameters:
+        - name: overlayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Widget payload
+        "404":
+          description: not_found

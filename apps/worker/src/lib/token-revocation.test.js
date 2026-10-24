@@ -176,7 +176,7 @@ describe("verifier integration — revoked token is rejected end-to-end", () => 
     expect(after.__status).toBe(401);
   });
 
-  it("tokens without jti bypass the KV lookup entirely (legacy compatible)", async () => {
+  it("tokens without jti are rejected (audit F-04: unrevocable)", async () => {
     const secret = "s2";
     const token = await signJwtHs256(secret, {
       sub: "u",
@@ -214,8 +214,12 @@ describe("verifier integration — revoked token is rejected end-to-end", () => 
       headers: { Authorization: `Bearer ${token}` },
     });
     const mod = await import("./jwt-auth.js");
-    const ctx = await mod.verifyJwtAndGetContext(req, env);
-    expect(ctx.userId).toBe("u");
+    const err = await mod.verifyJwtAndGetContext(req, env).then(
+      () => null,
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(Response);
+    expect(err.status).toBe(401);
     expect(getSpy).not.toHaveBeenCalled();
   });
 });

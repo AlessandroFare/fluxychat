@@ -5,4 +5,16 @@ description: "Realtime history has a gap that could not be filled"
 
 # 10200 — discontinuity
 
-Resume could not fill a sequence hole. The SDK emits `discontinuity` and jumps the cursor. Not terminal. Reload history if the UI must be exact.
+Resume could not fill a hole in the realtime history — events between the last cursor and now are missing. Not terminal.
+
+**At a glance** — no HTTP status · the SDK emits a `discontinuity` event and jumps the cursor forward.
+
+## What to do
+
+- If the UI must be exact, reload message history from REST instead of patching the gap in place.
+- Otherwise continue from the new cursor — the stream is live again after the jump.
+- Occasional discontinuities after long offline periods are expected; treat frequent ones as a signal, not noise.
+
+## Related
+
+- [50000 connection_failed](/docs/errors/connection_failed)

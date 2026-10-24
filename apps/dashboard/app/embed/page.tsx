@@ -170,7 +170,11 @@ export default function EmbedWidgetPage() {
       {loading && !config ? (
         <SkeletonCard />
       ) : !token ? (
-        <EmptyState title="Sign in required" description="Open the dashboard with an admin JWT." />
+        <EmptyState
+          title="Sign in required"
+          description="Open the dashboard with an admin JWT to configure the embed."
+          action={{ label: "Open Quickstart", href: "/onboarding" }}
+        />
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <Panel title="Configuration">

@@ -2,6 +2,8 @@
  * CP-046: Proactive embed trigger rules (URL pattern + dwell time).
  */
 
+import { compileSafeRegex } from "./safe-regex.js";
+
 const MAX_RULES = 20;
 const MAX_PATTERN_LEN = 200;
 const MAX_MESSAGE_LEN = 160;
@@ -76,7 +78,11 @@ export function urlMatchesProactivePattern(pattern, href) {
     return path === pattern || path.startsWith(`${pattern}?`);
   }
   try {
-    return new RegExp(pattern).test(href);
+    // Audit F-51: configured pattern — reject ReDoS shapes, fall back to a
+    // literal match.
+    const re = compileSafeRegex(pattern);
+    if (!re) return href.includes(pattern);
+    return re.test(href);
   } catch {
     return href.includes(pattern);
   }

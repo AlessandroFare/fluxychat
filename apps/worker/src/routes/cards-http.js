@@ -1,5 +1,6 @@
 import { pickRouteDeps } from "./route-http-deps.js";
 import { cardToFallbackText } from "../lib/cards.js";
+import { internalDoHeaders } from "../lib/room-shard.js";
 
 const CARD_MARKER_START = "<!--fluxy-card:v1-->";
 const CARD_MARKER_END = "<!--/fluxy-card-->";
@@ -81,6 +82,7 @@ export async function dispatchCardsRoutes(request, url, h) {
     const stub = env.ROOM.get(id);
     await stub.fetch("https://internal/announce", {
       method: "POST",
+      headers: internalDoHeaders(env),
       body: JSON.stringify({ type: "message", ...message }),
     }).catch((err) => logError("cards.announce_failed", err, requestLogCtx));
 

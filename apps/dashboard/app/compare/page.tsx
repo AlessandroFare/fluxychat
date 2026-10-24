@@ -24,6 +24,7 @@ import { MarketingShell } from "../components/marketing-shell";
 import { CloudflareCostTable } from "~/components/marketing/cloudflare-cost-table";
 import { DEVTO_SOCKET_FLEET_ARTICLE } from "@/lib/marketing-links";
 import { HOSTED_PATHS } from "@/lib/hosted-product";
+import styles from "../landing/landing-c.module.css";
 
 export const metadata = buildPageMetadata({
   title: "Compare FluxyChat vs Pusher, Ably, Stream, hosted chat SDKs",
@@ -84,16 +85,12 @@ function CompareTable({
 
 export default function ComparePage() {
   return (
-    <MarketingShell className="py-16 sm:py-16">
-      <p className="text-sm text-muted-foreground">
-        <Link href={HOSTED_PATHS.landing} className="text-brand underline underline-offset-2">
-          ← Back to landing
-        </Link>
-      </p>
-      <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-        Compare FluxyChat
-      </h1>
-      <p className="mt-3 max-w-2xl text-muted-foreground">
+    <MarketingShell className={styles.pageWide}>
+      <header className={styles.pageHero}>
+        <div className={styles.pageHeroCopy}>
+          <span className={styles.pageEyebrow}>Compare / build vs buy</span>
+          <h1 className={styles.pageTitle}>Compare FluxyChat.</h1>
+          <p className={styles.pageLede}>
         Put a room in the product and you are done shopping for a stack. Chat, presence, Yjs, and an agent on the same Durable Object. Guest widget on a public room takes minutes. Member JWT when you ship. MIT on your Cloudflare account when procurement asks who owns the data.
         Spec lives at{" "}
         <a href="https://docs.fluxychat.com" className="text-brand underline underline-offset-2">
@@ -103,7 +100,18 @@ export default function ComparePage() {
         <Link href={MARKETING_GUIDE_PATHS.pusherAlternativeSaas} className="text-brand underline underline-offset-2">
           Pusher alternative guide
         </Link>
-      </p>
+          </p>
+          <div className={styles.pageActions}>
+            <Link href="/demo" className={`${styles.btn} ${styles.btnPrimary}`}>Open the playground</Link>
+            <a href="https://docs.fluxychat.com" className={`${styles.btn} ${styles.btnGhost}`}>Read the docs</a>
+          </div>
+        </div>
+        <div className={styles.pageMeta}>
+          <span><strong>Room</strong> not transport</span>
+          <span><strong>MIT</strong> self-host</span>
+          <span><strong>Hosted</strong> beta</span>
+        </div>
+      </header>
 
       <h2 className="mt-10 font-heading text-xl font-semibold tracking-tight">
         {PUSHER_ALTERNATIVE_ANSWER.title}
@@ -232,7 +240,7 @@ export default function ComparePage() {
         SDK bundle size
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Gzip sizes from CI (<code className="text-xs">pnpm run check:bundle-size</code>).
+        Gzip sizes from CI (<code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">pnpm run check:bundle-size</code>).
         App bundles tree-shake imports, so chat-only paths stay small. See the{" "}
         <Link href="/docs/guides/feature-parity-checklist" className="text-brand underline underline-offset-2">
           feature parity checklist
@@ -477,7 +485,7 @@ export default function ComparePage() {
           <Link href={HOSTED_PATHS.getStarted}>Get started</Link>
         </Button>
         <Button asChild variant="outline">
-          <Link href="/demo">Try demo room</Link>
+          <Link href="/demo">Open Playground</Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/why">Why FluxyChat</Link>

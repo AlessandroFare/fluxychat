@@ -1,5 +1,7 @@
 import { importAdminMessage } from "./message-import.js";
 import { deriveScopedClientMessageId } from "./client-message-id.js";
+import { encryptSecret, decryptSecret } from "./secrets-crypto.js";
+import { enqueueBridgeDelivery, processPendingBridgeDeliveries } from "./bridge-delivery.js";
 
 function generateId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -7,18 +9,131 @@ function generateId() {
     .join("");
 }
 
-export async function createBridgeConfig(env, { projectId, platform, name, token, webhookUrl, botUserId, botDisplayName, settings }) {
+function parseSettingsSafely(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function createBridgeConfig(env, { projectId, platform, name, token, webhookUrl, botUserId, botDisplayName, settings, signingSecret }) {
   const id = `br_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
 
+  // Secrets encrypted at rest (AES-GCM, same key as webhook secrets) when
+  // WEBHOOK_SECRET_ENCRYPTION_KEY is set; plaintext fallback for local dev only.
+  let tokenPlain = token || null;
+  let tokenCiphertext = null;
+  let tokenIv = null;
+  if (token) {
+    const enc = await encryptSecret(env, token);
+    if (enc) {
+      tokenPlain = null;
+      tokenCiphertext = enc.ciphertext;
+      tokenIv = enc.iv;
+    }
+  }
+
+  const settingsObj = settings && typeof settings === "object" ? { ...settings } : null;
+  if (settingsObj) {
+    delete settingsObj.signingSecret;
+    delete settingsObj.publicKey;
+  }
+  let signingCiphertext = null;
+  let signingIv = null;
+  if (signingSecret) {
+    const enc = await encryptSecret(env, signingSecret);
+    if (enc) {
+      signingCiphertext = enc.ciphertext;
+      signingIv = enc.iv;
+    } else if (settingsObj) {
+      // shortcut: plaintext fallback when no encryption key is configured (local dev); upgrade when REQUIRE env ships for bridges
+      settingsObj.signingSecret = signingSecret;
+    }
+  }
+
   await env.DB.prepare(
-    `INSERT INTO bridge_configs (id, project_id, platform, name, token, webhook_url, bot_user_id, bot_display_name, status, settings, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'disconnected', ?, ?, ?)`
+    `INSERT INTO bridge_configs (id, project_id, platform, name, token, token_ciphertext, token_iv, webhook_url, bot_user_id, bot_display_name, status, settings, signing_secret_ciphertext, signing_secret_iv, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'disconnected', ?, ?, ?, ?, ?)`
   )
-    .bind(id, projectId, platform, name, token || null, webhookUrl || null, botUserId || null, botDisplayName || null, settings ? JSON.stringify(settings) : null, now, now)
+    .bind(id, projectId, platform, name, tokenPlain, tokenCiphertext, tokenIv, webhookUrl || null, botUserId || null, botDisplayName || null, settingsObj ? JSON.stringify(settingsObj) : null, signingCiphertext, signingIv, now, now)
     .run();
 
   return { id, status: "disconnected" };
+}
+
+/**
+ * Decrypted signing secret (Slack) or application public key (Discord) for inbound verification.
+ */
+export async function getBridgeSigningSecret(env, { bridgeId }) {
+  const row = await env.DB.prepare(
+    "SELECT settings, signing_secret_ciphertext, signing_secret_iv FROM bridge_configs WHERE id = ?"
+  ).bind(bridgeId).first();
+  if (!row) return null;
+  if (row.signing_secret_ciphertext && row.signing_secret_iv) {
+    const decrypted = await decryptSecret(env, row.signing_secret_ciphertext, row.signing_secret_iv);
+    if (decrypted) return decrypted;
+  }
+  const settings = parseSettingsSafely(row.settings);
+  return settings?.signingSecret || settings?.publicKey || null;
+}
+
+/**
+ * Update identity/secrets of an existing bridge (set-only; secrets are replaced, not merged).
+ */
+export async function updateBridgeConfig(env, { bridgeId, name, token, signingSecret, webhookUrl, botUserId, botDisplayName }) {
+  const updates = [];
+  const binds = [];
+
+  if (typeof name === "string" && name.trim()) {
+    updates.push("name = ?");
+    binds.push(name.trim());
+  }
+  if (typeof token === "string" && token) {
+    const enc = await encryptSecret(env, token);
+    if (enc) {
+      updates.push("token = NULL", "token_ciphertext = ?", "token_iv = ?");
+      binds.push(enc.ciphertext, enc.iv);
+    } else {
+      updates.push("token = ?", "token_ciphertext = NULL", "token_iv = NULL");
+      binds.push(token);
+    }
+  }
+  if (typeof signingSecret === "string" && signingSecret) {
+    const enc = await encryptSecret(env, signingSecret);
+    if (enc) {
+      updates.push("signing_secret_ciphertext = ?", "signing_secret_iv = ?");
+      binds.push(enc.ciphertext, enc.iv);
+    } else {
+      const row = await env.DB.prepare("SELECT settings FROM bridge_configs WHERE id = ?").bind(bridgeId).first();
+      const settings = parseSettingsSafely(row?.settings) || {};
+      settings.signingSecret = signingSecret;
+      updates.push("settings = ?");
+      binds.push(JSON.stringify(settings));
+    }
+  }
+  if (typeof webhookUrl === "string") {
+    updates.push("webhook_url = ?");
+    binds.push(webhookUrl || null);
+  }
+  if (typeof botUserId === "string") {
+    updates.push("bot_user_id = ?");
+    binds.push(botUserId || null);
+  }
+  if (typeof botDisplayName === "string") {
+    updates.push("bot_display_name = ?");
+    binds.push(botDisplayName || null);
+  }
+  if (!updates.length) return { updated: 0 };
+
+  updates.push("updated_at = ?");
+  binds.push(new Date().toISOString(), bridgeId);
+  const result = await env.DB.prepare(`UPDATE bridge_configs SET ${updates.join(", ")} WHERE id = ?`)
+    .bind(...binds)
+    .run();
+  return { updated: result.meta?.changes || 0 };
 }
 
 export async function connectBridge(env, { bridgeId }) {
@@ -67,6 +182,7 @@ export async function listBridgeConfigs(env, { projectId, platform }) {
 export async function deleteBridgeConfig(env, { bridgeId }) {
   await env.DB.prepare("DELETE FROM bridge_channel_mappings WHERE bridge_id = ?").bind(bridgeId).run();
   await env.DB.prepare("DELETE FROM bridge_message_map WHERE bridge_id = ?").bind(bridgeId).run();
+  await env.DB.prepare("DELETE FROM bridge_deliveries WHERE bridge_id = ?").bind(bridgeId).run();
   const result = await env.DB.prepare("DELETE FROM bridge_configs WHERE id = ?").bind(bridgeId).run();
   return { deleted: result.meta?.changes || 0 };
 }
@@ -74,13 +190,15 @@ export async function deleteBridgeConfig(env, { bridgeId }) {
 export async function createChannelMapping(env, { bridgeId, projectId, fluxychatRoomId, externalChannelId, externalChannelName, syncDirection, syncReactions, syncAttachments, autoReply }) {
   const id = `bcm_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
+  // The dashboard historically sent "bidirectional"; the schema CHECK allows "both".
+  const direction = syncDirection === "inbound" || syncDirection === "outbound" ? syncDirection : "both";
 
   await env.DB.prepare(
     `INSERT INTO bridge_channel_mappings (id, bridge_id, project_id, fluxychat_room_id, external_channel_id, external_channel_name, sync_direction, sync_reactions, sync_attachments, auto_reply, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(id, bridgeId, projectId, fluxychatRoomId, externalChannelId, externalChannelName || null,
-      syncDirection || "both", syncReactions !== false ? 1 : 0, syncAttachments !== false ? 1 : 0, autoReply ? 1 : 0, now)
+      direction, syncReactions !== false ? 1 : 0, syncAttachments !== false ? 1 : 0, autoReply ? 1 : 0, now)
     .run();
 
   return { id };
@@ -293,21 +411,36 @@ export async function syncOutboundMessage(env, { bridgeId, projectId, fluxychatM
 
   const existing = await findExternalMessage(env, { fluxychatMessageId });
   if (existing) return { error: "already_synced" };
+  if (!content || typeof content !== "string") return { error: "content_required" };
 
-  await recordBridgeEvent(env, {
-    bridgeId, projectId, eventType: "message_sync", direction: "outbound",
-    payload: { fluxychatMessageId, externalChannelId, content },
+  const queued = await enqueueBridgeDelivery(env, {
+    bridgeId,
+    projectId,
+    fluxychatMessageId,
+    externalChannelId,
+    content,
   });
+  await processPendingBridgeDeliveries(env);
+  const delivery = await env.DB.prepare(
+    "SELECT status, attempt_count, last_http_status, last_error FROM bridge_deliveries WHERE id = ?"
+  ).bind(queued.id).first();
 
-  return { externalChannelId, content, fluxychatMessageId };
+  return { externalChannelId, content, fluxychatMessageId, delivery: delivery || null };
 }
 
 function mapConfigRow(row) {
+  const settings = parseSettingsSafely(row.settings);
+  let hasSigningSecret = Boolean(row.signing_secret_ciphertext);
+  if (settings && (settings.signingSecret || settings.publicKey)) {
+    hasSigningSecret = true;
+    delete settings.signingSecret;
+    delete settings.publicKey;
+  }
   return {
     id: row.id, projectId: row.project_id, platform: row.platform,
-    name: row.name, token: row.token ? "•••" : null, webhookUrl: row.webhook_url,
+    name: row.name, token: row.token || row.token_ciphertext ? "•••" : null, webhookUrl: row.webhook_url,
     botUserId: row.bot_user_id, botDisplayName: row.bot_display_name,
-    status: row.status, settings: row.settings ? JSON.parse(row.settings) : null,
+    status: row.status, settings, hasSigningSecret,
     lastSyncAt: row.last_sync_at, errorMessage: row.error_message,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };

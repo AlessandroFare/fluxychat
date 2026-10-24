@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Shield, Plus, Trash2 } from "lucide-react";
+import { Shield, Plus, Trash2 } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Banner, Button, Panel, Section } from "../../components/ui";
+import { Banner, Button, Panel, Section, SkeletonCard } from "../../components/ui";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { messageFromUnknown } from "@/lib/error-message";
 import {
@@ -69,7 +69,15 @@ export default function AgentToolsPolicyPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function handleSave() {
@@ -137,8 +145,9 @@ export default function AgentToolsPolicyPage() {
       <ConsoleFeedback error={error} notice={notice} />
 
       {loading ? (
-        <div className="flex items-center text-muted-foreground">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <Section title="Policy rules">
@@ -210,7 +219,7 @@ export default function AgentToolsPolicyPage() {
                       onChange={(e) => updateRule(index, { reason: e.target.value })}
                       placeholder="Reason shown in audit"
                     />
-                    <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => removeRule(index)}>
+                    <Button type="button" size="sm" variant="ghost" aria-label={`Remove rule ${index + 1}`} className="text-destructive" onClick={() => removeRule(index)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>

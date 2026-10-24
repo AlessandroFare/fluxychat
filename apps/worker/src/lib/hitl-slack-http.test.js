@@ -45,7 +45,7 @@ function makeMappedEnv() {
                   approval.status = "approved";
                   approval.decided_by = "user_ana";
                 }
-                return { success: true };
+                return { success: true, meta: { changes: 1 } };
               },
             };
           },

@@ -1,9 +1,9 @@
-import { handleSlackRequest, createSlackBot } from "./bot.js";
+import { handleSlackRequest, createSlackBot, type BotEnv } from "./bot.js";
 
 const bot = createSlackBot();
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/slack/events" || url.pathname === "/slack/interactive") {

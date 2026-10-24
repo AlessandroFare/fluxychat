@@ -19,7 +19,7 @@ export async function createWorkflow(env, { projectId, name, description, trigge
   return { id };
 }
 
-export async function updateWorkflow(env, { workflowId, name, description, status, triggerConfig, actions, conditions, errorHandling }) {
+export async function updateWorkflow(env, { workflowId, projectId, name, description, status, triggerConfig, actions, conditions, errorHandling }) {
   const now = new Date().toISOString();
   const sets = ["updated_at = ?"];
   const params = [now];
@@ -31,7 +31,10 @@ export async function updateWorkflow(env, { workflowId, name, description, statu
   if (conditions) { sets.push("conditions = ?"); params.push(JSON.stringify(conditions)); }
   if (errorHandling) { sets.push("error_handling = ?"); params.push(errorHandling); }
   params.push(workflowId);
-  await env.DB.prepare(`UPDATE workflow_definitions SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  let sql = `UPDATE workflow_definitions SET ${sets.join(", ")} WHERE id = ?`;
+  // Audit fix A2-6: scope the update to the caller's project (IDOR guard).
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 
@@ -535,14 +538,17 @@ export async function createSchedule(env, { workflowId, projectId, scheduleType,
   return { id };
 }
 
-export async function updateSchedule(env, { scheduleId, enabled, nextRunAt }) {
+export async function updateSchedule(env, { scheduleId, projectId, enabled, nextRunAt }) {
   const sets = [];
   const params = [];
   if (enabled !== undefined) { sets.push("enabled = ?"); params.push(enabled ? 1 : 0); }
   if (nextRunAt) { sets.push("next_run_at = ?"); params.push(nextRunAt); }
   if (sets.length === 0) return { updated: 0 };
   params.push(scheduleId);
-  await env.DB.prepare(`UPDATE workflow_schedules SET ${sets.join(", ")} WHERE id = ?`).bind(...params).run();
+  let sql = `UPDATE workflow_schedules SET ${sets.join(", ")} WHERE id = ?`;
+  // Audit fix A2-6: scope the update to the caller's project (IDOR guard).
+  if (projectId) { sql += " AND project_id = ?"; params.push(projectId); }
+  await env.DB.prepare(sql).bind(...params).run();
   return { updated: true };
 }
 

@@ -9,6 +9,7 @@ import {
   BarChart3,
   Clock,
   FileImage,
+  Forward,
   Gavel,
   Globe,
   Loader2,
@@ -19,6 +20,7 @@ import {
   Smile,
   Sparkles,
   Square,
+  Star,
   Copy,
   Pencil,
   RotateCw,
@@ -119,6 +121,9 @@ import {
 import { listSlashCommands, type RoomCommand } from "@/lib/slash-commands-client";
 import { fetchMentionSuggestions, localMentionSuggestions } from "@/lib/mentions-client";
 import { RoomInfoPanel, RoomInfoToggle } from "~/components/chat/room-info-panel";
+import { CustomEmojiText, type CustomEmojiEntry } from "~/components/chat/custom-emoji-text";
+import { MessageHistoryDialog } from "~/components/chat/message-history-dialog";
+import { ForwardMessageDialog } from "~/components/chat/forward-message-dialog";
 import { cn } from "@/lib/utils";
 
 // shadcn UI primitives
@@ -376,6 +381,7 @@ interface PendingComposePayload {
   parentId: number | null;
   attachments: FluxyChatAttachment[];
   tool: PendingTool;
+  alsoSendToChannel?: boolean;
 }
 
 type ComposerAction = "poll" | "decision" | "schedule" | null;
@@ -493,6 +499,11 @@ export function FluxyChat({
   const [confirmBeforeSend, setConfirmBeforeSend] = useState(showCopilotConfirm ? coPilotConfirmDefault : false);
   const [draft, setDraft] = useState("");
   const [replyToId, setReplyToId] = useState<number | null>(null);
+  const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
+  const [savedMessageIds, setSavedMessageIds] = useState<Set<number>>(new Set());
+  const [forwardMessageId, setForwardMessageId] = useState<number | null>(null);
+  const [historyMessageId, setHistoryMessageId] = useState<number | null>(null);
+  const [customEmojis, setCustomEmojis] = useState<CustomEmojiEntry[]>([]);
   const [threadPaneParentId, setThreadPaneParentId] = useState<number | null>(null);
   const [ephemeralTtlSeconds, setEphemeralTtlSeconds] = useState(0);
   const [whisperMode, setWhisperMode] = useState(false);
@@ -670,6 +681,35 @@ export function FluxyChat({
   useEffect(() => {
     setResolvedRoomId(trimmedRoomId || null);
   }, [trimmedRoomId]);
+
+  // Wave E — saved messages + custom emoji are per-user / per-project lists.
+  useEffect(() => {
+    if (!fluxyClient) return;
+    let cancelled = false;
+    void fluxyClient
+      .listSavedMessagesRest(200)
+      .then((rows) => {
+        if (!cancelled) setSavedMessageIds(new Set(rows.map((row) => row.messageId)));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [fluxyClient]);
+
+  useEffect(() => {
+    if (!fluxyClient) return;
+    let cancelled = false;
+    void fluxyClient
+      .listCustomEmojisRest()
+      .then((rows) => {
+        if (!cancelled) setCustomEmojis(rows.map((e) => ({ name: e.name, imageUrl: e.imageUrl })));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [fluxyClient]);
 
   useEffect(() => {
     if (!shouldBootstrapAssistant) return;
@@ -1244,6 +1284,28 @@ export function FluxyChat({
     setReactionPickerMessageId(messageId);
   }
 
+  async function toggleSavedMessage(messageId: number) {
+    if (!fluxyClient) return;
+    const wasSaved = savedMessageIds.has(messageId);
+    setSavedMessageIds((prev) => {
+      const next = new Set(prev);
+      if (wasSaved) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+    try {
+      if (wasSaved) await fluxyClient.unsaveMessageRest(messageId);
+      else await fluxyClient.saveMessageRest(messageId);
+    } catch {
+      setSavedMessageIds((prev) => {
+        const next = new Set(prev);
+        if (wasSaved) next.add(messageId);
+        else next.delete(messageId);
+        return next;
+      });
+    }
+  }
+
   function insertComposerEmoji(emoji: string) {
     const input = textareaRef.current;
     const { next, caret } = insertTextAtCursor(input, draft, emoji);
@@ -1661,7 +1723,10 @@ export function FluxyChat({
     }
     setInputError(null);
     beginRunTracking();
-    const sendOpts = messageSendOptions(templateSend);
+    let sendOpts = messageSendOptions(templateSend);
+    if (payload.parentId != null && payload.alsoSendToChannel) {
+      sendOpts = { ...(sendOpts ?? {}), alsoSendToChannel: true };
+    }
 
     if (branchFromMessageId != null) {
       const branched = await truncateFromMessage(branchFromMessageId);
@@ -1684,6 +1749,7 @@ export function FluxyChat({
       setPendingTool(null);
       setTemplateSelection(null);
       setReplyToId(null);
+      setAlsoSendToChannel(false);
       try {
         void fluxyClient?.putRoomDraft(trimmedRoomId, { content: "", replyToId: null });
       } catch {
@@ -1844,6 +1910,7 @@ export function FluxyChat({
       parentId: replyToId,
       attachments: readyAttachments,
       tool: pendingTool,
+      alsoSendToChannel: replyToId != null && alsoSendToChannel,
     };
 
     if (confirmBeforeSend) {
@@ -2572,6 +2639,16 @@ export function FluxyChat({
                     m.id != null
                       ? canBranchFromMessage(visibleMessages, m.id, chatUserId, agentId)
                       : { allowed: false as const };
+                  const forwardedFrom = (() => {
+                    const raw = m.forwardedFrom ?? m.metadata?.forwardedFrom;
+                    if (!raw || typeof raw !== "object") return null;
+                    const row = raw as { roomId?: unknown; roomName?: unknown };
+                    if (typeof row.roomId !== "string" || !row.roomId) return null;
+                    return {
+                      roomId: row.roomId,
+                      roomName: typeof row.roomName === "string" && row.roomName ? row.roomName : row.roomId,
+                    };
+                  })();
 
                   const floatingToolbar = m.id != null && !isStreaming && !isDeleted ? (
                     <MessageHoverToolbar align={isSelf ? "end" : "start"} side="below">
@@ -2726,6 +2803,24 @@ export function FluxyChat({
                         <Reply className="size-3" />
                         Reply
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleSavedMessage(m.id!)}
+                        className={messageToolbarButtonClass}
+                        data-testid="toggle-saved-message"
+                      >
+                        <Star className="size-3" />
+                        {savedMessageIds.has(m.id!) ? "Unsave" : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForwardMessageId(m.id!)}
+                        className={messageToolbarButtonClass}
+                        data-testid="forward-message"
+                      >
+                        <Forward className="size-3" />
+                        Forward
+                      </button>
                       {m.id != null && (replyCountByParent.get(m.id) ?? 0) > 0 ? (
                         <button
                           type="button"
@@ -2803,7 +2898,7 @@ export function FluxyChat({
                                   <MessageTimestamp timestamp={mTime} size="sm" className="ml-1.5" />
                                 ) : null}
                                 {isAgent ? (
-                                  <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand ring-1 ring-brand/20">
+                                  <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--brand-hover)] ring-1 ring-brand/20">
                                     agent
                                   </span>
                                 ) : null}
@@ -2817,6 +2912,14 @@ export function FluxyChat({
                                     )}
                                   >
                                     {visibilityBadge.label}
+                                  </span>
+                                ) : null}
+                                {m.alsoToChannel ? (
+                                  <span
+                                    className="ml-1.5 rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-800 ring-1 ring-sky-500/25 dark:text-sky-200"
+                                    data-testid="also-to-channel-badge"
+                                  >
+                                    also in channel
                                   </span>
                                 ) : null}
                                 {isStreaming ? (
@@ -2838,6 +2941,17 @@ export function FluxyChat({
                               >
                                 {floatingToolbar}
                                 <BubbleContent className={bubbleContentPadding}>
+                                  {forwardedFrom ? (
+                                    <p
+                                      className={cn(
+                                        "mb-1 text-[10px] italic",
+                                        isSelf ? "text-white/70" : "text-muted-foreground",
+                                      )}
+                                      data-testid="forwarded-from"
+                                    >
+                                      Forwarded from {forwardedFrom.roomName}
+                                    </p>
+                                  ) : null}
                                   {/* Reply quote — inside bubble, before message text */}
                                   {parentMessage ? (
                                     <button
@@ -2959,7 +3073,7 @@ export function FluxyChat({
                                             )
                                           ) : (
                                             <p className="whitespace-pre-wrap break-words">
-                                              {bodyText}
+                                              <CustomEmojiText text={bodyText} emojis={customEmojis} />
                                               {!m.content && isStreaming ? "…" : null}
                                             </p>
                                           );
@@ -3111,9 +3225,17 @@ export function FluxyChat({
 
                                     {/* Edited */}
                                     {m.editedAt && !isStreaming ? (
-                                      <div className={cn("mt-1 text-[10px]", isSelf ? "text-white/60" : "text-muted-foreground")}>
+                                      <button
+                                        type="button"
+                                        className={cn(
+                                          "mt-1 text-[10px] underline-offset-2 hover:underline",
+                                          isSelf ? "text-white/60" : "text-muted-foreground",
+                                        )}
+                                        onClick={() => setHistoryMessageId(m.id)}
+                                        data-testid="message-edit-history"
+                                      >
                                         edited
-                                      </div>
+                                      </button>
                                     ) : null}
 
                                     {/* Timestamp + read receipt — inside bubble, WhatsApp style */}
@@ -3149,17 +3271,27 @@ export function FluxyChat({
                                       side="bottom"
                                       align={isSelf ? "end" : "start"}
                                     >
-                                      {Object.entries(reactions[m.id]).map(([emoji, count]) => (
-                                        <button
-                                          key={emoji}
-                                          type="button"
-                                          onClick={() => m.id != null && toggleReaction(m.id, emoji)}
-                                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] text-slate-700 transition-colors hover:bg-slate-100"
-                                        >
-                                          <span>{emoji}</span>
-                                          <span className="text-slate-500">{count}</span>
-                                        </button>
-                                      ))}
+                                      {Object.entries(reactions[m.id]).map(([emoji, count]) => {
+                                        const customMatch = /^:([a-z0-9_]{2,32}):$/.exec(emoji);
+                                        const customUrl = customMatch
+                                          ? customEmojis.find((e) => e.name === customMatch[1])?.imageUrl
+                                          : undefined;
+                                        return (
+                                          <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={() => m.id != null && toggleReaction(m.id, emoji)}
+                                            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[13px] text-slate-700 transition-colors hover:bg-slate-100"
+                                          >
+                                            {customUrl ? (
+                                              <img src={customUrl} alt={emoji} className="size-4" />
+                                            ) : (
+                                              <span>{emoji}</span>
+                                            )}
+                                            <span className="text-slate-500">{count}</span>
+                                          </button>
+                                        );
+                                      })}
                                     </BubbleReactions>
                                   ) : null}
                               </Bubble>
@@ -3350,10 +3482,22 @@ export function FluxyChat({
                 : `#${replyToId}`}
             </span>
           </div>
+          <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={alsoSendToChannel}
+              onChange={(e) => setAlsoSendToChannel(e.target.checked)}
+              data-testid="also-send-to-channel"
+            />
+            Also send to channel
+          </label>
           <button
             type="button"
             className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            onClick={() => setReplyToId(null)}
+            onClick={() => {
+              setReplyToId(null);
+              setAlsoSendToChannel(false);
+            }}
             aria-label="Cancel reply"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
@@ -4050,7 +4194,7 @@ export function FluxyChat({
         <button
           type="button"
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-            huddleActive ? "bg-red-600 text-white hover:bg-red-700" : "bg-brand/10 text-brand hover:bg-brand/20"
+            huddleActive ? "bg-red-600 text-white hover:bg-red-700" : "bg-brand/10 text-[var(--brand-hover)] hover:bg-brand/20"
           }`}
           onClick={() => void toggleHuddle()}
           title={huddleActive ? "Leave huddle" : "Join huddle"}
@@ -4213,6 +4357,7 @@ export function FluxyChat({
       <ReactionPicker
         open={reactionPickerMessageId !== null || composerEmojiOpen}
         anchorRect={reactionPickerAnchor}
+        customEmojis={customEmojis}
         onClose={() => {
           setReactionPickerMessageId(null);
           setComposerEmojiOpen(false);
@@ -4227,6 +4372,22 @@ export function FluxyChat({
           setComposerEmojiOpen(false);
           setReactionPickerAnchor(null);
         }}
+      />
+
+      {/* ─── Wave E: forward + edit history ─── */}
+      <ForwardMessageDialog
+        open={forwardMessageId !== null}
+        client={fluxyClient}
+        messageId={forwardMessageId}
+        sourceRoomId={trimmedRoomId}
+        onClose={() => setForwardMessageId(null)}
+      />
+      <MessageHistoryDialog
+        open={historyMessageId !== null}
+        client={fluxyClient}
+        roomId={trimmedRoomId}
+        messageId={historyMessageId}
+        onClose={() => setHistoryMessageId(null)}
       />
 
       {/* ─── Image Generation Dialog ─── */}
@@ -4513,6 +4674,11 @@ function FluxyAttachment({
         </AttachmentTitle>
         {attachment.sizeBytes ? (
           <AttachmentDescription>{formatFileSize(attachment.sizeBytes)}</AttachmentDescription>
+        ) : null}
+        {attachment.aiSummary ? (
+          <p className="mt-1 text-[10px] italic text-muted-foreground" data-testid="attachment-ai-summary">
+            {attachment.aiSummary}
+          </p>
         ) : null}
       </AttachmentContent>
     </Attachment>

@@ -5,6 +5,7 @@
 import { isAiConfigured } from "../lib/ai-chat-completion.js";
 import { pickRouteDeps } from "./route-http-deps.js";
 import { safeOutboundFetch } from "../lib/url-ssrf.js";
+import { internalDoHeaders } from "../lib/room-shard.js";
 
 export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
   const {
@@ -229,6 +230,18 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       }
       const now = new Date().toISOString();
       const ruleId = body.id || crypto.randomUUID();
+      // Audit fix A2-11: a client-supplied id must already belong to this
+      // project — INSERT OR REPLACE on a foreign id would hijack the row.
+      if (body.id) {
+        const owner = await env.DB.prepare(
+          "SELECT project_id FROM operational_alert_rules WHERE id = ?"
+        )
+          .bind(body.id)
+          .first();
+        if (owner && owner.project_id !== adminAuth.projectId) {
+          return json({ error: "forbidden" }, { status: 403 });
+        }
+      }
       await env.DB.prepare(
         "INSERT OR REPLACE INTO operational_alert_rules (id, project_id, metric_name, window_minutes, threshold_value, comparator, severity, cooldown_minutes, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM operational_alert_rules WHERE id = ?), ?), ?)"
       )
@@ -348,12 +361,16 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       )
         .bind(adminAuth.projectId, ...ids, ids.length * 50)
         .all();
+      // Audit fix A2-25: keep counting consecutive failures per webhook and
+      // stop only at the first delivered row (the old `has()` guard capped the
+      // streak at 1 and counted failures that preceded a delivery).
+      const streakClosed = new Set();
       for (const r of recent.results || []) {
-        if (failureCounts.has(r.webhook_id)) continue;
+        if (streakClosed.has(r.webhook_id)) continue;
         if (r.status === "failed" || r.status === "cancelled") {
           failureCounts.set(r.webhook_id, (failureCounts.get(r.webhook_id) || 0) + 1);
         } else if (r.status === "delivered") {
-          // stop counting
+          streakClosed.add(r.webhook_id);
         }
       }
     }
@@ -546,9 +563,13 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       if (!body || !body.roomId || !body.userId) {
         return json({ error: "roomId and userId required" }, { status: 400 });
       }
-      const expiresAt = body.durationSeconds
-        ? new Date(Date.now() + body.durationSeconds * 1000).toISOString()
-        : null;
+      const durationSeconds = Number(body.durationSeconds);
+      // Audit fix A2-24: a non-numeric duration used to make toISOString()
+      // throw (500) and the mute was never recorded — treat it as permanent.
+      const expiresAt =
+        Number.isFinite(durationSeconds) && durationSeconds > 0
+          ? new Date(Date.now() + durationSeconds * 1000).toISOString()
+          : null;
       await env.DB.prepare(
         "INSERT INTO moderation_events (project_id, room_id, user_id, action, reason, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
@@ -730,10 +751,17 @@ export async function dispatchAdminSearchAutomationRoutes(request, url, h) {
       if (!body || !body.roomId || !body.content) {
         return json({ error: "roomId and content required" }, { status: 400 });
       }
+      // Audit fix A2-3: announcements fan out into body.roomId — the caller
+      // must access that room (canAccessRoom is project-scoped).
+      const canAccess = await canAccessRoom(env, adminAuth, body.roomId);
+      if (!canAccess) {
+        return json({ error: "forbidden" }, { status: 403 });
+      }
       const id = env.ROOM.idFromName(body.roomId);
       const stub = env.ROOM.get(id);
       await stub.fetch("https://internal/announce", {
         method: "POST",
+        headers: internalDoHeaders(env),
         body: JSON.stringify({
           content: body.content,
           userId: body.userId || "system",

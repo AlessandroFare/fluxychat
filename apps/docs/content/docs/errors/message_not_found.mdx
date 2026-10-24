@@ -5,4 +5,12 @@ description: "Message not found"
 
 # 40400 — message_not_found
 
-`GET /messages/:id` (or versions / reactions for that id) did not find a row in this project, or the id was not a positive integer. Not terminal.
+`GET /messages/:id` — or the versions / reactions for that id — found no row in this project, or the id was not a positive integer. Not terminal.
+
+**At a glance** — HTTP 404 · REST only.
+
+## What to do
+
+- Check the id and the project scope: a message that exists in another project is a 404 here.
+- The id must be a positive integer; a malformed id is a 404, not a 400.
+- Nullable for UI: "not found" is a normal answer for detail endpoints, not an incident.

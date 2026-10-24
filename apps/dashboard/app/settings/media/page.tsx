@@ -5,7 +5,8 @@ import { HardDrive, Loader2, Save } from "lucide-react";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleFeedback } from "../../components/console-feedback";
-import { Button, Input, Panel, Section } from "../../components/ui";
+import { Button, EmptyState, Input, Panel, Section } from "../../components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "~/components/ui/badge";
 import { useDashboardSession } from "../../components/dashboard-session";
 import { formatDateTime } from "@/lib/format-datetime";
@@ -58,7 +59,15 @@ export default function MediaPipelineSettingsPage() {
   }, [token]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      // Async boundary: keeps the effect body free of synchronous setState.
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   async function handleSave() {
@@ -100,8 +109,9 @@ export default function MediaPipelineSettingsPage() {
       <Section title="Upload limits" description="Applied on POST /upload before files reach R2.">
         <Panel className="space-y-4">
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-8 w-40" />
             </div>
           ) : (
             <>
@@ -139,8 +149,15 @@ export default function MediaPipelineSettingsPage() {
 
       <Section title="Recent scan jobs" description="Messages block attachments while scan_status is pending or infected.">
         <Panel>
-          {jobs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No media jobs yet.</p>
+          {loading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : jobs.length === 0 ? (
+            <EmptyState
+              compact
+              className="border-0 bg-transparent"
+              title="No scan jobs yet"
+              description="Recent uploads appear here with AV and thumbnail status."
+            />
           ) : (
             <ul className="divide-y divide-border text-sm">
               {jobs.map((job) => (

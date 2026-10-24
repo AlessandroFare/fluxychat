@@ -38,28 +38,28 @@ export function createStreamResumptionStore(kv) {
       }
     },
 
-    async getActiveForRoom(roomId) {
-      const list = await kv.list({ prefix: STREAM_PREFIX });
+    // Audit F-65: `/active` used to list the whole namespace and get() every
+    // key — an authenticated caller could amplify one request into hundreds of
+    // KV reads. Bound the scan.
+    async getActive(filter, max = 50) {
+      const list = await kv.list({ prefix: STREAM_PREFIX, limit: Math.max(1, max * 2) });
       const results = [];
       for (const { name } of list.keys) {
         const raw = await kv.get(name, { type: "json" });
-        if (raw && raw.active && raw.roomId === roomId) {
+        if (raw && raw.active && filter(raw)) {
           results.push(raw);
+          if (results.length >= max) break;
         }
       }
       return results;
     },
 
-    async getActiveForUser(userId) {
-      const list = await kv.list({ prefix: STREAM_PREFIX });
-      const results = [];
-      for (const { name } of list.keys) {
-        const raw = await kv.get(name, { type: "json" });
-        if (raw && raw.active && raw.userId === userId) {
-          results.push(raw);
-        }
-      }
-      return results;
+    async getActiveForRoom(roomId, max = 50) {
+      return this.getActive((raw) => raw.roomId === roomId, max);
+    },
+
+    async getActiveForUser(userId, max = 50) {
+      return this.getActive((raw) => raw.userId === userId, max);
     },
 
     async cleanup(maxAgeMs = 600_000) {

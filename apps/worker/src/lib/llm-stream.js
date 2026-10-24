@@ -4,6 +4,7 @@
 import { buildOpenAiChatCompletionsUrl } from "./openai-compat-url.js";
 import { fetchWithDoKeepalive, outboundStreamTags } from "./do-outbound-keepalive.js";
 import { openAiMessagesForModel } from "./llm-message-content.js";
+import { assertSafeOutboundUrl } from "./url-ssrf.js";
 
 /**
  * @param {unknown} parsed
@@ -83,6 +84,8 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
   };
 
   const url = buildOpenAiChatCompletionsUrl(baseUrl, opts.chatCompletionsUrl);
+  // Audit F-23: project-defined baseUrl must not reach internal addresses.
+  assertSafeOutboundUrl(url, opts.env);
   const headers = {
     "Content-Type": "application/json",
     ...(opts.gatewayHeaders || {}),
@@ -109,6 +112,8 @@ export async function callLlmOpenAIStream(baseUrl, apiKey, model, messages, opts
       method: "POST",
       headers: streamHeaders,
       body: JSON.stringify(body),
+      // Audit F-23: never follow redirects to unvalidated (possibly internal) hosts.
+      redirect: "manual",
       ...(opts.abortSignal ? { signal: opts.abortSignal } : {}),
     },
     { feature: "llm_stream", projectId: opts.projectId, roomId: opts.roomId, runId: opts.runId },

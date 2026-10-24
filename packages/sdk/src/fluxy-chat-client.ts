@@ -138,6 +138,15 @@ export interface FluxyChatMessage {
   card?: import("./cards").CardElement;
   /** Stream `quoted_message_id` — citation, not a `parentId` thread. */
   quotedMessageId?: number | null;
+  /** Reply posted to the parent's channel as well as the thread. */
+  alsoToChannel?: boolean;
+  /** Forward provenance (Wave E) copied into `metadata.forwardedFrom`. */
+  forwardedFrom?: {
+    messageId: number;
+    roomId: string;
+    roomName: string;
+    authorId: string;
+  } | null;
   /** Art. 50: who produced this message. Agent inserts set `ai`. */
   participantType?: "human" | "ai";
   /** Signed Art. 50 / EU AI Act machine-readable mark when present. */
@@ -166,6 +175,8 @@ export interface FluxyChatAttachment {
   name: string;
   sizeBytes?: number;
   contentType?: string;
+  /** AI summary of a text-like file attachment (Wave E, best-effort). */
+  aiSummary?: string;
 }
 
 const AUDIO_FILE_SUFFIXES = [".webm", ".m4a", ".mp3", ".wav", ".ogg"];
@@ -960,6 +971,54 @@ function rememberPublicGuestKey(baseUrl: string, roomId: string, explicit?: stri
   return existing;
 }
 
+// Wave E — chat core additions.
+export interface FluxySavedMessage {
+  messageId: number;
+  roomId: string;
+  roomName: string;
+  authorId: string;
+  preview: string;
+  createdAt: string;
+  savedAt: string;
+}
+
+export interface FluxyUserGroup {
+  id: string;
+  name: string;
+  createdAt?: string;
+  memberIds: string[];
+}
+
+export interface FluxyRoomFolder {
+  id: string;
+  name: string;
+  position: number;
+  roomIds: string[];
+}
+
+export interface FluxyNotificationKeyword {
+  word: string;
+  createdAt: string;
+}
+
+export interface FluxyCustomEmoji {
+  id: string;
+  name: string;
+  imageUrl: string;
+  createdBy?: string | null;
+  createdAt?: string;
+}
+
+export interface FluxyRoomBookmark {
+  id: string;
+  roomId?: string;
+  label: string;
+  url: string;
+  position: number;
+  createdBy?: string | null;
+  createdAt?: string;
+}
+
 export class FluxyChatClient {
   private baseUrl: string;
   private _userId: string;
@@ -1204,6 +1263,43 @@ export class FluxyChatClient {
     });
     if (!res.ok) throw new Error(`Failed to join public room as guest: ${res.status}`);
     return res.json();
+  }
+
+  /**
+   * Claim a guest identity into this account (nakama-style linking).
+   *
+   * The guest token proves ownership; the target account comes from this
+   * client's credentials. Room memberships move over — the guest role upgrades
+   * to `member`. Message authorship and read markers stay under the guest user
+   * id.
+   */
+  async linkGuestAccount(guestToken: string): Promise<{
+    ok: true;
+    guestUserId: string;
+    targetUserId: string;
+    roomsTransferred: number;
+    roomsAlreadyMember: number;
+  }> {
+    const res = await fetch(new URL("/tokens/link-guest", this.baseUrl).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ guestToken }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        typeof body.error === "string"
+          ? body.error
+          : `linkGuestAccount failed: ${res.status}`,
+      );
+    }
+    return body as {
+      ok: true;
+      guestUserId: string;
+      targetUserId: string;
+      roomsTransferred: number;
+      roomsAlreadyMember: number;
+    };
   }
 
   private authHeaders(): HeadersInit | undefined {
@@ -2073,6 +2169,7 @@ export class FluxyChatClient {
         ...(options?.metadata ? { metadata: options.metadata } : {}),
         ...(options?.headers ? { headers: options.headers } : {}),
         ...(options?.quotedMessageId != null ? { quotedMessageId: options.quotedMessageId } : {}),
+        ...(options?.alsoSendToChannel ? { alsoSendToChannel: true } : {}),
       }),
     });
     const body = await res.json().catch(() => ({}));
@@ -3578,6 +3675,323 @@ export class FluxyChatClient {
     }
     const items = Array.isArray(body.items) ? body.items : [];
     return items.filter((row) => !row.roomId || row.roomId === roomId);
+  }
+
+  // ── Wave E: chat core ──────────────────────────────────────────────
+
+  async saveMessageRest(messageId: number): Promise<{ ok: boolean; saved: boolean }> {
+    const url = new URL(`/messages/${messageId}/save`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "POST", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("save message", body.error ?? `HTTP ${res.status}`));
+    }
+    return { ok: true, saved: true };
+  }
+
+  async unsaveMessageRest(messageId: number): Promise<{ ok: boolean; saved: boolean }> {
+    const url = new URL(`/messages/${messageId}/save`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("unsave message", body.error ?? `HTTP ${res.status}`));
+    }
+    return { ok: true, saved: false };
+  }
+
+  async listSavedMessagesRest(limit = 50): Promise<FluxySavedMessage[]> {
+    const url = new URL("/saved-messages", this.baseUrl);
+    url.searchParams.set("limit", String(limit));
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      items?: FluxySavedMessage[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("list saved messages", body.error ?? `HTTP ${res.status}`));
+    }
+    return Array.isArray(body.items) ? body.items : [];
+  }
+
+  async forwardMessageRest(
+    messageId: number,
+    targetRoomId: string,
+  ): Promise<FluxyChatMessage | null> {
+    const url = new URL(`/messages/${messageId}/forward`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ targetRoomId }),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      message?: FluxyChatMessage;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("forward message", body.error ?? `HTTP ${res.status}`));
+    }
+    return body.message ?? null;
+  }
+
+  async listUserGroupsRest(): Promise<FluxyUserGroup[]> {
+    const url = new URL("/user-groups", this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      groups?: FluxyUserGroup[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("list user groups", body.error ?? `HTTP ${res.status}`));
+    }
+    return Array.isArray(body.groups) ? body.groups : [];
+  }
+
+  async createUserGroupRest(name: string, memberIds: string[] = []): Promise<FluxyUserGroup | null> {
+    const url = new URL("/user-groups", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ name, memberIds }),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      group?: FluxyUserGroup;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("create user group", body.error ?? `HTTP ${res.status}`));
+    }
+    return body.group ?? null;
+  }
+
+  async deleteUserGroupRest(groupId: string): Promise<void> {
+    const url = new URL(`/user-groups/${encodeURIComponent(groupId)}`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("delete user group", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async addUserGroupMembersRest(groupId: string, userIds: string[]): Promise<void> {
+    const url = new URL(`/user-groups/${encodeURIComponent(groupId)}/members`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ userIds }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("add user group members", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async removeUserGroupMemberRest(groupId: string, userId: string): Promise<void> {
+    const url = new URL(
+      `/user-groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("remove user group member", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async listRoomFoldersRest(): Promise<FluxyRoomFolder[]> {
+    const url = new URL("/room-folders", this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      folders?: FluxyRoomFolder[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("list room folders", body.error ?? `HTTP ${res.status}`));
+    }
+    return Array.isArray(body.folders) ? body.folders : [];
+  }
+
+  async createRoomFolderRest(name: string): Promise<FluxyRoomFolder | null> {
+    const url = new URL("/room-folders", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ name }),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      folder?: FluxyRoomFolder;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("create room folder", body.error ?? `HTTP ${res.status}`));
+    }
+    return body.folder ?? null;
+  }
+
+  async renameRoomFolderRest(folderId: string, name: string): Promise<void> {
+    const url = new URL(`/room-folders/${encodeURIComponent(folderId)}`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ name }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("rename room folder", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async deleteRoomFolderRest(folderId: string): Promise<void> {
+    const url = new URL(`/room-folders/${encodeURIComponent(folderId)}`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("delete room folder", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async setRoomFolderItemRest(folderId: string, roomId: string): Promise<void> {
+    const url = new URL(`/room-folders/${encodeURIComponent(folderId)}/rooms`, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ roomId }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("move room to folder", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async removeRoomFolderItemRest(folderId: string, roomId: string): Promise<void> {
+    const url = new URL(
+      `/room-folders/${encodeURIComponent(folderId)}/rooms/${encodeURIComponent(roomId)}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("remove room from folder", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async listNotificationKeywordsRest(): Promise<FluxyNotificationKeyword[]> {
+    const url = new URL("/notification-keywords", this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      keywords?: FluxyNotificationKeyword[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("list notification keywords", body.error ?? `HTTP ${res.status}`));
+    }
+    return Array.isArray(body.keywords) ? body.keywords : [];
+  }
+
+  async addNotificationKeywordRest(word: string): Promise<void> {
+    const url = new URL("/notification-keywords", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ word }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("add notification keyword", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async removeNotificationKeywordRest(word: string): Promise<void> {
+    const url = new URL(`/notification-keywords/${encodeURIComponent(word)}`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("remove notification keyword", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async listCustomEmojisRest(): Promise<FluxyCustomEmoji[]> {
+    const url = new URL("/custom-emojis", this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      emojis?: FluxyCustomEmoji[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("list custom emojis", body.error ?? `HTTP ${res.status}`));
+    }
+    return Array.isArray(body.emojis) ? body.emojis : [];
+  }
+
+  async createCustomEmojiRest(name: string, imageUrl: string): Promise<FluxyCustomEmoji | null> {
+    const url = new URL("/custom-emojis", this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ name, imageUrl }),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      emoji?: FluxyCustomEmoji;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("create custom emoji", body.error ?? `HTTP ${res.status}`));
+    }
+    return body.emoji ?? null;
+  }
+
+  async deleteCustomEmojiRest(id: string): Promise<void> {
+    const url = new URL(`/custom-emojis/${encodeURIComponent(id)}`, this.baseUrl);
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("delete custom emoji", body.error ?? `HTTP ${res.status}`));
+    }
+  }
+
+  async listRoomBookmarksRest(roomId: string): Promise<FluxyRoomBookmark[]> {
+    const url = new URL(`/rooms/${encodeURIComponent(roomId)}/bookmarks`, this.baseUrl);
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as {
+      bookmarks?: FluxyRoomBookmark[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("list room bookmarks", body.error ?? `HTTP ${res.status}`));
+    }
+    return Array.isArray(body.bookmarks) ? body.bookmarks : [];
+  }
+
+  async createRoomBookmarkRest(
+    roomId: string,
+    label: string,
+    url: string,
+  ): Promise<FluxyRoomBookmark | null> {
+    const target = new URL(`/rooms/${encodeURIComponent(roomId)}/bookmarks`, this.baseUrl);
+    const res = await fetch(target.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ label, url }),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      bookmark?: FluxyRoomBookmark;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(unableTo("create room bookmark", body.error ?? `HTTP ${res.status}`));
+    }
+    return body.bookmark ?? null;
+  }
+
+  async deleteRoomBookmarkRest(roomId: string, id: string): Promise<void> {
+    const url = new URL(
+      `/rooms/${encodeURIComponent(roomId)}/bookmarks/${encodeURIComponent(id)}`,
+      this.baseUrl,
+    );
+    const res = await fetch(url.toString(), { method: "DELETE", headers: this.authHeaders() });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      throw new Error(unableTo("delete room bookmark", body.error ?? `HTTP ${res.status}`));
+    }
   }
 
   async editMessageRest(

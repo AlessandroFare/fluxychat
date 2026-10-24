@@ -70,12 +70,29 @@ function makeEnv() {
             } else if (sql.includes("INSERT INTO workspace_templates")) {
               templates.push({ id: params[0], project_id: params[1], name: params[2], description: params[3], tabs: params[4], agent_config: params[5], settings: params[6], is_system: params[7], use_count: 0, created_at: params[8] });
             } else if (sql.includes("DELETE FROM workspace_tabs")) {
+              // Honor the project-scope subquery the delete carries (A2b).
+              const scoped = sql.includes("SELECT id FROM workspace_configs");
               const before = tabs.length;
-              for (let i = tabs.length - 1; i >= 0; i--) { if (tabs[i].id === params[0]) tabs.splice(i, 1); }
+              for (let i = tabs.length - 1; i >= 0; i--) {
+                if (tabs[i].id !== params[0]) continue;
+                if (scoped) {
+                  const c = configs.find((c) => c.id === tabs[i].workspace_id);
+                  if (!c || c.project_id !== params[1]) continue;
+                }
+                tabs.splice(i, 1);
+              }
               return { meta: { changes: before - tabs.length } };
             } else if (sql.includes("DELETE FROM workspace_pins")) {
+              const scoped = sql.includes("SELECT id FROM workspace_configs");
               const before = pins.length;
-              for (let i = pins.length - 1; i >= 0; i--) { if (pins[i].id === params[0]) pins.splice(i, 1); }
+              for (let i = pins.length - 1; i >= 0; i--) {
+                if (pins[i].id !== params[0]) continue;
+                if (scoped) {
+                  const c = configs.find((c) => c.id === pins[i].workspace_id);
+                  if (!c || c.project_id !== params[1]) continue;
+                }
+                pins.splice(i, 1);
+              }
               return { meta: { changes: before - pins.length } };
             } else if (sql.includes("UPDATE workspace_configs")) {
               const idx = configs.findIndex((c) => c.id === params[params.length - 2] && c.project_id === params[params.length - 1]);
@@ -180,6 +197,43 @@ describe("ai-workspace", () => {
       const stats = await getWorkspaceStats(env, { projectId: "p1" });
       expect(stats.totalWorkspaces).toBe(2);
       expect(stats.byTabType.chat).toBe(2);
+    });
+  });
+
+  describe("scoped deletes (A2b)", () => {
+    it("removeTab only deletes tabs of the caller's project", async () => {
+      const env = makeEnv();
+      await createWorkspace(env, { projectId: "p1", roomId: "r1", name: "WS" });
+      const ws = await getWorkspace(env, { projectId: "p1", roomId: "r1" });
+      const tabId = ws.tabs[0].id;
+
+      const foreign = await removeTab(env, { id: tabId, projectId: "p_other" });
+      expect(foreign.deleted).toBe(0);
+      expect(env._tabs.some((t) => t.id === tabId)).toBe(true);
+
+      const own = await removeTab(env, { id: tabId, projectId: "p1" });
+      expect(own.deleted).toBe(1);
+      expect(env._tabs.some((t) => t.id === tabId)).toBe(false);
+    });
+
+    it("unpinItem only deletes pins of the caller's project", async () => {
+      const env = makeEnv();
+      await createWorkspace(env, { projectId: "p1", roomId: "r1", name: "WS" });
+      const ws = await getWorkspace(env, { projectId: "p1", roomId: "r1" });
+      const pin = await pinItem(env, {
+        workspaceId: ws.id,
+        itemType: "message",
+        itemId: "m1",
+        pinnedBy: "user1",
+      });
+
+      const foreign = await unpinItem(env, { id: pin.id, projectId: "p_other" });
+      expect(foreign.deleted).toBe(0);
+      expect(env._pins.some((p) => p.id === pin.id)).toBe(true);
+
+      const own = await unpinItem(env, { id: pin.id, projectId: "p1" });
+      expect(own.deleted).toBe(1);
+      expect(env._pins.some((p) => p.id === pin.id)).toBe(false);
     });
   });
 });

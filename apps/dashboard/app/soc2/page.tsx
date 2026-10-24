@@ -10,6 +10,7 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
 import { useDashboardSession } from "../components/dashboard-session";
+import { Soc2ReportsPanel } from "../components/soc2-reports-panel";
 import { fetchWorker, fetchWorkerJson } from "@/lib/worker-fetch";
 import { getPublicWorkerUrl } from "@/lib/worker-url-client";
 import { messageFromUnknown } from "@/lib/error-message";
@@ -44,11 +45,12 @@ interface DlpScanResult {
 export default function Soc2Page() {
   const { adminJwt } = useDashboardSession();
   const [dashboard, setDashboard] = useState<Soc2Dashboard | null>(null);
-  const [busy, setBusy] = useState<"load" | "export" | "audit" | "dlp" | "self" | null>(null);
+  const [busy, setBusy] = useState<"load" | "export" | "audit" | "dlp" | "self" | "pack" | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [selfAssessment, setSelfAssessment] = useState<Soc2SelfAssessment | null>(null);
   const [dlpSample, setDlpSample] = useState("Test PCI 4111111111111111 and PHI SSN 123-45-6789");
   const [dlpResult, setDlpResult] = useState<DlpScanResult | null>(null);
+  const [savedReportsKey, setSavedReportsKey] = useState(0);
   const workerUrl = getPublicWorkerUrl();
 
   const loadDashboard = useCallback(async () => {
@@ -121,6 +123,45 @@ export default function Soc2Page() {
       setStatus(`Self-assessment exported (${data.summary?.readinessScore ?? 0}% automated signal coverage).`);
     } catch (e: unknown) {
       setStatus(messageFromUnknown(e, "Self-assessment export failed."));
+    } finally {
+      setBusy(null);
+    }
+  }, [adminJwt, workerUrl]);
+
+  const exportOpsEvidencePack = useCallback(async () => {
+    const token = adminJwt.trim();
+    if (!token) {
+      setStatus("Admin JWT required.");
+      return;
+    }
+    setBusy("pack");
+    try {
+      const data = await fetchWorkerJson<{
+        document?: string;
+        report?: { id?: string };
+        evidence?: {
+          periodDays?: number;
+          runs?: { inPeriod?: number };
+          incidents?: { inPeriod?: number };
+        };
+      }>(`${workerUrl}/api/soc2/reports/evidence`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ days: 90 }),
+      });
+      const blob = new Blob([data.document ?? ""], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ops-evidence-pack-${new Date().toISOString().slice(0, 10)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus(
+        `Evidence pack saved as ${data.report?.id ?? "report"} (${data.evidence?.runs?.inPeriod ?? 0} runs, ${data.evidence?.incidents?.inPeriod ?? 0} incidents in ${data.evidence?.periodDays ?? 90} days).`,
+      );
+      setSavedReportsKey((key) => key + 1);
+    } catch (e: unknown) {
+      setStatus(messageFromUnknown(e, "Evidence pack generation failed."));
     } finally {
       setBusy(null);
     }
@@ -202,6 +243,10 @@ export default function Soc2Page() {
           {busy === "self" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
           Export self-assessment
         </Button>
+        <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void exportOpsEvidencePack()}>
+          {busy === "pack" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
+          Generate ops evidence pack
+        </Button>
         <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void exportAuditLog()}>
           {busy === "audit" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
           Export audit log
@@ -267,6 +312,8 @@ export default function Soc2Page() {
       </Panel>
 
       {status ? <p className="mt-3 text-sm text-muted-foreground">{status}</p> : null}
+
+      <Soc2ReportsPanel token={adminJwt} refreshKey={savedReportsKey} />
 
       {dashboard ? (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">

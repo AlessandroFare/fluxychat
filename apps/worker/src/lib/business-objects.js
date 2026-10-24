@@ -36,11 +36,15 @@ export async function updateObject(env, { id, state, payload, actorUserId }) {
   const newState = state || existing.state;
   const newPayload = payload !== undefined ? payload : existing.payload;
 
-  await env.DB.prepare(
-    "UPDATE business_objects SET state = ?, payload_json = ?, version = ?, updated_at = ? WHERE id = ?"
+  // Audit fix A2-15: optimistic version guard — a writer that changed the row
+  // between our read and this update wins instead of being silently overwritten.
+  const updated = await env.DB.prepare(
+    "UPDATE business_objects SET state = ?, payload_json = ?, version = ?, updated_at = ? WHERE id = ? AND version = ?"
   )
-    .bind(newState, JSON.stringify(newPayload), newVersion, now, id)
+    .bind(newState, JSON.stringify(newPayload), newVersion, now, id, existing.version)
     .run();
+
+  if ((updated.meta?.changes ?? 0) === 0) return { error: "edit_conflict" };
 
   await recordEvent(env, {
     projectId: existing.projectId,
@@ -134,11 +138,12 @@ export async function getSubscriptions(env, { roomId, projectId }) {
   }));
 }
 
-export async function unsubscribeFromObjectEvents(env, { id }) {
+export async function unsubscribeFromObjectEvents(env, { id, projectId }) {
+  // Audit fix A2-10: scope the delete to the caller's project (cross-tenant guard).
   const result = await env.DB.prepare(
-    "DELETE FROM business_object_subscriptions WHERE id = ?"
+    "DELETE FROM business_object_subscriptions WHERE id = ? AND project_id = ?"
   )
-    .bind(id)
+    .bind(id, projectId)
     .run();
   return { deleted: result.meta?.changes || 0 };
 }

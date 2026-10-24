@@ -72,15 +72,15 @@ function e2eSessionPayload(jwt: string) {
   };
 }
 
+/** Runs in the browser: seed the console session for both init scripts and live pages. */
+function applySession(data: ReturnType<typeof e2eSessionPayload>) {
+  window.sessionStorage.setItem("fluxychat.dashboard.session.v1", JSON.stringify(data));
+  (window as Window & { __FLUXY_E2E_SESSION?: typeof data }).__FLUXY_E2E_SESSION = data;
+}
+
 export async function seedAdminSession(page: Page, jwt: string) {
   const payload = e2eSessionPayload(jwt);
-  await page.context().addInitScript(
-    (data) => {
-      window.sessionStorage.setItem("fluxychat.dashboard.session.v1", JSON.stringify(data));
-      (window as Window & { __FLUXY_E2E_SESSION?: typeof data }).__FLUXY_E2E_SESSION = data;
-    },
-    payload,
-  );
+  await page.context().addInitScript(applySession, payload);
 
   const origin = (process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
   const url = page.url();
@@ -92,9 +92,9 @@ export async function seedAdminSession(page: Page, jwt: string) {
       if (!msg.includes("ERR_ABORTED") && !msg.includes("frame was detached")) throw err;
       await page.goto(`${origin}/`, { waitUntil: "commit" });
     }
-    await page.evaluate(apply, payload);
+    await page.evaluate(applySession, payload);
   } else {
-    await page.evaluate(apply, payload);
+    await page.evaluate(applySession, payload);
   }
 
   const storedJwt = await page.evaluate(() => {
@@ -110,7 +110,7 @@ export async function seedAdminSession(page: Page, jwt: string) {
   }
 }
 
-const workerOrigin = (process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL ?? "http://127.0.0.1:8787").replace(
+export const workerOrigin = (process.env.NEXT_PUBLIC_FLUXYCHAT_WORKER_URL ?? "http://127.0.0.1:8787").replace(
   /\/$/,
   "",
 );

@@ -2,12 +2,25 @@ import { describe, it, expect } from "vitest";
 import {
   generateVapidKeyPair,
   buildVapidJwt,
+  buildWebPushInfo,
   encryptWebPushPayload,
   getVapidPublicKeyRaw,
   classifyPushResponse,
 } from "./vapid.js";
 
 describe("vapid", () => {
+  it("A2-19: buildWebPushInfo follows RFC 8291 order (ua_public, then as_public)", () => {
+    const ua = crypto.getRandomValues(new Uint8Array(65));
+    const as = crypto.getRandomValues(new Uint8Array(65));
+    const info = buildWebPushInfo("aesgcm", as, base64urlEncode(ua));
+    const expected = new Uint8Array([
+      ...new TextEncoder().encode("WebPush: info\0"),
+      ...ua,
+      ...as,
+    ]);
+    expect(Array.from(info)).toEqual(Array.from(expected));
+  });
+
   it("generates a usable EC P-256 key pair", async () => {
     const { publicKey, privateKey } = await generateVapidKeyPair();
     expect(publicKey.kty).toBe("EC");

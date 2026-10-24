@@ -80,6 +80,7 @@ export async function dispatchMcpRoutes(request, url, h) {
     requestLogCtx,
     verifyJwtAndGetContext,
     logError,
+    checkAndConsumeRateLimit,
   } = pickRouteDeps(h, [
     "env",
     "json",
@@ -87,6 +88,7 @@ export async function dispatchMcpRoutes(request, url, h) {
     "requestLogCtx",
     "verifyJwtAndGetContext",
     "logError",
+    "checkAndConsumeRateLimit",
   ]);
 
   const roomMcpMatch = url.pathname.match(/^\/mcp\/rooms\/([^/]+)$/);
@@ -131,6 +133,23 @@ export async function dispatchMcpRoutes(request, url, h) {
           ...corsHeaders,
           "WWW-Authenticate": `Bearer realm="fluxychat", resource_metadata="${workerOrigin}/.well-known/oauth-protected-resource"`,
         },
+      },
+    );
+  }
+
+  // Audit F-71: MCP calls were unthrottled — one caller could hammer DB reads,
+  // room sends and SSE through the tools.
+  const mcpRate = await checkAndConsumeRateLimit(env, {
+    key: `mcp:${auth.projectId}:${auth.userId}`,
+    limit: Number(env.RATE_LIMIT_MCP_PER_MINUTE || 120),
+    windowSeconds: 60,
+  });
+  if (!mcpRate.allowed) {
+    return json(
+      { jsonrpc: "2.0", error: { code: -32002, message: "Rate limit exceeded" }, id: null },
+      {
+        status: 429,
+        headers: { ...corsHeaders, "Retry-After": String(mcpRate.retryAfterSeconds) },
       },
     );
   }

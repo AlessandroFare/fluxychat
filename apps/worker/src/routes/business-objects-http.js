@@ -113,6 +113,7 @@ export async function dispatchBusinessObjectRoutes(request, url, h) {
     const body = await request.json();
     const result = await updateObject(h.env, { id, state: body.state, payload: body.payload, actorUserId: auth.userId });
     if (result.error === "not_found") return json(result, h, 404);
+    if (result.error === "edit_conflict") return json(result, h, 409);
     return json(result, h);
   }
 

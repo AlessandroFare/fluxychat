@@ -1,5 +1,15 @@
 # @fluxy-chat/ui
 
+## 0.1.11 (2026-10-23)
+
+### Fixed
+
+- Cursor arrow tip now lands on the reported pointer position and has a high-contrast shadow for dark and light surfaces.
+
+### Changed
+
+- Peer `@fluxy-chat/sdk` is `^0.7.0`.
+
 ## 0.1.10 (2026-10-15)
 
 ### Changed

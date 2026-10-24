@@ -169,4 +169,34 @@ describe("workflow-automation", () => {
     expect(result).toHaveProperty("executions");
     expect(result).toHaveProperty("avgDurationMs");
   });
+
+  it("A2-6: scopes workflow and schedule updates to the project", async () => {
+    const sqls = [];
+    const binds = [];
+    const chain = {
+      bind: vi.fn(function (...params) {
+        binds.push(params);
+        return this;
+      }),
+      run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
+      first: vi.fn().mockResolvedValue(null),
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    };
+    env.DB = {
+      prepare: vi.fn((sql) => {
+        sqls.push(sql);
+        return chain;
+      }),
+    };
+    const { updateWorkflow, updateSchedule } = await import("../lib/workflow-automation.js");
+    await updateWorkflow(env, { workflowId: "wf1", projectId: "proj_own", name: "N" });
+    await updateSchedule(env, { scheduleId: "s1", projectId: "proj_own", enabled: true });
+    expect(sqls).toHaveLength(2);
+    for (const sql of sqls) {
+      expect(sql).toMatch(/AND project_id = \?/);
+    }
+    for (const params of binds) {
+      expect(params[params.length - 1]).toBe("proj_own");
+    }
+  });
 });

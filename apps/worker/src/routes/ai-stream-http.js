@@ -18,6 +18,7 @@ export async function dispatchAiStreamRoutes(request, url, h) {
     verifyJwtAndGetContext,
     logError,
     canAccessRoom,
+    checkAndConsumeRateLimit,
   } = pickRouteDeps(h, [
     "env",
     "json",
@@ -26,7 +27,13 @@ export async function dispatchAiStreamRoutes(request, url, h) {
     "verifyJwtAndGetContext",
     "logError",
     "canAccessRoom",
+    "checkAndConsumeRateLimit",
   ]);
+
+  // Audit F-65: bound what one caller can push into the KV resume namespace.
+  const MAX_STREAM_ID = 128;
+  const MAX_CHUNK_CHARS = 32_768;
+  const MAX_CONTENT_CHARS = 262_144;
 
   const resumeMatch = url.pathname.match(/^\/ai\/streams\/([^/]+)\/resume$/);
   if (resumeMatch && request.method === "GET") {
@@ -95,8 +102,31 @@ export async function dispatchAiStreamRoutes(request, url, h) {
     }
 
     const streamId = decodeURIComponent(chunkMatch[1]);
+    if (!new RegExp(`^[A-Za-z0-9._:-]{1,${MAX_STREAM_ID}}$`).test(streamId)) {
+      return json({ error: "invalid_stream_id" }, { status: 400, headers: corsHeaders });
+    }
+
+    // Audit F-65: unthrottled KV writes let one member fill the namespace.
+    const rate = await checkAndConsumeRateLimit(env, {
+      key: `ai-stream-chunk:${auth.projectId}:${auth.userId}`,
+      limit: Number(env.RATE_LIMIT_AI_STREAM_CHUNKS_PER_MINUTE || 120),
+      windowSeconds: 60,
+    });
+    if (!rate.allowed) {
+      return json(
+        { error: "rate_limit_exceeded", retryAfterSeconds: rate.retryAfterSeconds },
+        { status: 429, headers: { ...corsHeaders, "Retry-After": String(rate.retryAfterSeconds) } },
+      );
+    }
+
     const text = typeof body.text === "string" ? body.text : "";
+    if (text.length > MAX_CHUNK_CHARS) {
+      return json({ error: "chunk_too_large" }, { status: 413, headers: corsHeaders });
+    }
     const existing = await store.get(streamId);
+    if ((existing?.content?.length ?? 0) + text.length > MAX_CONTENT_CHARS) {
+      return json({ error: "stream_content_limit_reached" }, { status: 413, headers: corsHeaders });
+    }
     const entry = existing ?? {
       streamId,
       projectId: auth.projectId,

@@ -4,12 +4,61 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
+
+// Audit F-93: the resources removed themselves from state on any API error —
+// a transient 5xx or network blip made Terraform forget (and re-create) live
+// resources. Only a confirmed absence removes state.
+var errResourceNotFound = errors.New("resource not found")
+
+// validateWorkerURL rejects plain-HTTP Worker URLs: every call carries the
+// admin JWT, so http would put the token on the wire in clear. Localhost is
+// allowed for local development.
+func validateWorkerURL(raw string) (string, error) {
+	trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Host == "" {
+		return "", fmt.Errorf("worker_url must be an absolute URL, got %q", raw)
+	}
+	if parsed.Scheme == "https" {
+		return trimmed, nil
+	}
+	if parsed.Scheme == "http" {
+		switch parsed.Hostname() {
+		case "localhost", "127.0.0.1", "::1":
+			return trimmed, nil
+		}
+		return "", fmt.Errorf("worker_url must use https (http is only allowed for localhost): %q", raw)
+	}
+	return "", fmt.Errorf("worker_url must use https, got scheme %q", parsed.Scheme)
+}
+
+// validateWebhookURL keeps registrations to real https endpoints (localhost
+// http allowed for local receivers).
+func validateWebhookURL(raw string) (string, error) {
+	trimmed := strings.TrimSpace(raw)
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Host == "" {
+		return "", fmt.Errorf("url must be an absolute URL, got %q", raw)
+	}
+	if parsed.Scheme == "https" {
+		return trimmed, nil
+	}
+	if parsed.Scheme == "http" {
+		switch parsed.Hostname() {
+		case "localhost", "127.0.0.1", "::1":
+			return trimmed, nil
+		}
+	}
+	return "", fmt.Errorf("url must use https (http is only allowed for localhost): %q", raw)
+}
 
 type apiClient struct {
 	workerURL string
@@ -94,7 +143,7 @@ func (c *apiClient) getProject(ctx context.Context, id string) (projectRecord, e
 			return p, nil
 		}
 	}
-	return projectRecord{}, fmt.Errorf("project %q not found", id)
+	return projectRecord{}, fmt.Errorf("project %q: %w", id, errResourceNotFound)
 }
 
 type webhookRecord struct {
@@ -197,7 +246,7 @@ func (c *apiClient) getWebhook(ctx context.Context, id string) (webhookRecord, e
 			return webhook, nil
 		}
 	}
-	return webhookRecord{}, fmt.Errorf("webhook %q not found", id)
+	return webhookRecord{}, fmt.Errorf("webhook %q: %w", id, errResourceNotFound)
 }
 
 func (c *apiClient) updateWebhook(ctx context.Context, id, url string, eventTypes []string, secret string) error {

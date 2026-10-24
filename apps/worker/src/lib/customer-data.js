@@ -155,15 +155,19 @@ export async function addSegmentMember(env, { segmentId, projectId, customerId }
   }
   const id = `csm_${generateId().slice(0, 12)}`;
   const now = new Date().toISOString();
-  await env.DB.prepare(
+  const inserted = await env.DB.prepare(
     "INSERT OR IGNORE INTO customer_segment_members (id, segment_id, customer_id, added_at) VALUES (?, ?, ?, ?)"
   ).bind(id, segmentId, customerId, now).run();
 
-  await env.DB.prepare(
-    "UPDATE customer_segments SET customer_count = customer_count + 1, updated_at = ? WHERE id = ?"
-  ).bind(now, segmentId).run();
+  // Audit fix A2-16: only count members the INSERT actually added.
+  const added = (inserted.meta?.changes ?? 0) > 0;
+  if (added) {
+    await env.DB.prepare(
+      "UPDATE customer_segments SET customer_count = customer_count + 1, updated_at = ? WHERE id = ?"
+    ).bind(now, segmentId).run();
+  }
 
-  return { id };
+  return { id, added };
 }
 
 export async function removeSegmentMember(env, { segmentId, projectId, customerId }) {

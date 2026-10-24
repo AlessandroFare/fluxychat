@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Truck, Navigation, MapPin, Clock, Wifi, WifiOff, Crosshair, Play, CheckCircle, XCircle, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 import * as Y from "yjs";
@@ -14,6 +14,23 @@ import { useYDoc } from "@/components/fleet/use-ydoc";
 
 const WORKER_URL = getPublicWorkerUrl();
 
+function subscribeOnline(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
+function getOfflineSnapshot() {
+  return typeof navigator !== "undefined" && !navigator.onLine;
+}
+
+function getServerOfflineSnapshot() {
+  return false;
+}
+
 interface Trip { id: string; vehicleId: string; status: string; startedAt: string | null; completedAt: string | null; pickup: { lat: number; lng: number; address: string | null }; dropoff: { lat: number; lng: number; address: string | null }; distanceMeters: number | null; createdAt: string; }
 interface Vehicle { id: string; name: string; plate: string | null; }
 
@@ -24,7 +41,7 @@ export default function DriverPage() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [tracking, setTracking] = useState(false);
-  const [offline, setOffline] = useState(!navigator.onLine);
+  const offline = useSyncExternalStore(subscribeOnline, getOfflineSnapshot, getServerOfflineSnapshot);
   const [gpsStatus, setGpsStatus] = useState<"inactive" | "active" | "error">("inactive");
   const [pos, setPos] = useState<GeolocationPosition | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -72,7 +89,6 @@ export default function DriverPage() {
 
   useEffect(() => {
     const handleOnline = async () => {
-      setOffline(false);
       loadData();
       const doc = (window as any).__Y_DOC;
       if (doc) {
@@ -86,10 +102,8 @@ export default function DriverPage() {
         }
       }
     };
-    const handleOffline = () => setOffline(true);
     window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => { window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
+    return () => { window.removeEventListener("online", handleOnline); };
   }, [client, loadData]);
 
   useEffect(() => {

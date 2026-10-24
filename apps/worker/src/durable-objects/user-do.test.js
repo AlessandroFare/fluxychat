@@ -48,4 +48,22 @@ describe("UserDurableObject", () => {
     expect(closed).toBe(2);
     expect(userDo.clients.size).toBe(0);
   });
+
+  it("A2-31: a socket whose close() throws stays tracked", () => {
+    const state = { id: { toString: () => "proj__alice" } };
+    const userDo = new UserDurableObject(state, {});
+    const ws1 = createMockWebSocket();
+    const ws2 = createMockWebSocket();
+    ws1.close = () => {};
+    ws2.close = () => {
+      throw new Error("already closing");
+    };
+    userDo.clients.add(ws1);
+    userDo.clients.add(ws2);
+
+    const closed = userDo.terminateAllConnections(4001, "kick");
+    expect(closed).toBe(1);
+    expect(userDo.clients.has(ws1)).toBe(false);
+    expect(userDo.clients.has(ws2)).toBe(true);
+  });
 });

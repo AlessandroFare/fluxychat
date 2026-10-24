@@ -107,13 +107,21 @@ export async function verifyStripeWebhookSignatureAsync(
 ) {
   try {
     const parts = {};
+    const v1Signatures = [];
     for (const element of signatureHeader.split(",")) {
       const [key, ...rest] = element.split("=");
-      parts[key.trim()] = rest.join("=");
+      const name = key.trim();
+      const value = rest.join("=");
+      // Audit fix M9: Stripe sends one v1 per active endpoint secret during
+      // rotation — keep them all and accept if any matches.
+      if (name === "v1") {
+        v1Signatures.push(value);
+      } else {
+        parts[name] = value;
+      }
     }
     const timestamp = Number(parts.t);
-    const v1Signature = parts.v1;
-    if (!timestamp || !v1Signature) {
+    if (!timestamp || !v1Signatures.length) {
       return { valid: false, error: "missing t or v1 in Stripe-Signature", timestamp: null };
     }
 
@@ -134,7 +142,13 @@ export async function verifyStripeWebhookSignatureAsync(
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    const valid = await timingSafeEqual(expectedHex, v1Signature);
+    let valid = false;
+    for (const candidate of v1Signatures) {
+      if (await timingSafeEqual(expectedHex, candidate)) {
+        valid = true;
+        break;
+      }
+    }
     return { valid, timestamp, error: valid ? null : "signature_mismatch" };
   } catch (err) {
     return {
@@ -211,6 +225,24 @@ export async function handleStripeWebhookPost(request, env, h) {
     }
   }
 
+  try {
+    return await processStripeEvent(env, body, { json, logInfo });
+  } catch (err) {
+    // Audit F-82: the event was claimed before processing — release the claim on
+    // failure so Stripe's retry reprocesses it instead of being dropped as a
+    // duplicate.
+    if (eventId) {
+      await env.DB.prepare("DELETE FROM stripe_webhook_events WHERE id = ?")
+        .bind(eventId)
+        .run()
+        .catch(() => {});
+    }
+    logError("billing.stripe_processing_failed", err, { eventId, eventType: body.type });
+    return json({ error: "processing_failed" }, { status: 500 });
+  }
+}
+
+async function processStripeEvent(env, body, { json, logInfo }) {
   const eventType = body.type;
   const customerId = body.data?.object?.customer;
   const subscriptionId = body.data?.object?.id;
@@ -262,6 +294,8 @@ export async function handleStripeWebhookPost(request, env, h) {
     const planName = body.data?.object?.metadata?.plan_name || "starter";
     if (projectId) {
       const s = String(status || "");
+      // Unknown or pending Stripe statuses (incomplete, paused, future
+      // additions) fail closed: only an explicit paid status keeps the tier.
       const billingStatus =
         s === "active"
           ? "active"
@@ -273,7 +307,7 @@ export async function handleStripeWebhookPost(request, env, h) {
                 ? "cancelled"
                 : s === "unpaid"
                   ? "past_due"
-                  : "active";
+                  : "cancelled";
       await upsertProjectPlanFromStripe(env, {
         projectId,
         planName,

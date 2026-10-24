@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createTranscriptsApi } from "./transcripts";
 import type { TranscriptEntry } from "./transcripts";
 
@@ -180,5 +180,94 @@ describe("createTranscriptsApi", () => {
 
     const entries = await api.list({ userKey: "u1", limit: 2, roles: ["user"] });
     expect(entries).toHaveLength(2);
+  });
+});
+
+describe("createTranscriptsApi worker transport", () => {
+  function workerApi(fetchMock: ReturnType<typeof vi.fn>) {
+    return createTranscriptsApi({
+      maxPerUser: 10,
+      retention: "30d",
+      worker: {
+        baseUrl: "https://worker.test/",
+        token: "jwt",
+        fetch: fetchMock as unknown as typeof fetch,
+      },
+    });
+  }
+
+  it("appends through POST /admin/transcripts", async () => {
+    const entry: TranscriptEntry = {
+      id: "t1",
+      userKey: "u1",
+      role: "assistant",
+      text: "hi",
+      platform: "slack",
+      threadId: "C1",
+      timestamp: 1,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ entry }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const api = workerApi(fetchMock);
+    const result = await api.append("C1", "slack", { text: "hi", role: "assistant" }, { userKey: "u1" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(url)).toBe("https://worker.test/admin/transcripts");
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer jwt");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      userKey: "u1",
+      role: "assistant",
+      text: "hi",
+      platform: "slack",
+      threadId: "C1",
+      maxPerUser: 10,
+      retentionMs: 2_592_000_000,
+    });
+    expect(result).toEqual(entry);
+  });
+
+  it("lists and counts through the worker", async () => {
+    const entries: TranscriptEntry[] = [
+      { id: "t1", userKey: "u1", role: "user", text: "a", platform: "slack", threadId: "C1", timestamp: 1 },
+    ];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ entries }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ count: 7 }), { status: 200 }));
+    const api = workerApi(fetchMock);
+
+    const listed = await api.list({ userKey: "u1", platforms: ["slack"], roles: ["user"], limit: 5 });
+    expect(listed).toEqual(entries);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://worker.test/admin/transcripts?userKey=u1&platforms=slack&roles=user&limit=5",
+    );
+
+    expect(await api.count({ userKey: "u1" })).toBe(7);
+    expect(String(fetchMock.mock.calls[1][0])).toBe(
+      "https://worker.test/admin/transcripts/count?userKey=u1",
+    );
+  });
+
+  it("deletes through the worker", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ deleted: 3 }), { status: 200 }));
+    const api = workerApi(fetchMock);
+    expect(await api.delete({ userKey: "u@example.com" })).toEqual({ deleted: 3 });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(url)).toBe("https://worker.test/admin/transcripts?userKey=u%40example.com");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("surfaces worker failures", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("nope", { status: 401 }));
+    const api = workerApi(fetchMock);
+    await expect(api.list({ userKey: "u1" })).rejects.toThrow("401");
   });
 });

@@ -127,7 +127,7 @@ export default function InboxPage() {
   ];
 
   return (
-    <ConsoleShell className="max-w-3xl">
+    <ConsoleShell className="max-w-5xl">
       <ConsolePageHeader
         title="Inbox"
         description={`Mentions, unread rooms, snoozed channels, and follow-ups.${unreadCounter > 0 ? ` ${unreadCounter} unread room${unreadCounter === 1 ? "" : "s"}.` : ""}${unseen > 0 ? ` ${unseen} in view.` : ""}`}
@@ -223,7 +223,7 @@ export default function InboxPage() {
             className={cn(
               "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               tab === t.id
-                ? "border-primary bg-primary/10 text-primary"
+                ? "border-primary bg-primary/5 text-[var(--brand-hover)]"
                 : "border-border text-muted-foreground hover:bg-muted/50",
             )}
           >
@@ -258,7 +258,11 @@ export default function InboxPage() {
                 Mentions of you
               </h2>
               {data.mentions.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No recent @mentions.</p>
+                <EmptyState
+                  compact
+                  title="No recent mentions"
+                  description="When someone @mentions you, it lands here."
+                />
               ) : (
                 <ul className="space-y-2">
                   {data.mentions.map((m) => (
@@ -331,7 +335,11 @@ export default function InboxPage() {
                 Snoozed
               </h2>
               {data.snoozedRooms.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No snoozed rooms.</p>
+                <EmptyState
+                  compact
+                  title="Nothing snoozed"
+                  description="Snooze a room to quiet it until later."
+                />
               ) : (
                 <ul className="space-y-2">
                   {data.snoozedRooms.map((r) => (
@@ -378,7 +386,11 @@ export default function InboxPage() {
                 </Button>
               </Panel>
               {data.followUps.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No open follow-ups.</p>
+                <EmptyState
+                  compact
+                  title="No open follow-ups"
+                  description="Add a room above to keep it on your list."
+                />
               ) : (
                 <ul className="space-y-2">
                   {data.followUps.map((f) => (

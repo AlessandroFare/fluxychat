@@ -5,4 +5,15 @@ description: "This rooms instance has been disposed"
 
 # 40041 — resource_disposed
 
-`rooms.get` ran after `rooms.dispose()` / `client.close()`. The client is done. Make a new `FluxyChatClient`. Terminal.
+`rooms.get` ran after `rooms.dispose()` / `client.close()`. The client is done. Terminal.
+
+**At a glance** — HTTP 400 · terminal · a client lifecycle error, not a network failure.
+
+## What to do
+
+- Create a new `FluxyChatClient` instead of reusing the disposed one.
+- Terminal means retrying on the same client cannot succeed — the fix is a new client, not a retry.
+
+## Related
+
+- [10000 send_not_open](/docs/errors/send_not_open)

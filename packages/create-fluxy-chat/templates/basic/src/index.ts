@@ -1,7 +1,7 @@
-import { handleWebhook } from "./bot.js";
+import { handleWebhook, type BotEnv } from "./bot.js";
 
 export default {
-  async fetch(request: Request, env: Record<string, string>): Promise<Response> {
+  async fetch(request: Request, env: BotEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/webhook" && request.method === "POST") {

@@ -70,7 +70,10 @@ function makeEnv() {
               runs.push({ id: params[0], project_id: params[2], status: params[3], event_count: params[4] });
             } else if (sql.includes("UPDATE") && sql.includes("last_run_at")) {
               const idx = schedules.findIndex((s) => s.id === params[2]);
-              if (idx >= 0) schedules[idx].last_run_at = params[0];
+              if (idx >= 0) {
+                schedules[idx].last_run_at = params[0];
+                schedules[idx].next_run_at = params[1];
+              }
             }
             return { meta: { changes: 1 } };
           },
@@ -78,6 +81,7 @@ function makeEnv() {
       }),
     },
     _events: events,
+    _schedules: schedules,
   };
 }
 
@@ -121,6 +125,22 @@ describe("audit-log-export", () => {
         destinationUrl: "https://siem.example.com/ingest",
       });
       expect(result.created).toBe(true);
+    });
+
+    it("A2-18: recordExportRun computes the next run from the schedule frequency", async () => {
+      const env = makeEnv();
+      const created = await createExportSchedule(env, {
+        projectId: "p1",
+        name: "Weekly SIEM",
+        frequency: "weekly",
+        destinationType: "siem",
+        destinationUrl: "https://siem.example.com/ingest",
+      });
+      await recordExportRun(env, { scheduleId: created.id, projectId: "p1", status: "completed", eventCount: 3 });
+      const schedule = env._schedules.find((s) => s.id === created.id);
+      const days = (new Date(schedule.next_run_at).getTime() - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(6);
+      expect(days).toBeLessThan(8);
     });
 
     it("requires name, frequency, destinationType", async () => {
@@ -175,5 +195,21 @@ describe("audit-log-export", () => {
       expect(stats.byAction["message.send"]).toBe(1);
       expect(stats.bySeverity["info"]).toBe(2);
     });
+  });
+
+  it("A2-9: toggleExportSchedule scopes the update by project", async () => {
+    const calls = [];
+    const chain = {
+      bind: function (...params) {
+        calls.push(params);
+        return this;
+      },
+      run: async () => ({ meta: { changes: 1 } }),
+    };
+    const env = { DB: { prepare: (sql) => { calls.push(sql); return chain; } } };
+    const result = await toggleExportSchedule(env, { id: "s1", projectId: "proj_own", enabled: true });
+    expect(calls[0]).toMatch(/AND project_id = \?/);
+    expect(calls[1][calls[1].length - 1]).toBe("proj_own");
+    expect(result.updated).toBe(1);
   });
 });

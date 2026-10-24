@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ConsoleShell } from "../../components/console-shell";
 import { ConsolePageHeader } from "../../components/console-page-header";
 import { ConsoleProjectRoomBar } from "../../components/console-project-room-bar";
@@ -39,6 +40,18 @@ export default function RealtimeFeaturesPage() {
         preferRoom
         hint="Uses the Worker /demo/session guest room when not signed in; sign in and pick a project to exercise your own rooms."
       />
+
+      <p className="mt-3 text-xs text-muted-foreground">
+        Same SDK as production. No-signup version:{" "}
+        <Link href="/demo" className="text-brand underline underline-offset-2">
+          Playground
+        </Link>
+        ; seeded stream UI in Labs:{" "}
+        <Link href="/stream/demo" className="text-brand underline underline-offset-2">
+          Stream studio
+        </Link>
+        .
+      </p>
 
       <div
         role="tablist"

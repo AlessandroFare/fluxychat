@@ -321,7 +321,7 @@ function EntityList({ entities, onRemove }: { entities: Array<{ id: string; type
               <p className="text-xs font-medium capitalize">{e.type}</p>
               <p className="text-[10px] text-muted-foreground">({e.x}, {e.z}) · {String(e.props.color || "")}</p>
             </div>
-            <button onClick={() => onRemove(e.id)} className="text-muted-foreground hover:text-red-500">
+            <button onClick={() => onRemove(e.id)} aria-label={`Remove ${e.type} at ${e.x}, ${e.z}`} className="text-muted-foreground hover:text-red-500">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>

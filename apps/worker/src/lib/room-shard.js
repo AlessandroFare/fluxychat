@@ -167,7 +167,9 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
   if (shardCount <= 1) {
     try {
       const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
-      const liveRes = await stub.fetch("https://internal/live-stats");
+      const liveRes = await stub.fetch("https://internal/live-stats", {
+        headers: internalDoHeaders(env),
+      });
       if (liveRes.ok) mergeBody(await liveRes.json());
     } catch {
       /* cold DO */
@@ -175,7 +177,9 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
   } else {
     await forEachRoomShard(env, roomId, shardCount, async (stub) => {
       try {
-        const liveRes = await stub.fetch("https://internal/live-stats");
+        const liveRes = await stub.fetch("https://internal/live-stats", {
+          headers: internalDoHeaders(env),
+        });
         if (liveRes.ok) mergeBody(await liveRes.json());
       } catch {
         /* ignore */
@@ -189,6 +193,25 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
 }
 
 /**
+ * Audit #15: optional service credential for internal-only DO endpoints
+ * (/announce, /stream). Returns `headers` unchanged unless INTERNAL_DO_TOKEN is
+ * configured; when it is, the room DO requires the header and rejects callers
+ * without it.
+ * @param {*} env
+ * @param {HeadersInit} [headers]
+ */
+export function internalDoHeaders(env, headers) {
+  const token = env?.INTERNAL_DO_TOKEN;
+  if (!token) return headers;
+  if (typeof Headers !== "undefined" && headers instanceof Headers) {
+    const next = new Headers(headers);
+    next.set("X-Internal-Do-Token", token);
+    return next;
+  }
+  return { ...(headers || {}), "X-Internal-Do-Token": token };
+}
+
+/**
  * POST/GET to all shard DOs (e.g. /announce) — parallel fan-out.
  * @param {*} env
  * @param {string} projectId
@@ -199,7 +222,8 @@ export async function fetchAggregatedRoomLive(env, projectId, roomId) {
 export async function fanoutRoomInternal(env, projectId, roomId, path, init) {
   const shardCount = await getRoomShardCount(env, projectId, roomId);
   const url = `https://internal${path.startsWith("/") ? path : `/${path}`}`;
-  await forEachRoomShard(env, roomId, shardCount, (stub) => stub.fetch(url, init));
+  const initWithAuth = { ...(init || {}), headers: internalDoHeaders(env, init?.headers) };
+  await forEachRoomShard(env, roomId, shardCount, (stub) => stub.fetch(url, initWithAuth));
 }
 
 /**
@@ -238,7 +262,7 @@ export async function autoRebalanceRoom(env, projectId, roomId) {
     const res = await router.fetch("https://internal/rebalance", {
       method: "POST",
       body: JSON.stringify({ projectId, roomId }),
-      headers: { "Content-Type": "application/json" },
+      headers: internalDoHeaders(env, { "Content-Type": "application/json" }),
       signal: AbortSignal.timeout(200),
     });
     return res.ok ? res.json() : null;

@@ -2,7 +2,7 @@
 
 import { Bot, FolderKanban, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { HOSTED_PATHS } from "@/lib/hosted-product";
+import { HOSTED_PATHS, isClerkClientConfigured } from "@/lib/hosted-product";
 import { FluxychatMark } from "@/components/FluxychatLogo";
 import type { OnboardingWizard } from "./use-onboarding-wizard";
 
@@ -53,12 +53,27 @@ export function WelcomeStep({ wizard: w }: WelcomeStepProps) {
         })}
       </div>
 
+      <p className="mt-6 text-xs text-muted-foreground">
+        Curious first?{" "}
+        <Link href="/demo" className="underline underline-offset-2">
+          Try the demo room
+        </Link>{" "}
+        as a guest — no account needed.
+      </p>
+
       {!w.clerkSignedIn && !w.adminJwt.trim() ? (
-        <p className="mt-6 text-xs text-muted-foreground">
-          Next step asks you to sign in.{" "}
-          <Link href={HOSTED_PATHS.console} className="underline underline-offset-2">
-            Skip to console
-          </Link>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {isClerkClientConfigured() ? (
+            <>Next step asks you to sign in. The console unlocks once Quickstart is done.</>
+          ) : (
+            <>
+              No sign-in gate on this deployment.{" "}
+              <Link href={HOSTED_PATHS.console} className="underline underline-offset-2">
+                Skip ahead to the console
+              </Link>
+              .
+            </>
+          )}
         </p>
       ) : null}
     </div>

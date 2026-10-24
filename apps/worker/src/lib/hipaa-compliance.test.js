@@ -82,4 +82,44 @@ describe("hipaa-compliance", () => {
     expect(result).toHaveProperty("breaches");
     expect(result).toHaveProperty("training");
   });
+
+  it("A2-5: scopes every update to the caller's project", async () => {
+    const sqls = [];
+    const binds = [];
+    const chain = {
+      bind: vi.fn(function (...params) {
+        binds.push(params);
+        return this;
+      }),
+      run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
+      first: vi.fn().mockResolvedValue(null),
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    };
+    env.DB = {
+      prepare: vi.fn((sql) => {
+        sqls.push(sql);
+        return chain;
+      }),
+    };
+    const { updateBAA, reviewPHIDetection, updateBreach, completeTraining } = await import(
+      "../lib/hipaa-compliance.js"
+    );
+    await updateBAA(env, { baaId: "baa1", projectId: "proj_own", status: "active" });
+    await reviewPHIDetection(env, {
+      detectionId: "det1",
+      projectId: "proj_own",
+      actionTaken: "masked",
+      reviewedBy: "u1",
+    });
+    await updateBreach(env, { breachId: "br1", projectId: "proj_own", status: "contained" });
+    await completeTraining(env, { trainingId: "tr1", projectId: "proj_own", score: 90 });
+
+    expect(sqls).toHaveLength(4);
+    for (const sql of sqls) {
+      expect(sql).toMatch(/WHERE id = \? AND project_id = \?/);
+    }
+    for (const params of binds) {
+      expect(params[params.length - 1]).toBe("proj_own");
+    }
+  });
 });

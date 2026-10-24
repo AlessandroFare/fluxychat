@@ -321,8 +321,8 @@ export default function PlaygroundPage() {
           <>
             Compose rich interactive cards visually, preview the result, copy the code, and send it
             to a room.{" "}
-            <Link href="/docs" className="text-brand underline underline-offset-2">
-              Card docs →
+            <Link href="/docs" className="whitespace-nowrap text-brand underline underline-offset-2">
+              Card docs
             </Link>
           </>
         }

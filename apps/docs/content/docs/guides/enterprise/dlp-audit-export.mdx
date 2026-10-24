@@ -12,6 +12,7 @@ FluxyChat ships built-in data loss prevention (DLP) for chat content plus admin 
 3. Run a **DLP scan** on sample text containing a test SSN or card number.
 4. **Export audit log** (last 24h JSON) for your auditor pack.
 5. **Export SOC 2 evidence** JSON from the same page.
+6. **Generate ops evidence pack** to record what the governed agents actually did (runs, approvals, incidents).
 
 ## SDK — local PHI/PCI detection
 
@@ -91,6 +92,18 @@ Dashboard **SOC 2** page calls:
 
 - `GET /api/soc2/dashboard` — control, risk, and incident counts
 - `GET /api/soc2/evidence` — downloadable evidence bundle
+- `POST /api/soc2/reports/evidence` — build an **operations evidence pack** (markdown) from live data: incidents and MTTR, governed agent runs, approvals, and the tool and policy controls in force. The document is stored as an `soc2_reports` row (`reportType: audit`) and returned in the response; the SOC 2 page exposes it as **Generate ops evidence pack**.
+
+```bash
+curl -X POST "$WORKER_URL/api/soc2/reports/evidence" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"days": 90}'
+```
+
+Counts are read from live tables at generation time (no estimates), so the pack can be handed to an auditor or pasted into a security questionnaire.
+
+Saved reports are listed on the same page (**Saved reports**): view the markdown inline, download it as a file, and promote a `draft` report to `final` with `PATCH /api/soc2/reports/:id` (`status`: `draft` | `final` | `archived`). Every report write is scoped to the project that created it.
 
 Combine with audit export and DLP scan history (`GET /admin/dlp-integrations/scans`) for a complete auditor handoff.
 

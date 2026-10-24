@@ -2,6 +2,8 @@
  * Normalize and validate LLM tool calls before executing against customer endpoints (P1-3).
  */
 
+import { validateSchema } from "./strict-tool-calling.js";
+
 /**
  * Audit A-5: parse the AGENT_TOOL_ALLOWLIST env var (comma-separated) into
  * a Set. Returns:
@@ -149,6 +151,21 @@ export function validateToolCall(toolCallRaw, registeredTools, runId, projectAll
       toolCall: null,
       warning: `tool_call_blocked_by_project_allowlist runId=${runId} name=${name}`,
     };
+  }
+
+  // P25-9: the tool's own JSON Schema gates the arguments so a malformed
+  // payload never reaches the customer endpoint. askHuman keeps its own
+  // runtime validation (agent-inbox), like it does for the allow-lists.
+  const parameters = registeredTools?.find((t) => t.function?.name === name)?.function?.parameters;
+  if (parameters && typeof parameters === "object" && String(name).toLowerCase() !== "askhuman") {
+    const schemaErrors = validateSchema(parsedArgs, parameters);
+    if (schemaErrors.length) {
+      return {
+        valid: false,
+        toolCall: null,
+        warning: `tool_call_invalid_arguments_schema runId=${runId} name=${name} errors=${schemaErrors.slice(0, 3).join("; ").slice(0, 180)}`,
+      };
+    }
   }
 
   return {

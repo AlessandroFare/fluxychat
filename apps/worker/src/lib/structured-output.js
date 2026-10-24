@@ -3,6 +3,8 @@
  * JSON schema constrained generation.
  */
 
+import { compileSafeRegex } from "./safe-regex.js";
+
 /**
  * Generate a system prompt suffix for structured output.
  * @param {Object} schema
@@ -121,8 +123,12 @@ export function validateAgainstSchema(obj, schema) {
     errors.push(`String length must be <= ${schema.maxLength}`);
   }
 
-  if (schema.pattern && typeof obj === "string" && !new RegExp(schema.pattern).test(obj)) {
-    errors.push(`String must match pattern: ${schema.pattern}`);
+  // Audit F-51: schema patterns can be model-generated — skip unsafe shapes.
+  if (schema.pattern && typeof obj === "string") {
+    const re = compileSafeRegex(schema.pattern);
+    if (re && !re.test(obj)) {
+      errors.push(`String must match pattern: ${schema.pattern}`);
+    }
   }
 
   return { valid: errors.length === 0, errors };

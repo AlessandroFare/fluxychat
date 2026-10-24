@@ -5,6 +5,18 @@ description: "You are not a member of this room"
 
 # 40300 — not_member
 
-The user is authenticated but not in this room. Terminal until they are invited or join.
+The user is authenticated but not a member of this room. Terminal until they are invited or join.
 
-HTTP 403. Close 1008, reason `not_member`. SDK class: `FluxyNotMemberError`.
+**At a glance** — HTTP 403 · close 1008 `not_member` · terminal · SDK `FluxyNotMemberError`.
+
+## What to do
+
+- Add the user to the room (invite / membership API), or connect with an identity that is already a member.
+- The SDK also maps a `Forbidden` close reason to `FluxyNotMemberError` — inspect the raw reason when you need to tell the two apart.
+- Do not auto-retry the same identity: reconnect fails until membership changes.
+
+## Related
+
+- [40301 banned](/docs/errors/banned)
+- [40302 forbidden](/docs/errors/forbidden)
+- [40108 auth_refused](/docs/errors/auth_refused)

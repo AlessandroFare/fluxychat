@@ -200,7 +200,7 @@ function KnowledgeBaseDemo() {
                 setResults(res.map((r) => ({ title: r.document.title, score: r.score, snippet: r.chunk.content.slice(0, 80) })));
                 addLog(`Search "${searchQuery}" → ${res.length} results`);
               }}} />
-            <Button size="sm" variant="outline" onClick={() => {
+            <Button size="sm" variant="outline" aria-label="Search knowledge base" onClick={() => {
               if (!searchQuery.trim()) return;
               const res = kb.search({ text: searchQuery.trim(), maxResults: 5 });
               setResults(res.map((r) => ({ title: r.document.title, score: r.score, snippet: r.chunk.content.slice(0, 80) })));
@@ -214,7 +214,7 @@ function KnowledgeBaseDemo() {
               {sources.map((s) => (
                 <div key={s.id} className="flex items-center justify-between text-xs py-0.5">
                   <span>{s.name} <span className="text-muted-foreground">({s.type})</span></span>
-                  <button className="text-red-400 hover:text-red-600" onClick={() => { kb.removeSource(s.id); setSources((p) => p.filter((x) => x.id !== s.id)); addLog(`Removed source "${s.name}"`); }}>
+                  <button className="text-red-400 hover:text-red-600" aria-label={`Remove source ${s.name}`} onClick={() => { kb.removeSource(s.id); setSources((p) => p.filter((x) => x.id !== s.id)); addLog(`Removed source "${s.name}"`); }}>
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
@@ -298,7 +298,7 @@ function ResourceLinksDemo() {
                   {l.valid ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <XCircle className="h-3 w-3 text-red-500" />}
                   <span className="truncate font-mono">{l.uri}</span>
                   <span className="text-muted-foreground shrink-0">{l.name}</span>
-                  <button onClick={() => { setLinks((p) => p.filter((_, j) => j !== i)); addLog("Link removed"); }}>
+                  <button onClick={() => { setLinks((p) => p.filter((_, j) => j !== i)); addLog("Link removed"); }} aria-label={`Remove ${l.name || l.uri}`}>
                     <Trash2 className="h-3 w-3 text-muted-foreground hover:text-red-500" />
                   </button>
                 </div>
@@ -411,7 +411,7 @@ function TranslationDemo() {
               {glossary.map((g, i) => (
                 <div key={i} className="flex items-center justify-between text-xs py-0.5">
                   <span>{g.source} <ArrowRightLeft className="h-3 w-3 inline text-muted-foreground" /> {g.target}</span>
-                  <button onClick={() => { setGlossary((p) => p.filter((_, j) => j !== i)); addLog(`Removed "${g.source}"`); }}>
+                  <button onClick={() => { setGlossary((p) => p.filter((_, j) => j !== i)); addLog(`Removed "${g.source}"`); }} aria-label={`Remove glossary term ${g.source}`}>
                     <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
                   </button>
                 </div>

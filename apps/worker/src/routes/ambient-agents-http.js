@@ -41,6 +41,18 @@ export async function dispatchAmbientAgentsRoutes(request, url, h) {
     return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
   }
 
+  // Audit F-52: an admin-scoped trigger must not accept a roomId from another
+  // project (the agent would post into a foreign room).
+  const roomInProject = async (roomId) => {
+    if (!roomId) return true;
+    const row = await env.DB.prepare(
+      "SELECT id FROM rooms WHERE id = ? AND project_id = ?",
+    )
+      .bind(roomId, auth.projectId)
+      .first();
+    return Boolean(row);
+  };
+
   try {
     if (request.method === "GET" && path === "/admin/ambient/policies") {
       const triggerType = url.searchParams.get("triggerType") ?? undefined;
@@ -88,10 +100,15 @@ export async function dispatchAmbientAgentsRoutes(request, url, h) {
         .first();
       const policy = mapAgentPolicyRow(row);
       if (!policy) return json({ error: "not_found" }, { status: 404, headers: corsHeaders });
+      // Audit F-52: the requested room must belong to this project.
+      const roomId = body.roomId || policy.roomId;
+      if (!(await roomInProject(roomId))) {
+        return json({ error: "room_not_found" }, { status: 404, headers: corsHeaders });
+      }
       const result = await executeAmbientPolicy(env, policy, {
         triggerType: policy.triggerType,
         triggerKey: body.triggerKey || policy.triggerPattern,
-        roomId: body.roomId || policy.roomId,
+        roomId,
         payload: body.payload || {},
         userId: auth.userId,
         traceId: body.traceId,
@@ -105,6 +122,10 @@ export async function dispatchAmbientAgentsRoutes(request, url, h) {
       const triggerKey = String(body.triggerKey ?? "").trim();
       if (!triggerType || !triggerKey) {
         return json({ error: "triggerType and triggerKey required" }, { status: 400, headers: corsHeaders });
+      }
+      // Audit F-52: the event room must belong to this project.
+      if (body.roomId && !(await roomInProject(String(body.roomId)))) {
+        return json({ error: "room_not_found" }, { status: 404, headers: corsHeaders });
       }
       const result = await dispatchAmbientEvent(env, {
         projectId: auth.projectId,

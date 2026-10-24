@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, CSSProperties, KeyboardEvent, MouseEvent } from 'react';
 import { gsap } from 'gsap';
+import Image from 'next/image';
 
 export interface AccordionGalleryItem {
   image: string;
@@ -253,11 +254,13 @@ const AccordionGallery = ({
                   willChange: 'transform, filter'
                 }}
               >
-                <img
+                <Image
                   src={item.image}
                   alt={item.alt || item.label || ''}
                   draggable={false}
-                  className="block h-full w-full select-none object-cover [-webkit-user-drag:none]"
+                  fill
+                  sizes="(max-width: 640px) 90vw, 320px"
+                  className="block select-none object-cover [-webkit-user-drag:none]"
                 />
               </span>
               <span

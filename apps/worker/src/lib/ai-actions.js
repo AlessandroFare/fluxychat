@@ -77,6 +77,19 @@ export async function updateAction(env, { projectId, actionId, name, description
   const existing = await getAction(env, { projectId, actionId });
   if (!existing) return null;
 
+  // Audit F-59: merge config so a masked read-modify-write cannot blank secrets.
+  let configJson = JSON.stringify(existing.config);
+  if (config) {
+    const base = existing.config && typeof existing.config === "object" ? existing.config : {};
+    const next = { ...base, ...config };
+    for (const [key, value] of Object.entries(next)) {
+      if (value !== REDACTED_CONFIG_VALUE) continue;
+      if (base[key] !== undefined) next[key] = base[key];
+      else delete next[key];
+    }
+    configJson = JSON.stringify(next);
+  }
+
   const now = new Date().toISOString();
   await env.DB.prepare(
     `UPDATE ai_actions SET name = ?, description = ?, kind = ?, config = ?, enabled = ?, updated_at = ?
@@ -86,7 +99,7 @@ export async function updateAction(env, { projectId, actionId, name, description
       name ?? existing.name,
       description !== undefined ? description : existing.description,
       kind ?? existing.kind,
-      config ? JSON.stringify(config) : JSON.stringify(existing.config),
+      configJson,
       enabled !== undefined ? (enabled ? 1 : 0) : (existing.enabled ? 1 : 0),
       now,
       actionId,
@@ -353,6 +366,26 @@ async function executeCustom(env, { action, input }) {
 }
 
 // --- Helpers ---
+
+// Audit F-59: config holds secrets (github_token, webhook headers). API reads
+// must return a mask, and writes that echo the mask keep the stored value.
+export const REDACTED_CONFIG_VALUE = "***";
+const SECRET_CONFIG_KEY = /(token|secret|api[-_]?key|authorization|password)/i;
+
+export function redactActionConfig(config) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) return config;
+  const out = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (SECRET_CONFIG_KEY.test(key)) {
+      out[key] = value ? REDACTED_CONFIG_VALUE : value;
+    } else if (key === "headers" && value && typeof value === "object") {
+      out[key] = redactActionConfig(value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
 
 function parseAction(row) {
   return {

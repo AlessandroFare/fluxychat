@@ -299,3 +299,79 @@ function tryParse(json) {
     return json;
   }
 }
+
+/**
+ * Audit F-65: category for a tool name so `ai_action_policies` rows are matched
+ * at execution time.
+ * shortcut: only webhook/email/tool_call categories exist; widen when a new
+ * policy vocabulary ships.
+ */
+export function policyActionTypeForTool(toolName) {
+  const name = String(toolName || "").toLowerCase();
+  if (name.includes("webhook")) return "webhook";
+  if (name.includes("email") || name.startsWith("mail_") || name.startsWith("smtp")) return "email";
+  return "tool_call";
+}
+
+/** Record an executed action so `maxExecutionsPerHour` can be enforced. */
+export async function recordActionExecution(env, { projectId, actionType, toolName, agentId, userId, roomId }) {
+  const id = generateId();
+  await env.DB.prepare(
+    `INSERT INTO ai_action_executions (id, project_id, action_id, room_id, user_id, input, output, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      id,
+      projectId,
+      actionType,
+      roomId || null,
+      userId || null,
+      JSON.stringify({ toolName: toolName || null, agentId: agentId || null }),
+      null,
+      "succeeded",
+      nowIso(),
+    )
+    .run();
+  return { id };
+}
+
+/**
+ * Audit F-65: the action policies were decorative — nothing called
+ * `checkPolicy` at the point where an agent tool runs. This is that gate:
+ * deny → violation log; requireApproval → denied until an approval flow is
+ * wired (fail closed); allowed with a matched policy → execution recorded.
+ */
+export async function enforceToolPolicy(env, { projectId, toolName, userRoles, agentId, userId, roomId }) {
+  if (!env?.DB) return { allowed: true, reason: "policy_store_missing", requireApproval: false };
+  const actionType = policyActionTypeForTool(toolName);
+  const decision = await checkPolicy(env, { projectId, actionType, toolName, userRoles, agentId });
+  const actionId = `${actionType}:${String(toolName || "")}`;
+  if (!decision.allowed) {
+    await logViolation(env, {
+      projectId,
+      policyId: decision.matchedPolicy?.id || null,
+      actionId,
+      agentId,
+      userId,
+      violationType: decision.reason,
+      details: { toolName, actionType },
+    }).catch(() => {});
+    return decision;
+  }
+  if (decision.requireApproval) {
+    await logViolation(env, {
+      projectId,
+      policyId: decision.matchedPolicy?.id || null,
+      actionId,
+      agentId,
+      userId,
+      violationType: "approval_required",
+      details: { toolName, actionType },
+    }).catch(() => {});
+    return { ...decision, allowed: false, reason: "approval_required" };
+  }
+  if (decision.matchedPolicy) {
+    await recordActionExecution(env, { projectId, actionType, toolName, agentId, userId, roomId }).catch(() => {});
+  }
+  return decision;
+}

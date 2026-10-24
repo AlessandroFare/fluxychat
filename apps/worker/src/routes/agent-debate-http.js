@@ -40,6 +40,18 @@ export async function dispatchAgentDebateRoutes(request, url, h) {
     return json({ error: "forbidden" }, { status: 403, headers: corsHeaders });
   }
 
+  // Audit F-52: debate routes are admin-scoped but the roomId comes from the
+  // caller — it must resolve to a room of this project.
+  const roomInProject = async (roomId) => {
+    if (!roomId) return false;
+    const row = await env.DB.prepare(
+      "SELECT id FROM rooms WHERE id = ? AND project_id = ?",
+    )
+      .bind(roomId, auth.projectId)
+      .first();
+    return Boolean(row);
+  };
+
   try {
     if (request.method === "GET" && path === "/admin/agent-debate/roles") {
       const roles = await listDebateRoles(env, { projectId: auth.projectId });
@@ -79,6 +91,10 @@ export async function dispatchAgentDebateRoutes(request, url, h) {
       if (!roomId) {
         return json({ error: "roomId required" }, { status: 400, headers: corsHeaders });
       }
+      // Audit F-52: room must belong to this project.
+      if (!(await roomInProject(roomId))) {
+        return json({ error: "room_not_found" }, { status: 404, headers: corsHeaders });
+      }
       const sessions = await listDebateSessions(env, {
         projectId: auth.projectId,
         roomId,
@@ -93,6 +109,10 @@ export async function dispatchAgentDebateRoutes(request, url, h) {
       const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
       if (!roomId || !prompt) {
         return json({ error: "roomId and prompt required" }, { status: 400, headers: corsHeaders });
+      }
+      // Audit F-52: room must belong to this project.
+      if (!(await roomInProject(roomId))) {
+        return json({ error: "room_not_found" }, { status: 404, headers: corsHeaders });
       }
       const result = await runDebateSession(env, {
         projectId: auth.projectId,

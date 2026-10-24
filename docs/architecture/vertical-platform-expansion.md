@@ -44,9 +44,10 @@ Severity: **P0** security/correctness, **P1** misleading UX or data integrity, *
 | **Room kernel** | Versioned events, idempotent publish | `createVerticalPlatform` client + Worker `POST/GET /rooms/:id/capabilities/events` | Vertical studios (sync badge) | **Beta (client + Worker audit)** | P2 | DO fan-out for live updates |
 | **Polls** | Idempotent vote, close | Fixed in kernel + Stream/Game fixes | `/edu`, `/events`, stream demo | **Beta (client)** | — | Wire to room DO |
 | **CRDT / whiteboard** | Yjs + Excalidraw collaboration | Yjs via `yjs-provider.tsx` + Worker `yjs-sync.js`; Excalidraw lazy-loaded (`collab-whiteboard.tsx`); mermaid→Excalidraw stubbed for build | `/collab` | **Beta** | P2 | Property tests on concurrent strokes |
-| **FluxyStream** | Live polls, sentiment | In-memory `fluxy-stream.ts` | `/stream`, demo | **Prototype** | P1 | Poll close/vote fixes applied; backend TBD |
-| **FluxyGame** | Authoritative tick, anti-cheat | In-memory `fluxy-game.ts` | `/game` interactive | **Prototype** | P1 | Duration/sequence/bounds fixes applied |
-| **FluxyIoT** | Rule actions, device shadow | Rule actions execute; credentials stripped via `toPublicDevice()` | `/iot` | **Beta (demo)** | P2 | Worker device-shadow adapter |
+| **FluxyStream** | Live events, chat, moderation, angles, replays, shopping, gifts, OBS overlays | Worker `/api/live/*` + D1 (43 ops) via `createWorkerFluxyStreamClient`; overlays `/overlays` on the legacy client; in-memory `fluxy-stream.ts` = seeded studio only; WHIP/HLS ingest and replay reconciliation on the integrator's Cloudflare Stream (`503 cloudflare_stream_not_configured`); sentiment table read-only (no producer); LiveKit tokens `503 livekit_not_configured` without `LIVEKIT_*` | `/stream` (Worker-backed), `/stream/demo` (Labs) | **Beta (Worker + D1)** | P2 | Encoder, Cloudflare Stream account, TURN relay, payments and sentiment producer left to the integrator ("What you bring" in `apps/docs/content/docs/platform/stream.mdx`); route + SDK tests green |
+| **FluxyGame** | Authoritative tick, anti-cheat, matchmaking, quests, checkpoints | Worker `/games/*` + D1 (`0159`–`0230`) via `createWorkerFluxyGameClient`; in-memory `fluxy-game.ts` = demo engine | `/game` (Worker-backed) | **Beta (Worker + D1)** | P2 | Netcode / dedicated server left to the integrator ("What you bring" in `apps/docs/content/docs/platform/game.mdx`); route + SDK tests green |
+| **FluxyIoT** | Device registry, ingest, shadow, rules, alarms, RPC | Worker `/iot/*` + D1 via `createWorkerFluxyIoTClient`; rules raise alarms (`action` stored, not executed); device keys hashed, never returned by reads | `/iot` (Worker-backed) | **Beta (Worker + D1)** | P2 | MQTT/broker and rule-action dispatcher left to the integrator ("What you bring" in `apps/docs/content/docs/platform/iot.mdx`) |
+| **FluxyFleet** | GPS ingest, geofences, trips, delivery dispatch | Worker `/fleet/*` + D1 via `createWorkerFluxyFleetClient`; vehicle keys hashed and forced to their own vehicleId; copilot/window/pricing are heuristics (hour table, trip averages, demand ratio) — no live traffic or maps | `/fleet` (Worker-backed) | **Beta (Worker + D1)** | P2 | Real trackers/MQTT bridge and maps/routing provider left to the integrator ("What you bring" in `apps/docs/content/docs/platform/fleet.mdx`) |
 | **FluxyEdu** | Class + attendance + grading | `vertical-workflows.ts` + studio | `/edu` live SDK demo | **Beta (demo)** | — | SFU + Yjs + Worker persistence |
 | **FluxyHealth** | HIPAA | Synthetic demo only; explicit non-claim | `/health` | **Preview** | — | BAA gate before any HIPAA copy |
 | **FluxyEvent** | Tickets, Q&A | Workflow + ticket verify (demo sig) | `/events` | **Beta (demo)** | — | Signed ticket adapter |
@@ -60,9 +61,10 @@ Evidence paths:
 
 - Kernel: `packages/sdk/src/vertical-platform.ts`, `vertical-workflows.ts`
 - Tests: `vertical-platform.test.ts`, `vertical-workflows.test.ts`
+- Stream: `apps/worker/src/routes/live-streaming-http.test.js`, `packages/sdk/src/worker-fluxy-stream-client.test.ts`
 - Console IA: `apps/dashboard/app/components/console-nav.ts`
 - Studios: `apps/dashboard/app/components/vertical-studio.tsx`
-- Products: `apps/dashboard/app/game`, `iot`, `stream/demo`
+- Products: `apps/dashboard/app/game`, `iot`, `fleet`, `stream/demo`
 
 ---
 

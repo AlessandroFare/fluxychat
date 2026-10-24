@@ -1,3 +1,5 @@
+import { OPS_TOOL_EVENT_TYPES } from "./ops-tool-events.js";
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -29,6 +31,9 @@ export function createMemoryOpsStore() {
     sessions: [],
     files: [],
     views: {},
+    mcpServers: [],
+    mcpConnections: [],
+    mcpOauthStates: [],
   };
 
   function scoped(list, projectId) {
@@ -109,6 +114,16 @@ export function createMemoryOpsStore() {
         .filter((row) => row.definitionId === def.id && row.status === "published")
         .sort((a, b) => b.version - a.version)[0] || null;
     },
+    async listLatestPublished(projectId) {
+      const out = [];
+      for (const def of scoped(tables.definitions, projectId)) {
+        const latest = scoped(tables.versions, projectId)
+          .filter((row) => row.definitionId === def.id && row.status === "published")
+          .sort((a, b) => b.version - a.version)[0];
+        if (latest) out.push({ ...latest, slug: def.slug });
+      }
+      return out.sort((a, b) => String(a.slug).localeCompare(String(b.slug)));
+    },
     async createSession({ projectId, roomId, createdBy }) {
       const row = {
         id: id("ops"),
@@ -183,10 +198,11 @@ export function createMemoryOpsStore() {
       tables.tasks.push(task);
       return task;
     },
-    async listOpenTasks(projectId, { assignee } = {}) {
+    async listOpenTasks(projectId, { assignee, roles = [] } = {}) {
       return scoped(tables.tasks, projectId).filter((row) => {
         if (row.status !== "open") return false;
-        if (assignee && row.assignee !== assignee && row.role !== assignee) return false;
+        // Same rule as the complete-task gate: assignee, or a holder of the role.
+        if (assignee && row.assignee !== assignee && row.role !== assignee && !(row.role && roles.includes(row.role))) return false;
         return true;
       });
     },
@@ -207,6 +223,90 @@ export function createMemoryOpsStore() {
     async listPendingApprovals(projectId) {
       return scoped(tables.approvals, projectId).filter((row) => row.status === "pending");
     },
+    async listApprovals(projectId, filter = {}) {
+      return scoped(tables.approvals, projectId)
+        .filter((row) => !filter.status || row.status === filter.status)
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    },
+    async listMcpServers(projectId) {
+      return scoped(tables.mcpServers, projectId).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    },
+    async getMcpServer(projectId, serverId) {
+      return scoped(tables.mcpServers, projectId).find((row) => row.id === serverId) || null;
+    },
+    async getMcpServerByName(projectId, name) {
+      return scoped(tables.mcpServers, projectId).find((row) => row.name === name) || null;
+    },
+    async upsertMcpServer(projectId, server) {
+      const now = nowIso();
+      const existing = tables.mcpServers.find((row) => row.projectId === projectId && row.name === server.name);
+      const row = {
+        ...(existing || {}),
+        ...server,
+        id: existing?.id || server.id || id("omcp"),
+        projectId,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+      tables.mcpServers = tables.mcpServers.filter((item) => item.id !== row.id);
+      tables.mcpServers.push(row);
+      return row;
+    },
+    async deleteMcpServer(projectId, serverId) {
+      const row = scoped(tables.mcpServers, projectId).find((item) => item.id === serverId) || null;
+      if (!row) return null;
+      tables.mcpServers = tables.mcpServers.filter((item) => item.id !== serverId);
+      // Connections are the removed server's tokens: they must not survive it.
+      tables.mcpConnections = tables.mcpConnections.filter((item) => item.serverId !== serverId);
+      return row;
+    },
+    async upsertMcpConnection(projectId, connection) {
+      const now = nowIso();
+      const existing = tables.mcpConnections.find(
+        (row) => row.projectId === projectId && row.serverId === connection.serverId && row.userId === connection.userId,
+      );
+      const row = {
+        ...(existing || {}),
+        ...connection,
+        id: existing?.id || connection.id || id("omcn"),
+        projectId,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+      tables.mcpConnections = tables.mcpConnections.filter((item) => item.id !== row.id);
+      tables.mcpConnections.push(row);
+      return row;
+    },
+    async getMcpConnection(projectId, serverId, userId) {
+      return (
+        scoped(tables.mcpConnections, projectId).find((row) => row.serverId === serverId && row.userId === userId) || null
+      );
+    },
+    async listMcpConnections(projectId, filter = {}) {
+      return scoped(tables.mcpConnections, projectId)
+        .filter((row) => !filter.userId || row.userId === filter.userId)
+        .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    },
+    async deleteMcpConnection(projectId, connectionId) {
+      const row = scoped(tables.mcpConnections, projectId).find((item) => item.id === connectionId) || null;
+      if (!row) return null;
+      tables.mcpConnections = tables.mcpConnections.filter((item) => item.id !== connectionId);
+      return row;
+    },
+    async createMcpOauthState(row) {
+      const state = { id: id("omst"), createdAt: nowIso(), ...row };
+      tables.mcpOauthStates.push(state);
+      return state;
+    },
+    async takeMcpOauthState(stateHash) {
+      // Single-use: the row leaves the table on lookup, success or failure.
+      const index = tables.mcpOauthStates.findIndex((row) => row.stateHash === stateHash);
+      if (index < 0) return null;
+      return tables.mcpOauthStates.splice(index, 1)[0];
+    },
+    async purgeMcpOauthStates(before) {
+      tables.mcpOauthStates = tables.mcpOauthStates.filter((row) => String(row.expireAt) >= String(before));
+    },
     async saveApproval(row) {
       return row;
     },
@@ -218,6 +318,12 @@ export function createMemoryOpsStore() {
     async getGuestByTokenHash(projectId, tokenHash) {
       return scoped(tables.guests, projectId).find((row) => row.tokenHash === tokenHash) || null;
     },
+    async markGuestRedeemed(projectId, guestId) {
+      const guest = scoped(tables.guests, projectId).find((row) => row.id === guestId);
+      if (!guest || guest.redeemedAt) return false;
+      guest.redeemedAt = nowIso();
+      return true;
+    },
     async appendEvent(row) {
       const event = { id: id("oev"), createdAt: nowIso(), ...row };
       tables.events.push(event);
@@ -225,6 +331,26 @@ export function createMemoryOpsStore() {
     },
     async listEvents(projectId, runId) {
       return scoped(tables.events, projectId).filter((row) => !runId || row.runId === runId);
+    },
+    async listEventsSince(projectId, { since = null, until = null, limit = 5000 } = {}) {
+      return scoped(tables.events, projectId)
+        .filter((row) => (!since || row.createdAt >= since) && (!until || row.createdAt <= until))
+        .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+        .slice(0, Math.max(1, Math.min(limit, 20000)));
+    },
+    async listToolEvents(projectId, { limit = 100, runId = null } = {}) {
+      return scoped(tables.events, projectId)
+        .filter((row) => OPS_TOOL_EVENT_TYPES.includes(row.eventType) && (!runId || row.runId === runId))
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .slice(0, Math.max(1, Math.min(limit, 200)));
+    },
+    async countToolCallsSince(projectId, { tool, since = null } = {}) {
+      return scoped(tables.events, projectId).filter(
+        (row) =>
+          (row.eventType === "ops.tool.called" || row.eventType === "ops.tool.failed") &&
+          row.result?.tool === tool &&
+          (!since || row.createdAt >= since),
+      ).length;
     },
     async getBudget(projectId, runId) {
       return tables.budgets.find((row) => row.projectId === projectId && row.runId === runId) || null;
