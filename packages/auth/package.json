@@ -20,7 +20,7 @@
     "test": "pnpm exec vitest run"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "typescript": "^7",
     "vitest": "^4.1.11"
   }
 }
